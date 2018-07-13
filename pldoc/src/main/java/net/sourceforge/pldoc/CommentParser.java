@@ -41,7 +41,7 @@ public class CommentParser
     // break input into lines and store internally
     inputLines = breakIntoLines(input);
     removeCommentChars();
-    removeBlankLines();
+    //removeBlankLines();
     text = extractText();
     mainSentence = extractMainSentence();
     tags = extractTags();
@@ -133,7 +133,8 @@ public class CommentParser
   /** Returns the entire parsed comment, but without the tag section(s). */
   private String extractText()
   {
-    String line;
+    boolean insideCode = false;
+	String line;
     StringBuffer buf = new StringBuffer();
     // concatenate lines until PARAM_CHAR is first on line
     for (int i=0; i < inputLines.size(); i++) {
@@ -142,8 +143,18 @@ public class CommentParser
       if (line.trim().indexOf(PARAM_CHAR) == 0) {
         break;
       }
-      // otherwise, collect the text and remove the line
-      buf.append(line).append('\n');
+      // @BOJEJ
+      if (line.indexOf("<pre>") != -1)
+        insideCode = true;
+      if (line.indexOf("</pre>") != -1)
+        insideCode = false;
+	
+	  // otherwise, collect the text and remove the line
+      buf.append(line);
+	  if (!insideCode) {
+		  buf.append("<br/>");
+	  }
+	  buf.append('\n');
       inputLines.remove(i);
       i--; // adjust for the next index
     }
