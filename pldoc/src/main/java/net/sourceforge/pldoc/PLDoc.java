@@ -923,7 +923,7 @@ public class PLDoc
       String line = null;
       while ((line = overviewReader.readLine()) != null) {
         overview.append(line);
-        overview.append(lineSeparator);
+        overview.append("\n"); // use Java nre line instead as 0d0a will add additonal line feeds to output 
       }
       overviewReader.close();
     } catch(FileNotFoundException e) {
