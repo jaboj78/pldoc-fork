@@ -1,0 +1,8 @@
+CREATE OR REPLACE 
+PACKAGE pkg_define AS
+PROCEDURE define ;
+END;
+/
+
+
+

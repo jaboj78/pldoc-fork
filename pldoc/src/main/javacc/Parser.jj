@@ -1,0 +1,697 @@
+/* Copyright (C) 2002 Albert Tumanov
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+*/
+
+// $Header: /cvsroot/pldoc/sources/src/javacc/Parser.jj,v 1.2 2003/10/30 20:59:25 dvoytenko Exp $
+//
+options {
+	DEBUG_PARSER = false ;
+	DEBUG_TOKEN_MANAGER = false;
+	DEBUG_LOOKAHEAD = false;
+	IGNORE_CASE = true;
+	STATIC = false;
+	LOOKAHEAD = 1;
+	CHOICE_AMBIGUITY_CHECK = 2; // 3;
+	OTHER_AMBIGUITY_CHECK = 1;
+	ERROR_REPORTING = true;
+        JAVA_UNICODE_ESCAPE = false; //true 
+	UNICODE_INPUT = true;
+	USER_TOKEN_MANAGER = false;
+	USER_CHAR_STREAM = false;
+	BUILD_PARSER = true;
+	BUILD_TOKEN_MANAGER = true;
+	SANITY_CHECK = true;
+	FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(PLSQLParser)
+
+/* Copyright (C) 2002 Albert Tumanov
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+*/
+
+package net.sourceforge.pldoc.parser;
+
+import java.io.*;
+import java.util.*;
+import org.xml.sax.SAXException;
+import org.w3c.dom.*;
+import net.sourceforge.pldoc.*;
+import uk.co.anyware.html.HTMLEscaper;
+import org.xml.sax.SAXException;
+import net.sourceforge.pmd.lang.java.ast.ASTCompilationUnit;
+import net.sourceforge.pmd.lang.java.ast.JavaParser;
+import net.sourceforge.pmd.lang.java.ast.JavaParserTokenManager;
+
+public class PLSQLParser {
+
+	/** Reserved Tags, those tags were special treated by the parser. */
+	static final String[] RESERVED_TAGS = {"param", "return", "throws"};
+	
+	private XMLWriter m_out;
+	private boolean ignoreInformalComments = false;
+  	private String defaultKeywordscase = "upper"; 
+  	private String defaultNamescase = "upper"; 
+  	private boolean namesDefaultcase = true;
+  	private boolean namesUppercase = false;
+  	private boolean namesLowercase = false;
+  	private boolean keywordsDefaultcase = true;
+  	private boolean keywordsUppercase = false; //SRT 20110419
+  	private boolean keywordsLowercase = false; //SRT 20110419
+  	private String schemaName = ""; //SRT 20110418
+  	private String globalPackageName = "_GLOBAL"; //SRT 20110418
+  	
+  
+	/** Sets the stream to receive output XML text.
+	*/
+	public void setXMLWriter(XMLWriter out)
+	{
+		m_out = out;
+	}
+	
+	/**
+	* Sets to ignore informal comments (default false).
+	*/
+	public void setIgnoreInformalComments(boolean ignoreInformalComments)
+	{
+	  this.ignoreInformalComments = ignoreInformalComments;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to defaultcase (default true).
+	*/
+	public void setNamesDefaultcase(boolean namesUppercase)
+	{
+	  this.namesDefaultcase = namesDefaultcase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to uppercase (default false).
+	*/
+	public void setNamesUppercase(boolean namesUppercase)
+	{
+	  this.namesUppercase = namesUppercase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to lowercase (default false).
+	*/
+	public void setNamesLowercase(boolean namesLowercase)
+	{
+	  this.namesLowercase = namesLowercase;
+	}
+
+	/**
+	* Specifies default case (upper or lower case- default upper) of unquoted PL/SQL identifiers .
+	*/
+	public void setDefaultNamescase(String defaultNamescase)
+	{
+	  this.defaultNamescase = defaultNamescase;
+	}
+	
+	/**
+	* Specifies default case (upper or lower case- default upper) of PL/SQL keywords.
+	*/
+	public void setDefaultKeywordscase(String defaultKeywordscase)
+	{
+	  this.defaultKeywordscase = defaultKeywordscase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to defaultcase (default true).
+	*/
+	public void setKeywordsDefaultcase(boolean keywordsDefaultcase)
+	{
+	  this.keywordsDefaultcase = keywordsDefaultcase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to uppercase (default false).
+	*/
+	public void setKeywordsUppercase(boolean keywordsUppercase)
+	{
+	  this.keywordsUppercase = keywordsUppercase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to lowercase (default false).
+	*/
+	public void setKeywordsLowercase(boolean keywordsLowercase)
+	{
+	  this.keywordsLowercase = keywordsLowercase;
+	}
+
+	/**
+	* Sets the SchemaName for this parser 
+	*/
+	public void setSchemaName(String schemaName)
+	{
+	  this.schemaName = schemaName;
+	}
+
+	/**
+	* Sets the GlobalPackageName for this parser 
+	*/
+	public void setGlobalPackageName(String globalPackageName)
+	{
+	  this.globalPackageName = globalPackageName;
+	}
+
+	/**
+	Output summary for the parsed object.
+
+	@param parsedObject - PL/SQL type - procedure, trigger, object type 
+	@param baseLine - start line number of containing PL/SQL or 0 if the parsed object is a top-level object: normalise the line numbers to match *_SOURCE tables and PL/SCOPE 
+	@param startToken - first Token (usually the object name) 
+	@param endToken - last token (usually the terminating ";" )
+	*/
+	void printSummary(String parsedObject, int baseLine, Token startToken, Token endToken)
+        throws SAXException 
+	{
+	    //Decrement baseLine to convert from an absolute line number into an adjustment 
+	    if (baseLine > 0) 
+	    {
+	       baseLine--;
+	    }
+
+	    if (null != m_out)
+	    {
+ 		    m_out.pushAttribute("START_LINE", Integer.toString(startToken.beginLine - baseLine)   );
+ 		    m_out.pushAttribute("START_COLUMN", Integer.toString(startToken.beginColumn) );
+ 		    m_out.pushAttribute("END_LINE", Integer.toString(endToken.beginLine - baseLine) );
+ 		    m_out.pushAttribute("END_COLUMN", Integer.toString(endToken.beginColumn) );
+ 		    m_out.pushAttribute("LINES", Integer.toString(endToken.beginLine - startToken.beginLine  + 1));
+		    m_out.startElement("SUMMARY");
+		    m_out.endElement("SUMMARY");
+	    }
+	}
+
+	/** Processes a package comment.
+	* Searches for possible package-level formal comment before the current token.
+	* If found, generates COMMENT element for the package.
+	*/
+	private void processPackageComment(Token token)
+      throws SAXException {
+		Hashtable packageCommentTags = new Hashtable();
+		String packageComment = null;
+
+                //SRT 20110422 System.err.println("processPackageComment(" + ((null == token) ?  "<empty token>" : token.toString()) +")"  );
+		// get the text, if present
+		while (token != null && token.specialToken != null) { //Tracker Issue 1433480 
+		//SRT 20110422 System.err.println("processPackageComment(specialToken)"  );
+			token = token.specialToken;
+			int kind = token.kind;
+			String comment = token.toString();
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment): ["+ comment +"]"  );
+			if (comment != null && kind == EOL) {//Tracker Issue 1433480 - skip EOLs 
+			  continue;
+			} 
+			if (comment != null && kind == FORMAL_COMMENT) {
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment FORMAL_COMMENT): ["+ comment +"]"  );
+				CommentParser commentParser = new CommentParser(comment);
+				// get the package comment text
+		//SRT		packageComment = commentParser.getText();
+				packageComment = commentParser.getPackageComment();
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment commentParser.toString()): ["+ commentParser.toString() +"]"  );
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment packageComment): ["+ packageComment +"]"  );
+				if (packageComment != null) {
+					// extract tags from the package comment
+					packageCommentTags.putAll(commentParser.getTags());
+				}
+			}
+		        break; // Tracker Issue 1433480 - Only process the first comment before the package
+		}
+
+		// print the package comment
+		printPackageComment(packageComment, packageCommentTags);
+	}
+
+	/**  Writes a list of Tokens to standard error 
+	*/
+	private void stringWalk(Token token)
+      throws SAXException {
+
+		// get the text, if present
+		for ( ; token != null ; token = token.specialToken) {
+			
+			System.err.println("stringWalk: [[" + token.toString() +"]]" );
+		}
+
+	}
+
+	/** Processes a package member.
+	* Searches for possible package-level comment before the member.
+	* If found, generates COMMENT element for the package.
+	* For the package member, generates open tag with the given element name
+	* with memberName as NAME attribute.
+	* Inserts COMMENT_FIRST_LINE and COMMENT elements.
+	* <B>Closing member tag is <U>NOT</U> added.</B>
+	* <B>elementName and memberName may be null: this allows processing of memberComments at arbitrary locations in source code </B>
+	* @return table of tags found in the formal comment
+	*/
+	private Hashtable processMemberComment(Token token, String elementName, String memberName)
+      throws SAXException {
+	 // A Package will not have an action (add, replace, delete) or a version number)
+         return processMemberComment(token, elementName, memberName, null);
+      }
+
+	/** Processes an object type member.
+	* Searches for possible package-level comment before the member.
+	* If found, generates COMMENT element for the package.
+	* For the package member, generates open tag with the given element name
+	* with memberName as NAME attribute.
+	* Inserts COMMENT_FIRST_LINE and COMMENT elements.
+	* <B>Closing member tag is <U>NOT</U> added.</B>
+	* @return table of tags found in the formal comment
+	*/
+	
+	private Hashtable processMemberComment(Token token, String elementName, String memberName, Hashtable attributes)
+      throws SAXException {
+		String commentFirstLine = null, commentAll = null;
+		String packageComment = null, returnComment = null;
+		Hashtable tags = new Hashtable();
+		Hashtable packageCommentTags = new Hashtable();
+
+		//SRT 20110422 System.err.println("processMemberComment:  starting with Token=" + token.toString());
+
+		// Should handle multiple comment blocks ? Then use "while".
+		// Otherwise, use "if".
+		while (token.specialToken != null) {
+
+			token = token.specialToken;
+			int kind = token.kind;
+			String comment = token.toString();
+
+			if (comment != null && kind == EOL) {//Tracker Issue 1433480 - skip EOLs 
+			  continue;
+			} 
+			//SRT 20110422 System.err.println("processMemberComment:  stepped to Token of kind(" + kind + ")=" + token.toString());
+			if (comment != null && (kind == FORMAL_COMMENT || ! ignoreInformalComments)) {
+
+				CommentParser commentParser = new CommentParser(comment);
+				// get package comment, if any
+				packageComment = commentParser.getPackageComment();
+				//SRT 20110422 System.err.println("processMemberComment:  found packageComment tags" + commentParser.getTags().toString());
+				if (packageComment != null) {
+				//SRT 20110422 System.err.println("processMemberComment:  saving packageComment tags" + commentParser.getTags().toString());
+					// extract tags from package comment
+					packageCommentTags.putAll(commentParser.getTags());
+				}
+				//ISRT 20110427 f comment is a Package Comment do not add the tags to the method  
+				else
+				{
+				  tags.putAll(commentParser.getTags());
+				}
+
+
+				// only the main sentence from the first comment block is used, others are ignored
+				if (commentFirstLine == null) {
+					commentFirstLine = commentParser.getMainSentence();
+				//SRT 20110422 System.err.println("processMemberComment: assigned Main Sentence=" + commentFirstLine);
+					if (kind != FORMAL_COMMENT) {
+						if(ignoreInformalComments) {
+							// ignore informal comments
+							commentFirstLine = "";
+						} else {
+							// informal comment may have "<" etc inside
+							commentFirstLine = HTMLEscaper.escape(commentFirstLine);
+						}
+					}
+				}
+
+				// only the comment text from the first comment block is used, others are ignored
+				//SRT 20110422 System.err.println("processMemberComment:  commentParser.getText" + commentParser.getText());
+				if (commentAll == null) {
+					commentAll = commentParser.getText();
+				//SRT 20110422 System.err.println("processMemberComment: assigned Comment Text=" + commentAll);
+					if (kind != FORMAL_COMMENT) {
+						if(ignoreInformalComments) {
+							// ignore informal comments
+							commentAll = "";
+						} else {
+							// informal comment may have "<" etc inside
+							commentAll = HTMLEscaper.escape(commentAll);
+						}
+					}
+				}
+
+				// tags are out together (duplicate names will be overwritten)
+				// 20110427 tags.putAll(commentParser.getTags());
+
+				//SRT 20110422 System.err.println("processMemberComment:  saving tags (again) " + commentParser.getTags().toString());
+			}
+
+		}
+
+		// print package-level stuff
+		//SRT 20110422 System.err.println("processMemberComment:  post loop Comment First Line =" + commentFirstLine);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop Comment =" + commentAll);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printing tags-" +  tags.toString());
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printing Package Comment-" + packageComment + "/"+ packageCommentTags.toString());
+		printPackageComment(packageComment, packageCommentTags);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printed Package Comment");
+
+		// now start the program unit
+		//Cope with Comment Search in arbitrary location in object source 
+		if ( null != elementName)
+		{
+		  String purifiedElementName = purifyKeyword(elementName);
+		  if (null!=purifiedElementName && !"".equals(purifiedElementName)) 
+		  {
+ 		    m_out.pushAttribute("NAME", purifyIdentifier(memberName));
+		    printAttributes(attributes) ;
+		    m_out.startElement(purifyKeyword(elementName));
+		  }
+		}
+
+		if (commentFirstLine != null) {
+		//SRT 20110422 System.err.println("processMemberComment:  WRITING Comment First Line =" + commentFirstLine);
+			m_out.startElement("COMMENT_FIRST_LINE");
+			m_out.cdata(commentFirstLine);
+			m_out.endElement("COMMENT_FIRST_LINE");
+		}
+		if (commentAll != null) {
+		//SRT 20110422 System.err.println("processMemberComment:  WRITING Comment =" + commentFirstLine);
+			m_out.startElement("COMMENT");
+			m_out.cdata(commentAll);
+			m_out.endElement("COMMENT");
+		}
+
+		//SRT 20110422 System.err.println("processMemberComment:  RETURNING tags " + tags.toString());
+		return tags;
+	}
+
+	/** Prints the package comment into the stream.
+	 *
+	 * 2006-05-22 - Matthias Hendler - refactored
+	 */
+	private void printPackageComment(String packageComment, Hashtable packageCommentTags)
+      throws SAXException {
+		// print package-level stuff
+		if (packageComment != null) {
+			// print package comment, it goes under PACKAGE tag
+			m_out.startElement("COMMENT");
+			m_out.cdata(packageComment);
+			m_out.endElement("COMMENT");
+			
+			printCustomTags(packageCommentTags);
+      	}
+    }
+  
+
+
+	/**
+	* Gets the comment for the parameter named <code>paramName</code> from the table of tags.
+	*
+	* @param paramName	name of the parameter
+	* @param tags		table of tags
+	* @return		comment or <code>null</code> if comment not found
+	*/
+	private String getParamComment(String paramName, Hashtable tags)
+	{
+		String paramComment = null;
+		Collection tagValues = (Collection) tags.get("@param");
+		if (tagValues != null) {
+			Iterator it = tagValues.iterator();
+			while (it.hasNext()) {
+				String value = (String) it.next();
+
+				// extract parameter name
+				String extractedParamName = null;
+				// use tokenizer, because tokens maybe separated by spaces or tabs
+				StringTokenizer st = new StringTokenizer(value);
+				// extract parameter name, the rest is the comment
+				if (st.hasMoreTokens()) {
+					extractedParamName = st.nextToken();
+				}
+
+				if (extractedParamName != null && extractedParamName.equalsIgnoreCase(paramName)) {
+					int paramCommentStart = value.indexOf(extractedParamName) + extractedParamName.length() + 1;
+					if (paramCommentStart < value.length()) {
+						paramComment = value.substring(paramCommentStart).trim();
+					}
+					break;
+	}
+			}
+		}
+		return paramComment;
+	}
+
+  /** Purifies an identifier: changes to uppercase, removes quotes.
+  */
+  private String purifyIdentifier(String name)
+  {
+    // SRT 20100428 Return any literals unchanged 
+    if (
+       ( null != name && name.length() > 2 && '\'' == name.charAt(0) && '\'' == name.charAt(name.length()-1) ) // Simple Literal
+       || //Q-Quoted literal
+       ( null != name && name.length() > 3 && 'Q' == name.toUpperCase().charAt(0) && '\'' == name.charAt(1) && '\'' == name.charAt(name.length()-1) )
+       )
+    {
+      return name ; 
+    }
+
+
+    // SRT 20100418 Change case of unquoted identifiers to default case
+
+    if (namesDefaultcase && -1 == name.indexOf('"') && !defaultNamescase.equalsIgnoreCase("mixed") )
+    {
+      name = defaultNamescase.equalsIgnoreCase("upper") ? name.toUpperCase() : name.toLowerCase() ;
+    }
+
+    // Force Change case as requested in settings
+    if (namesUppercase) {
+      name = name.toUpperCase();
+    }
+    if (namesLowercase) {
+      name = name.toLowerCase();
+    }
+
+    // remove any double quotes
+    StringBuffer s = new StringBuffer(name.trim());
+    for (int i=0; i<s.length(); i++) {
+      if (s.charAt(i) == '"') {
+        s.deleteCharAt(i);
+        i--;
+      }
+    }
+    return s.toString();
+  }
+
+
+  /** Purifies a keyword: changes to correct case
+  */
+  private String purifyKeyword(String keyword)
+  {
+
+    if (keywordsDefaultcase)
+    {
+      keyword = defaultKeywordscase.equalsIgnoreCase("upper") ? keyword.toUpperCase() : keyword.toLowerCase() ;
+    }
+
+    // Force Change case as requested in settings
+    if (keywordsUppercase) {
+      keyword = keyword.toUpperCase();
+    }
+    if (keywordsLowercase) {
+      keyword = keyword.toLowerCase();
+    }
+
+    return keyword.trim();
+  }
+
+
+
+	/**
+	 * Print all custom tags.
+	 * Custom tags are those, which have NO direct link to the documented language.
+	 * Linked/reserved tags are RETURN, PARAM/ARGUMENT and THROWS. 
+	 * Linked tags have a link to the language cause we can automatically find the return type of a function.
+	 * These linked tags will NOT be printed out to the XML document as custom tags.
+	 * All other tags just have a desciptive task.
+	 *
+	 * 2006-05-22 - Matthias Hendler - added
+	 *
+	 * @param pTags		all tags
+	 */
+	private void printCustomTags(Map pTags) throws SAXException {
+      final Iterator keyIter = pTags.keySet().iterator();
+      while (keyIter.hasNext()) {
+        final String key = (String) keyIter.next();
+        final Collection tagValues = (Collection) pTags.get(key);
+        if (tagValues != null && !isReservedTag(key)) {
+          for(Iterator iter = tagValues.iterator(); iter.hasNext(); ) {
+            final String comment = (String) iter.next();
+			printTag(key, comment);
+          }
+        }
+      }
+	}
+
+	/**
+	 * Print all Attributes
+	 *
+	 * @param pTags	all  Attributes
+	 */
+	private void printAttributes(Map attributes) throws SAXException {
+	  if (null != attributes)
+	  {
+	  final Iterator keyIter = attributes.keySet().iterator();
+	  while (keyIter.hasNext()) {
+          final String key = (String) keyIter.next();
+          final String value = (String) attributes.get(key);
+ 		     m_out.pushAttribute(key, purifyIdentifier(value));
+         }
+        }
+      }
+
+
+
+	/**
+	 * Is the given Tag a linked/reserved Tag?
+	 *
+	 * 2005-05-22 - Matthias Hendler - added
+	 *
+	 * @return 		TRUE: tag is one of the reserved tags.
+	 */
+	private boolean isReservedTag(String pTag) {
+		boolean result = false;
+		
+		for (int index=0; index < RESERVED_TAGS.length; index++) {
+			result = result || RESERVED_TAGS[index].equalsIgnoreCase(pTag);
+		}
+		
+		return result;
+	}
+
+
+
+	/**
+	 * Add a comment tag to the current node.
+	 *
+	 * 2006-05-18 - Matthias Hendler - added
+	 */
+	private void printTag(String pTagName, String pComment) throws SAXException {
+		m_out.pushAttribute("TYPE", purifyIdentifier(pTagName));
+      	m_out.startElement("TAG");
+      	if (pComment != null) {
+        	m_out.startElement("COMMENT");
+        	m_out.cdata(pComment);
+        	m_out.endElement("COMMENT");
+      	}
+      	m_out.endElement("TAG");
+	}
+
+  /**
+   * main method, for testing only.
+   * @param args
+   */
+  public static void main(String[] args)
+      throws ParseException, SAXException {
+
+    PLSQLParser parser = new PLSQLParser(System.in);
+    parser.input();
+
+    String s;
+    s = "qwerty";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\"";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\".uiop";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\".\"uiop\"";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+  }
+
+
+  /** Java compilation unit from PMD Java parser delegated to parse Java code.
+   */
+  private ASTCompilationUnit  fromDelegatedJavaParser()
+  throws ParseException
+  {
+         // create a Java parser that we will delegate to
+          JavaCharStreamAdapter a = new JavaCharStreamAdapter( jj_input_stream );
+          JavaParserTokenManager tm = new JavaParserTokenManager( a );
+          JavaParser jp = new JavaParser( tm );
+
+	  //Oracle 11G Java 5 
+          jp.setJdkVersion(5);
+
+          // the parser fills in an empty query template
+          ASTCompilationUnit cu = null; // new ASTCompilationUnit();
+          //jp.setASTCompilationUnit( cu );
+          //setPrefixes( cu );
+
+          try {
+              // parse to the end of the query
+              cu = jp.CompilationUnit();
+              //cu.setSyntax(Syntax.syntaxJava);
+
+              // push back the final char, which the Java parser will have
+              // consumed to know that the query was finished
+              jj_input_stream.backup(1);
+          }
+          catch (net.sourceforge.pmd.lang.java.ast.ParseException javaParseException) {
+                String message = javaParseException.getMessage();
+                 
+	      //System.err.println("JavaParserException:"+message);
+              /* Normal PLSQL-wrapped Java will have the terminating "/" 
+                 Which causes the Java Parser to fail.
+                 If this is the reason, then ignore it
+
+                 This is a nasty work-around to avoid hacking the PMD Java parser
+                 to play nicer with bad terminating text. 
+               */
+              if (
+                     message.startsWith("Encountered \" \"/\" \"/ \"\" at line ")
+                     ||message.contains("Was expecting one of:")
+                     ||message.contains("<EOF>")
+                 )
+              {
+                // Push back the final char, which the Java parser will have
+                // consumed to know that the query was finished
+                jj_input_stream.backup(1);
+              }
+              else
+              {
+                ParseException plsqlParseException =
+                new ParseException( "Error reported by Java parser: " + message);
+                throw (ParseException) plsqlParseException.initCause( javaParseException );
+               }
+          }
+
+          return cu;
+  }
+
+
+}
+
+PARSER_END(PLSQLParser)

@@ -1,0 +1,61 @@
+What is pldoc?
+
+ pldoc is an open-source utility for generating HTML documentation of code written in Oracle PL/SQL.
+
+ The goal is to provide a tool analogous to {{{http://java.sun.com/j2se/javadoc/index.html}javadoc}} for Java.
+
+ To get quick idea what the tool does, look at the following example:
+
+ Suppose you have PL/SQL code:
+
+ {{{./samples/sample1.sql}sample1.sql}}\
+ {{{./samples/sample2.sql}sample2.sql}}\
+ {{{./samples/sample3.sql}sample3.sql}}
+
+ And maybe a short description file:
+
+ {{{./samples/overview.html}overview.html}}
+
+
+ You then run pldoc using command like this:
+
++-----+
+$ pldoc -d sampleOutput -doctitle TheBigApp -overview overview.html sample*.sql
+
+pldoc version: 0.6.8
+Parsing file sample1.sql ...
+Parsing file sample2.sql ...
+Parsing file sample3.sql ...
+Generating HTML files ...
+Generating summary.html ...
+Generating allpackages.html ...
+Generating index.html ...
+Generating <unit>.html ...
+Done (6.366 seconds).
++-----+
+
+
+ This HTML will be created in the directory you specified (sampleOutput):
+ 
+ 
+
+[./images/result.png] Resulting HTML
+
+  {{{./sampleOutput/index.html}Resulting HTML}}
+
+Supported Databases
+
+ Although PL/SQL originally ran only in Oracle's family of databases, other database manufacturers have implemented PL/SQL compatibility layers and, given some effort, PLDoc may also be run against these additional {{{./OtherDatabases.html}databases}}.
+
+Notes
+
+    * Although pldoc can process code without any comments and can handle some usual /**/ and -- comments, you will get the best result if you use formal comments (/** ...*/) in your PL/SQL code.
+
+    * pldoc follows javadoc conventions for writing comments etc as close as possible, as those conventions has become de-facto standard for many other similar tools (and no other standards actually exist).
+
+    * pldoc is written entirely in java and is platform-independent.
+
+    * Presently, pldoc has only command line interface, no GUI.
+
+
+

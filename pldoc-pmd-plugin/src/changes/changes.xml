@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://maven.apache.org/changes/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/changes/1.0.0 http://maven.apache.org/xsd/changes-1.0.0.xsd">
+    <properties>
+        <title>PLDoc PMD Maven Plug-in Project</title>
+        <author email="sturton at users.sourceforge.net">Albert Tumanov</author>
+    </properties>
+    <body>
+
+        <release version="3.2.6" date="2016-08-08"  description="Minor change" >
+            <action type="fix" dev="sturton" >URIencode schemas</action>
+        </release>
+
+        <release version="3.2.5" date="2015-02-17"  description="Minor change" >
+            <action type="update" dev="sturton" >Use later modular version of PMD</action>
+        </release>
+
+        <release version="3.2.4" date="2015-01-21"  description="Minor fixes" >
+            <action type="fix" dev="sturton" >Correct links to Package and Object Type Specifications</action>
+        </release>
+
+        <release version="3.2.3" date="2015-01-15"  description="Minor fixes" >
+            <action type="fix" dev="sturton" >Correct links to Package and Object Type Specifications</action>
+        </release>
+
+        <release version="3.2.2" date="2014-11-10"  description="Minor fixes" >
+            <action type="fix" dev="sturton" >NPE when plugin used in site without explicit reportOutPutDirectory setting</action>
+        </release>
+
+        <release version="3.2.1" date="2014-08-17"  description="Correct JXR HTML link generation for Windows platforms" >
+            <action type="fix" dev="sturton" >Correct generated xref links for database-derived code under Windows</action>
+        </release>
+
+        <release version="3.2" date="2014-08-12"  description="Initial fork of maven-pmd-plugin with minimal changes to support PLSQL" >
+            <action type="update" dev="sturton" >Initial check-in of PLSQL fork</action>
+        </release>
+
+    </body>
+</document>

@@ -1,0 +1,160 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE APPLICATION SYSTEM "application.dtd">
+<APPLICATION NAME="MyApplication">
+  <PACKAGE NAME="SEAT_RESERVATIONS" SCHEMA="UNEX">
+    <COMMENT><![CDATA[Provides services to consumers that need to create & delete seats and enroll customers in UCDE classes
+<br/> <br/>
+<b>Semantics</b> <br/>
+<blockquote>
+<b>Reserve:</b> lock a seat; other consumers cannot reserve it; consumer intends to hold it for an order or enrollment in progress<br/>
+<b>Hold:</b> hold a seat by linking it to an enrollment or a web order<br/>
+<b>Assign:</b>  write a web order ID to a seat previously held by a web customer<br/>
+<b>Release:</b> return seats to the free pool</blockquote>
+]]></COMMENT>
+    <TAG TYPE="@HEADCOM">
+      <COMMENT>
+      </COMMENT>
+    </TAG>
+    <FUNCTION NAME="SEATS_EXIST">
+      <ARGUMENT MODE="IN" NAME="S_ID" TYPE="UNEX.SECTION.SECTION_ID%TYPE"/>
+      <RETURN TYPE="BOOLEAN"/>
+    </FUNCTION>
+    <FUNCTION NAME="GET_PENDING_ENROLL_COUNT">
+      <COMMENT_FIRST_LINE><![CDATA[test for existence of rows in the section seat table for a single section (project)
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[test for existence of rows in the section seat table for a single section (project)
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="S_ID" TYPE="UNEX.SECTION.SECTION_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="HOLD_SEAT">
+      <COMMENT_FIRST_LINE><![CDATA[gets a count = sum of locked seats and pending web enrollments
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[gets a count = sum of locked seats and pending web enrollments
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="ENROLL_ID" TYPE="UNEX.SECTION_SEAT.ENROLLMENT_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="WEB_ORDER_ID" TYPE="UNEX.SECTION_SEAT.WEB_ORDER_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="HOLD_SEAT">
+      <COMMENT_FIRST_LINE><![CDATA[The EBS holds a seat for a real enrollment
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[The EBS holds a seat for a real enrollment
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="OUT" NAME="RESERVATION_ID" TYPE="UNEX.SECTION_SEAT.SEAT_RESERVATION_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="RELEASE_SEAT">
+      <COMMENT_FIRST_LINE><![CDATA[the web site is holding a seat for a web entrollment request
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[the web site is holding a seat for a web entrollment request
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="ENROLL_ID" TYPE="UNEX.SECTION_SEAT.ENROLLMENT_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="RELEASE_SEAT">
+      <COMMENT_FIRST_LINE><![CDATA[releases seats reserved by get_seat_post
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[releases seats reserved by get_seat_post
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="RESERVATION_ID" TYPE="UNEX.SECTION_SEAT.SEAT_RESERVATION_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="SEAT_RESERVED">
+      <COMMENT_FIRST_LINE><![CDATA[the web site is releasing a seat
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[the web site is releasing a seat
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="S_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="OUT" NAME="ROW_ID" TYPE="ROWID"/>
+      <RETURN TYPE="BOOLEAN"/>
+    </FUNCTION>
+    <FUNCTION NAME="SEAT_RESERVED">
+      <COMMENT_FIRST_LINE><![CDATA[locks an available seat row, typucally from the web site
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[locks an available seat row, typucally from the web site
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="S_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="OUT" NAME="ROW_ID" TYPE="ROWID"/>
+      <ARGUMENT MODE="IN" NAME="WEB_ORD_ID" TYPE="UNEX.SECTION_SEAT.WEB_ORDER_ID%TYPE"/>
+      <RETURN TYPE="BOOLEAN"/>
+    </FUNCTION>
+    <FUNCTION NAME="SEAT_HELD">
+      <COMMENT_FIRST_LINE><![CDATA[locks an available seat row, caller may be completing a web entrollment request
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[locks an available seat row, caller may be completing a web entrollment request
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="ENROLL_ID" TYPE="UNEX.SECTION_SEAT.ENROLLMENT_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="ROW_ID" TYPE="ROWID"/>
+      <ARGUMENT MODE="OUT" NAME="ERROR_CODE" TYPE="PLS_INTEGER"/>
+      <RETURN TYPE="BOOLEAN"/>
+    </FUNCTION>
+    <FUNCTION NAME="SEAT_HELD">
+      <COMMENT_FIRST_LINE><![CDATA[writes an enroll_id to a previously reserved seat row
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[writes an enroll_id to a previously reserved seat row
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="ROW_ID" TYPE="ROWID"/>
+      <ARGUMENT MODE="OUT" NAME="RESERVATION_ID" TYPE="UNEX.SECTION_SEAT.SEAT_RESERVATION_ID%TYPE"/>
+      <ARGUMENT MODE="OUT" NAME="ERROR_CODE" TYPE="PLS_INTEGER"/>
+      <RETURN TYPE="BOOLEAN"/>
+    </FUNCTION>
+    <PROCEDURE NAME="ASSIGN_WEB_SEAT">
+      <COMMENT_FIRST_LINE><![CDATA[and returs the reservation_id to the caller
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[and returs the reservation_id to the caller
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="WEB_ORD_ID" TYPE="UNEX_WEB.WEB_ENROLLMENT.WEB_ENROLLMENT_ID%TYPE"/>
+    </PROCEDURE>
+    <PROCEDURE NAME="ASSIGN_SEAT_TO_WEB_ORDER">
+      <COMMENT_FIRST_LINE><![CDATA[the old version ofassigning a set to a web order
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[the old version ofassigning a set to a web order
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="RESERVATION_ID" TYPE="UNEX.SECTION_SEAT.SEAT_RESERVATION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="WEB_ORD_ID" TYPE="UNEX_WEB.WEB_ENROLLMENT.WEB_ENROLLMENT_ID%TYPE"/>
+    </PROCEDURE>
+    <FUNCTION NAME="GET_SEATS_AVAILABLE">
+      <COMMENT_FIRST_LINE><![CDATA[writes a real web order id to a previously reserved seat
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[writes a real web order id to a previously reserved seat
+]]></COMMENT>
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="INSERT_INTO_SECTION_SEAT">
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="MAX_ENR" TYPE="UNEX.SECTION.MAXIMUM_ENROLLMENTS%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <FUNCTION NAME="DELETE_FROM_SECTION_SEAT">
+      <ARGUMENT MODE="IN" NAME="SECT_ID" TYPE="UNEX.SECTION_SEAT.SECTION_ID%TYPE"/>
+      <ARGUMENT MODE="IN" NAME="MAX_ENR" TYPE="UNEX.SECTION.MAXIMUM_ENROLLMENTS%TYPE"/>
+      <RETURN TYPE="PLS_INTEGER"/>
+    </FUNCTION>
+    <VARIABLE NAME="PROCEDURE">
+      <COMMENT_FIRST_LINE><![CDATA[Releases seats reserved but not held by the web site - web customers have not completed their orders<br>
+within a pre-determined expiration time that dicates when the seats are returned to the free pool.<br>
+]]></COMMENT_FIRST_LINE>
+      <COMMENT><![CDATA[Releases seats reserved but not held by the web site - web customers have not completed their orders<br>
+within a pre-determined expiration time that dicates when the seats are returned to the free pool.<br>
+]]></COMMENT>
+      <RETURN TYPE="RELEASE_ELAPSED_SEATS"/>
+    </VARIABLE>
+    <PROCEDURE NAME="RELEASE_WEB_ORDER_SEATS">
+      <ARGUMENT MODE="IN" NAME="WEB_ORD_ID" TYPE="UNEX_WEB.WEB_ENROLLMENT.WEB_ENROLLMENT_ID%TYPE"/>
+    </PROCEDURE>
+  </PACKAGE>
+  <GENERATOR>
+    <OBJECTS>
+      <PROCESSED COUNT="1"/>
+      <SKIPPED COUNT="0"/>
+    </OBJECTS>
+    <CREATED DATE="11/14/11" TIME="5:28 PM"/>
+  </GENERATOR>
+</APPLICATION>

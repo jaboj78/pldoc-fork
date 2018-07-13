@@ -1,0 +1,427 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+  <meta http-equiv="Content-Language" content="en-gb">
+  <title>PlDoc User's Guide</title>
+  <base target="_self">
+</head>
+
+<body>
+
+<p><b><font size="6">PLDoc User's Guide </font></b></p>
+<p>by Andras Soltesz</p>
+<p>&nbsp;</p>
+<h2 style="margin-top: -10"><a name="Overview">Overview</a></h2>
+<p style="margin-top: -10">PLDoc is a utility for generating technical
+documentation for PL/SQL code. Working similarly to JavaDoc, it parses
+PL/SQL packages, object types, functions, procedures, and triggers, finding comments of definitions and building HTML
+format technical documentation for your project. By using it, ORACLE database
+developers will have better documented projects and more consistent
+documentation.</p>
+<p style="margin-top: -10">Main features of PLDoc:</p>
+<ul>
+  <li>
+    <p style="margin-top: 0">Uses its own PL/SQL code parser
+    to analyze PL/SQL definitions.</li>
+  <li>
+    <p style="margin-top: 0">Builds a structured, XML database from the
+    definitions.</li>
+  <li>
+    <p style="margin-top: 0">Generates the HTML documentation by using Xalan and
+    XSLs so customization of the output can be easily done.</li>
+</ul>
+<p style="margin-top: 0">&nbsp;</p>
+<h2 style="margin-top: -10"><a name="General">General</a></h2>
+<p style="margin-top: -10">When we refer to a command file used on Windows
+systems (e.g.: pldoc.bat)
+always keep in mind that a similar operation is possible with the shell script
+created for UNIX systems (pldoc.sh). In order to avoid repeating ourselves in the
+documentation we only include the operation with the file having the .bat
+extension.</p>
+<p style="margin-top: -10">&nbsp;</p>
+<h2 style="margin-top: -10"><a name="Installation">Installation</a></h2>
+<p style="margin-top: -10">After you have downloaded the binary release of PLDoc
+as a compressed ZIP file:</p>
+<p style="margin-top: -10">1) Install Java runtime version 1.2 or above, if not yet installed   (available from
+<a href="http://java.sun.com">JavaSoft</a>).</p>
+<p style="margin-top: -10">2) Unpack the compressed ZIP into a new directory.
+(This will be PLDoc's home directory)</p>
+<p style="margin-top: -10">To use PLDoc with its standard settings you have to
+have the java runtime interpreter in your path.</p>
+<p style="margin-top: -10">After having installed PLDoc, read through <a href="../../readme.txt"><i>readme.txt</i></a>
+and <a href="../../changes.txt"><i>changes.txt</i></a> to learn more about the
+current release.</p>
+<p style="margin-top: -10">&nbsp;</p>
+<h2><a name="Running the sample project">Running the sample project</a></h2>
+<p>You can run the sample project to test the installation or to see an example
+of the work results of PLDoc. To start the sample project run <i>pldoc_example.bat.</i></p>
+<p>The sample project's PL/SQL packages can be found in the \samples directory.
+You can examine these package definitions to see working examples of the comment
+formats PLDoc accepts.</p>
+<p>The generated documentation can be found in the <i>SampleApplicationDoc</i>
+directory (only after you have run the sample project). The XML database
+containing the parsed PL/SQL definitions is located here as well (<i>application.xml</i>).</p>
+<p>&nbsp;</p>
+
+<h2><a name="Using PlDoc">Using PLDoc</a></h2>
+
+<p>The easiest way to use PLDoc for your project is to make a copy of <i>pldoc_example.bat</i>
+and edit the new file. The example file does a parameterized call of <i>pldoc.bat,</i>
+which is responsible for more complex environment settings (e.g.: classpath) and
+starting the Java application itself.</p>
+<p>Starting <i>pldoc.bat </i> is possible from a directory different from PLDoc's home directory,
+so your customized command file, starting from
+a different directory, doesn't have to programmatically enter PLDoc's directory
+before you call <i>pldoc.bat</i>.&nbsp;</p>
+If you are using Windows, you may also use a convenience script for quick running of
+pldoc.
+This is named <i>pldoc_drop.bat</i>. Make a desktop shortcut of this .bat file, then drag-and-drop a SQL file on it.
+PLDoc will be run and the result shown in browser.
+This method is useful if you want to quickly try how a comment will look like in the documentation.
+You will find more detailed info in the <i> pldoc_drop.bat</i> file itself.
+
+<h3><a name="PlDoc's runtime parameters">PLDoc</a><a name="PlDoc's runtime parameters">'s runtime parameters</a></h3>
+
+<p>An few example calls of the <i> pldoc.bat</i> command file:</p>
+<p><font face="Courier New">call pldoc.bat -overview samples/overview1.html -d SampleApplicationDoc samples/sample*.sql</font></p>
+<p><font face="Courier New">call pldoc.bat -url jdbc:oracle:thin:@localhost:1521:ORCL -user SCOTT -password TIGER -sql SYS.DBMS_PIPE,SYS.DBMS_OUTPUT</font></p>
+<p>The parameters we can use when running PLDoc:</p>
+<table border="1" width="100%">
+  <tr>
+    <td width="28%"><b>Parameter name (and structure)</b></td>
+    <td width="72%"><b>Description</b></td>
+  </tr>
+  <tr>
+    <td width="28%">-d &lt;<i>directory name</i>&gt;</td>
+    <td width="72%">The output directory's name.<br/>
+    Optional, defaults to the current directory.</td>
+  </tr>
+  <tr>
+    <td width="28%">-doctitle &lt;<i>text</i>&gt;</td>
+    <td width="72%">Application name.<br/>
+    Optional, defaults to MyApplication.</td>
+  </tr>
+  <tr>
+    <td width="28%">-overview &lt;<i>overview file name</i>&gt;</td>
+    <td width="72%">The name of the overview file we would like to include in
+      the main page of the technical documentation.<br/>
+      Optional.</td>
+  </tr>
+  <tr>
+    <td width="28%">-defaultnamescase &lt;<i><u>upper</u>|lower|mixed</i>&gt;</td>
+    <td width="72%">The case that unquoted names will be initially converted to (this may be subsequently overridden with <i>nameslowercase</i> or <i>namesuppercase</i>).<br/>
+      Optional 
+      <i>Upper</i> is the default, matching Oracle's standard case conversion.
+      <i>Lower</i> is the EnterpriseDB value, matching Postgres Plus' standard case conversion.
+      <i>Mixed</i> is the value if you want mixed case names.
+      </td>
+  </tr>
+  <tr>
+    <td width="28%">-namesdefaultcase</td>
+    <td width="72%">To convert all PL/SQL names to lowercase.<br/>
+      Optional (by default this is assumed true - override with <i>nameslowercase</i> or <i>namesuppercase</i>).</td>
+  </tr>
+  <tr>
+    <td width="28%">-nameslowercase</td>
+    <td width="72%">To convert all PL/SQL names to lowercase.<br/>
+      Optional (by default the case is converted to defaultcase).</td>
+  </tr>
+  <tr>
+    <td width="28%">-namesuppercase</td>
+    <td width="72%">To convert all PL/SQL names to uppercase.<br/>
+      Optional (by default the case is converted to defaultcase).</td>
+  </tr>
+  <tr>
+    <td width="28%">-stylesheetfile &lt;<i>filename</i>&gt;</td>
+    <td width="72%">CSS file to change style of the generated document.
+    <br/>
+    Optional (using the supplied defaultstylesheet.css by default).
+    </td>
+  </tr>
+  <tr>
+    <td width="28%">-definesfile &lt;<i>filename</i>&gt;</td>
+    <td width="72%">The file containing values for SQL*Plus variables.
+    <br/>
+    Optional.
+    </td>
+  </tr>
+  <tr>
+    <td width="28%">-inputencoding &lt;<i>enc</i>&gt;</td>
+    <td width="72%">Encoding used in the input files.
+    <br/>
+    Optional (by default, assuming the operation system default encoding).
+    </td>
+  </tr>
+  <tr>
+    <td width="28%"><i>&lt;file names </i><i>|</i><i> file name filters&gt;</i></td>
+    <td width="72%">A list of input files and/or file name filters which define the exact
+      list of PL/SQL source files to be documented.<br/>
+    Empty when generating from the Oracle dictionary, otherwise at least one file must be given.</td>
+  </tr>
+  <tr>
+    <td width="28%">-url &lt;<i>url</i>&gt;</td>
+    <td width="72%">Database url, for example jdbc:oracle:thin:@HOST:PORT:SID.<br/>
+    Required when generating from the Oracle dictionary.</td>
+  </tr>
+  <tr>
+    <td width="28%">-user &lt;<i>username</i>&gt;</td>
+    <td width="72%">Schema name.<br/>
+    Required when generating from the Oracle dictionary. The schema name is
+    case sensitive since Oracle stores schema names like "My schema" (name with
+    double quotes) as 'My schema' in the dictionary. Ordinary schema names
+    like scott are stored as 'SCOTT' (upper case).</td>
+  </tr>
+  <tr>
+    <td width="28%">-password &lt;<i>password</i>&gt;</td>
+    <td width="72%">Password of the schema.<br/>
+    Required when generating from the Oracle dictionary.</td>
+  </tr>
+  <tr>
+    <td width="28%">-sql &lt;<i>object name(s)</i>&gt;</td>
+    <td width="72%">Comma separated list of object name(s) to generate documentation for.<br/>
+    Required when generating from the Oracle dictionary.<br/>
+    An object name is case sensitive (the same rules as described for schema
+    names apply).<br/>
+    An object name may be prepended by a schema name and may have SQL
+    wildcards.<br/>
+    When the object belongs to a different schema than the logon user (as specified by
+    the -user parameter), the logon user must have been granted the role SELECT_CATALOG_ROLE.</td>
+  </tr>
+  <tr>
+    <td width="28%">-getmetadata &lt;<i>getmetadata</i>&gt;</td>
+    <td width="72%">Callable statement to retrieve PL/SQL code, e.g. <br/>"'{ ? = call GET_SOURCE( ? ,  ? ,  ? ,  ? , ? , ? ) }'"<br/> <b>Required only when running against a non-Oracle database</b>.</td>
+  </tr>
+  <tr>
+    <td width="28%">-returntype &lt;<i>returntype</i>&gt;</td>
+    <td width="72%">Number corresponding to the java.sql.types constant equivalent to the the object type returned by getmetadata, e.g. 12<br/> <b>Required only when running against a non-Oracle database</b>.</td>
+  </tr>
+</table>
+
+<h3>&nbsp;</h3>
+
+<h3><a name="Commenting rules">Commenting rules</a></h3>
+
+<p>There are some rules which you have to adhere to in order to provide PLDoc conform comments. There are comment types used by PL/SQL developers which are
+not currently supported by PLDoc.</p>
+<p>In general, the same rules apply for writing formal comments as for <a href="http://java.sun.com/j2se/javadoc/writingdoccomments/index.html"> javadoc</a>.
+At the moment PLDoc supports only the following tags: @headcom, @deprecated, @param, @return and @throws.
+If you do not have time to read the <a href="http://java.sun.com/j2se/javadoc/writingdoccomments/index.html">javadoc</a> rules, 
+at least keep in mind the main highlights:</p>
+<ul>
+  <li>
+    <p style="margin-top: 0">The comment text will be treated as HTML. You can use HTML tags, formatting, links etc.
+    If you need a line break in the text, put a &lt;br/&gt; tag.</li>
+  <li>
+    <p style="margin-top: 0">The first sentence of the comment (ending with a dot) becomes the "summary" for the comment,
+    shown in the Summary part of the generated documentation.</li>
+  <li>
+    <p style="margin-top: 0">All tags (if any) must be placed <strong>after</strong> the main comment text.</li>
+</ul>
+
+<h3><i>Formal, informal comments</i></h3>
+<p>Although PLDoc supports some types of the informal comments (single line --,
+/* */), try to use formal comments everywhere in your code ( /** ... */).
+Special PLDoc comment tags (e.g.: @param) can be used only in&nbsp; /* ... */
+and /** ... */ (multi-line) comments so if you want to take advantage of PLDoc's
+more advanced features you have to review your code for correcting multi-line --
+comments.</p>
+<p>PLDoc accepts the following two comment types:</p>
+<p><font face="Courier New">/* Checking the partner record whether it exists or
+not */<br>
+FUNCTION check_partner(id IN VARCHAR2) RETURN NUMBER;</font></p>
+<p><font face="Courier New">/** Checking the partner record whether it exists or
+not */<br>
+FUNCTION check_partner(id IN VARCHAR2) RETURN NUMBER;</font></p>
+<p>and accepts this as well:</p>
+<p><font face="Courier New">--Checking the partner record whether it exists or
+not<br>
+FUNCTION check_partner(id IN VARCHAR2) RETURN NUMBER;</font></p>
+<p>but doesn't accept&nbsp; this:</p>
+<p><font face="Courier New">--<br>
+--Checking the partner record whether it exists or not<br>
+--<br>
+FUNCTION check_partner(id IN VARCHAR2) RETURN NUMBER;</font></p>
+
+<h3><i>The package/object/collection comment</i></h3>
+
+<p>There are four ways to place a package, collection, schema-level function or procedure comment. 
+The result will be exactly the same in all cases. 
+Whichever you choose, it must be a formal comment.<p/>
+<p>The first method is to put the package comment text immediately before the package code:</p>
+
+<p><font face="Courier New">
+/**&nbsp;<br>
+*========================================================================&lt;br/&gt;<br>
+* A package for handling partner related activities like<br>
+* (adding a new partner,
+updating partner data, removing a<br>
+* partner)<br>
+*/<br>
+CREATE OR REPLACE<br>
+PACKAGE PARTNER_ACTNS<br>
+IS<br>
+...<br>
+END;<br>
+/</font></p>
+
+<p>This method has a disadvantage when running PLDoc against a database: the comment is not saved with the source code.</p>
+<p>Next method is to put the package comment text immediately before the IS keyword:</p>
+
+<p><font face="Courier New">
+CREATE OR REPLACE<br>
+PACKAGE PARTNER_ACTNS<br>
+/**&nbsp;<br>
+*========================================================================&lt;br/&gt;<br>
+* A package for handling partner related activities like<br>
+* (adding a new partner,
+updating partner data, removing a<br>
+* partner)<br>
+*/<br>
+IS<br>
+...<br>
+END;<br>
+/</font></p>
+
+<p>This method should not be used to document schema level functions and procedures; PLDoc requires that the comment is before the parameter list</p>
+
+<p>Next method is to put the object comment text between the object type and the object name:</p>
+
+<p><font face="Courier New">
+CREATE OR REPLACE<br>
+FUNCTION 
+<br>
+/**&nbsp;<br>
+* Retrieve name from supplied ID.<br>
+* 
+* @param p_id Person ID<br>
+*/<br>
+FN_GET_NAME ( p_id INTEGER) RETURN VARCHAR2 IS<br>
+...<br>
+END;<br>
+/</font></p>
+
+<p>This method has the advantage that comments are retained in the database, and may be extracted from compiled objects using PLDoc. This is the only practical way of adding effective PLDoc comments to collection, schema-level functions or procedures.</p>
+
+<p>And the last method is to put the package comment anywhere between the IS and the END keywords of the package spec 
+(but not inside the functions/procedures of the package). 
+In this case, you must add the @headcom tag to the end of the comment text, 
+to distinguish the package comment from comments for functions/procedures.</p>
+
+<p><font face="Courier New">CREATE OR REPLACE<br>
+PACKAGE PARTNER_ACTNS<br>
+IS<br>
+/**&nbsp;<br>
+*========================================================================&lt;br/&gt;<br>
+* A package for handling partner related activities like<br>
+* (adding a new partner,
+updating partner data, removing a<br>
+* partner)<br>
+* @headcom<br>
+*/<br>
+...<br>
+END;<br>
+/</font></p>
+
+<h3><i>The parameter descriptor comment (@param)</i></h3>
+
+<p>PLDoc supports the @param tag (well known for Java programmers) but doesn't
+support -- comments placed after parameter definitions.</p>
+<p><b>Not accepted by PLDoc:<br>
+</b><font face="Courier New">/** Checking the partner record whether it exists
+or not */<br>
+FUNCTION check_partner(<br>
+&nbsp;&nbsp;&nbsp;</font> <font face="Courier New">id IN VARCHAR2 -- The ID of
+the partner we want to check<br>
+) RETURN NUMBER;</font></p>
+<p><b>Accepted by PLDoc:</b><br>
+<font face="Courier New">/** Checking the partner record whether it exists or
+not.<br>
+* @param id The ID of the partner we want to check<br>
+* @return Full Name of the Person<br>
+*/<br>
+FUNCTION check_partner(<br>
+&nbsp;&nbsp;&nbsp;</font> <font face="Courier New">id IN VARCHAR2<br>
+) RETURN NUMBER;</font></p>
+<p>Keep in mind that @param tags should be placed in new lines.</p>
+<h3><i>The deprecated state comment (@deprecated)</i></h3>
+<p>You can mark PL/SQL entities deprecated by using the @deprecated tag. You can
+place this tag at the end of the multi-line comment providing some information
+together with the mark (e.g.: what should be used instead of the entity)</p>
+<p><font face="Courier New">/** Checking the partner record whether it exists or
+not.<br>
+* @param id The ID of the partner we want to check<br>
+</font><font face="Courier New">* @deprecated Use something &lt;b>new&lt;/b> instead.<br>
+</font><font face="Courier New">*/<br>
+FUNCTION check_partner(<br>
+&nbsp;&nbsp;&nbsp;</font> <font face="Courier New">id IN VARCHAR2<br>
+) RETURN NUMBER;</font></p>
+<h3><i>The return value comment (@return)</i></h3>
+<p>The return comment can be used to describe the return value of a PL/SQL
+method. Usage:</p>
+<p><font face="Courier New">/** Checking the partner record whether it exists or
+not.<br>
+* @param id The ID of the partner we want to check<br>
+* @return 1 if the partner exists, -1 if it doesn't.<br>
+*/<br>
+FUNCTION check_partner(<br>
+&nbsp;&nbsp;&nbsp;</font> <font face="Courier New">id IN VARCHAR2<br>
+) RETURN NUMBER;</font></p>
+<h3><i>The thrown exception tag (@throws)</i></h3>
+<p>Specifies the exception the method throws. Usage:</p>
+<p><font face="Courier New">  /** Thrown when a partner would be necessary for the operation<br>
+  * but it cannot be found */<br>
+NO_PARTNER_FOUND EXCEPTION;</font></p>
+<p><font face="Courier New">/** Removes the partner<br>
+* @param id The id of the partner to remove<br>
+* @throws NO_PARTNER_FOUND If the partner cannot be found<br>
+*/<br>
+PROCEDURE remove_partner(<br>
+&nbsp;&nbsp;&nbsp; id IN VARCHAR2<br>
+);</font></p>
+<h3><i>Using line breaks and HTML tags</i></h3>
+<p>Since the output of PLDoc is an HTML format documentation it is possible to
+use HTML tags in the comment text bodies to get better formatted output. Comment
+text is treated as HTML but only well-formed XHTML tags  are allowed (you must use &lt;br/&gt; instead of &lt;br&gt;)
+etc.)</p>
+<h3><i>Placing @ tags AFTER the comment text</i></h3>
+<p>Sections with @ tags should always be AFTER the comments. For example: If we
+are commenting a procedure and its parameters we always write the comment of the
+procedure first and we start the @param tags after the comment text of the
+procedure.</p>
+<p><font face="Courier New">/** Removes the partner and its dependent objects
+(cascading delete is set on this table)<br>
+* @param id The id of the partner to remove<br>
+*/<br>
+PROCEDURE remove_partner(<br>
+&nbsp;&nbsp;&nbsp; id IN VARCHAR2<br>
+);</font></p>
+
+<h3><a name="SQLPlusVariables">SQL*Plus Variables</a></h3>
+<p>It may be the case that your code contains some SQL*Plus variables (like &amp;myvar).
+If they do not affect PLDoc, you may leave them as is.
+But in case PLDoc cannot parse the code (e.g. some language constructs are substituted by variables)
+you can specify values for substitution.</p>
+<p>To do this, create a text file containing the names of variables
+(with leading &amp), and the values, separated by '='. Each assignment should be on separate line.
+For example, if you want to substitute value "first value" for variable &amp;myvar1 and "second value" for variable &amp;myvar2,
+create a file with the following content:</p>
+<pre>
+&amp;myvar1=first value
+&amp;myvar2=second value
+</pre>
+<p>Next, when you run PLDoc, add a command line parameter to point to the file:</p>
+<p><font face="Courier New">call pldoc.bat -definesfile mydir/myvariables.txt</font> <i><...></i></p>
+<p>PLDoc will replace all occurrences of &amp;myvar1 and &amp;myvar2 in the PL/SQL files with their respective values.
+After that, documentation will be generated as usual.</p>
+
+<h1><a name="Additional information">Additional information</a></h1>
+<p>The following file contain more information about PLDoc's releases:</p>
+<p><i><a href="../../changes-report.html">Change Log</a> </i>- changes in the software
+since the previous releases .</p>
+
+</body>
+
+</html>

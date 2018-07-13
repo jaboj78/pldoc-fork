@@ -1,0 +1,43 @@
+create or replace type T_dependent_handling as object
+(
+  -- Created : 31/08/2006
+  -- Purpose : Used in maintain specifications usecase
+
+ID                              NUMBER(28),
+CODE	                          VARCHAR2(6),
+ONLINE_FLAG	                    VARCHAR2(1),
+DISPLAY_ONLINE_FLAG 	          VARCHAR2(3),
+SPEC_TITLE	                    VARCHAR2(45),
+PSG_ID	                        NUMBER(28) ,
+SPEC_GROUP_TITLE	              VARCHAR2(45),
+PTY_CODE	                      VARCHAR2(6),
+SPG_ID                          NUMBER(28),
+REP_SPEC_EXIST                  VARCHAR2(1)
+)
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_invalidate VARCHAR2(30)
+      INVALIDATE
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_cascade VARCHAR2(3)
+      CASCADE 
+/* */
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_not_including VARCHAR2(3)
+      CASCADE NOT INCLUDING TABLE DATA
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_including VARCHAR2(3)
+      CASCADE INCLUDING TABLE DATA
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_convert VARCHAR2(3)
+      CASCADE CONVERT TO SUBSTITUTABLE 
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_force VARCHAR2(3)
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_exceptions VARCHAR2(3)
+      CASCADE EXCEPTIONS INTO dependent_handling_exceptions
+ ALTER TYPE T_dependent_handling
+      ADD ATTRIBUTE a_fq_exceptions VARCHAR2(3)
+      CASCADE EXCEPTIONS INTO other_schema.dependent_handling_exceptions
+/* */
+;
+

@@ -1,0 +1,148 @@
+Maven 2 PLDoc plugin - document PL/SQL in Oracle and other Databases.
+
+ In operation, maven-pldoc-plugin is similar to the Javadoc plugin.
+ The bundled downloads also contain example Maven POM and execution settings files for Oracle and other {{{../OtherDatabases.html}databases}}.
+
+Summary
+
+ You need to add the following to your reporting section of your POM file:
+
++-----+
+ <reporting>
+        <plugins>
+            <plugin>
+                <groupId>net.sourceforge.pldoc</groupId>
+                <artifactId>maven-pldoc-plugin</artifactId>
+                <version>${project.version}</version>
+            </plugin>
+        </plugins>
+ </reporting>
++-----+
+
+
+ Here is a example if you want to change the default configuration (location of sql files ... )
+
++-----+
+<plugin>
+	<groupId>net.sourceforge.pldoc</groupId>
+	<artifactId>maven-pldoc-plugin</artifactId>
+	<version>${velocityProjectVersion}</version>
+	<configuration>
+		<applicationTitle>project-name</applicationTitle>
+		<sourceDirectory>src/sql</sourceDirectory>
+		<includes>*.sql</includes>
+		<reportOutputDirectory>target/site/apidocs</reportOutputDirectory>
+	</configuration>                    
+</plugin>
++-----+
+
+
+ *Since version 3.0.0, you can to change the default configuration using standard Maven fileSets configuration*
+
++-----+
+<plugin>
+	<groupId>net.sourceforge.pldoc</groupId>
+	<artifactId>maven-pldoc-plugin</artifactId>
+	<version>${velocityProjectVersion}</version>
+	<configuration>
+		<applicationTitle>project-name</applicationTitle>
+		<-- <sourceDirectory>src/sql</sourceDirectory>
+		<includes>*.sql</includes> -->
+		<fileSets>
+		  <fileSet>
+		    <directory>samples</directory>
+		    <include>**/*.sql</include>
+		  </fileSet>
+		  <fileSet>
+		    <directory>/Development/pldoc/trunk/src/test/resources/testinput</directory>
+		    <includes>
+		      <include>**/*.fnc</include>
+		      <include>**/*.prc</include>
+		      <include>**/*.trg</include>
+		      <include>**/*.pks</include>
+		      <include>**/*.pkb</include>
+		      <include>**/*.tps</include>
+		      <include>**/*.tpb</include>
+		    </includes>
+		    <excludes>
+		      <exclude>**/*Java*</exclude>
+		      <exclude>**/*_fully_reserved*</exclude>
+		    </excludes>
+		  </fileSet>
+		</fileSets>
+		<reportOutputDirectory>target/site/apidocs</reportOutputDirectory>
+	</configuration>                    
+</plugin>
++-----+
+
+
+ Here is a example if you want to change the default configuration (reading database code ... )
+
++-----+
+    <plugins>
+      <plugin>
+	<groupId>net.sourceforge.pldoc</groupId>
+	<artifactId>maven-pldoc-plugin</artifactId>
+	<version>${velocityProjectVersion}</version>
+	  <dependencies>
+	    <dependency>
+	     <groupId>com.oracle</groupId>
+	     <artifactId>ojdbc6</artifactId>
+	     <version>12.1.0.2</version>
+	    </dependency>
+	  </dependencies>
+	<configuration>
+	  <applicationTitle>Maven Goal Enterprise PLDoc</applicationTitle>
+	  <!-- sourceDirectory>src/test/resources/samples</sourceDirectory>
+	  <includes>*.sql</includes -->
+	  <destDir>destDir</destDir>
+	  <outputDirectory>target/site/apidocs/outputDirectory</outputDirectory>
+	  <reportOutputDirectory>target/site/apidocs/reportOutputDirectory</reportOutputDirectory>
+	  <showSkippedPackages>true</showSkippedPackages>
+	  <dbUrl>jdbc:oracle:thin:@//192.168.100.22:1521/orcl</dbUrl>
+	  <dbUser>system</dbUser>
+	  <dbPassword>oracle</dbPassword>
+	  <inputTypes>PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY</inputTypes>
+	  <inputObjects>ANONYMOUS.%,APEX_040000.%,APEX_PUBLIC_USER.%,APPQOSSYS.%,BI.%,CACHEADM.%,CTXSYS.%,DBSNMP.%,DEMO.%,DIP.%,EXFSYS.%,FLOWS_FILES.%,HR.%,HR1.%,HR_TRIG.%,IX.%,MDDATA.%,MDSYS.%,MGMT_VIEW.%,OBE.%,OE.%,OE1.%,OLAPSYS.%,ORACLE_OCM.%,ORDDATA.%,ORDPLUGINS.%,ORDSYS.%,OUTLN.%,OWBSYS.%,OWBSYS_AUDIT.%,PHPDEMO.%,PLS.%,PM.%,SCOTT.%,SH.%,SI_INFORMTN_SCHEMA.%,SPATIAL_CSW_ADMIN_USR.%,SPATIAL_WFS_ADMIN_USR.%,SYS.%,SYSMAN.%,SYSTEM.%,TIMESTEN.%,TTHR.%,WMSYS.%,XDB.%,XDBMETADATA.%,XDBPM.%,XFILES.%,XS$NULL.%</inputObjects>
+	</configuration>                    
+      </plugin>
+      ...
+    </plugins>
++-----+
+
+
+ Database access requires Oracle JDBC classes: due to licensing restrictions, they are not hosted in Maven Central. A {{{http://repo2.maven.org/maven2/com/oracle/ojdbc14/10.2.0.3.0/ojdbc14-10.2.0.3.0.pom}pom.xml}} file for an old version exists in the {{{https://search.maven.org/#search%7Cga%7C1%7Cojdbc}Maven Central Repository}}, but you will have to {{{http://www.oracle.com/technetwork/database/features/jdbc/default-2280470.html}download the JAR file(s)}} and install them into your local Maven repository. 
+
++-----+
+mvn install:install-file -Dfile=${ORACLE_HOME}/ojdbc6.jar -Dpackaging=jar -DgroupId=com.oracle -DartifactId=ojdbc6 -Dversion=12.1.0.2 -Dpackage=jar -DgeneratePom=true 
++-----+
+
+
+Other Databases
+
+ For other database types, the JDBC driver classes, metadata methods, metadata return type, must be specified explicitly.
+ 
+ The JDBC drivers are usually included with the database client software: make them accessible using the steps below:- 
+
+ * Install the database client;
+
+ * Set an environment variable pointing to the installed client;
+
+
+ * Install Maven artefacts for the JDBC drivers into the local repository;
+
+ * Run "mvn pldoc:pldoc" or "mvn site". 
+
+ The example repository installation scripts and example scripts bundled into the distributions make these assumptions:  
+
+*---*---*---*---*
+|Database Type|Environment Variable Assumed|Example Installation script| Example Command-line| 
+*---*---*---*---*
+|Oracle|ORACLE_HOME|ojdbc-mvn-install.sh| mvn -s maven_oracle_settings.xml -f pldoc-oracle-pom.xml|
+*---*---*---*---*
+|DB2|DB2_HOME|db2jdbc-mvn-install.sh| mvn -s maven_db2_settings.xml -f pldoc-db2-pom.xml|
+*---*---*---*---*
+|TimesTen|TT_HOME|ttjdbc-mvn-install.sh| mvn -s maven_timesten_settings.xml -f pldoc-timesten-pom.xml|
+*---*---*---*---*
+
+enjoy writing documentation...

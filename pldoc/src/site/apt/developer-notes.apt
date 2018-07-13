@@ -1,0 +1,72 @@
+  ---------------
+  Developer Notes 
+  ---------------
+
+Introduction
+
+ PLDoc code comprises:- 
+
+ * JavaCC - the PL/SQL parser adding entries to application.xml 
+
+ * Java - main PLDoc class and utility classes
+
+ * XSLT - creates all HTML files from application.xml using XSLT
+
+ * Batch and Shell scripts - Windows and Unix/linux shell scripts to call PLDoc java
+
+ []
+
+ The PLDoc build process comprises:- 
+
+ * JavaCC - generation PL/SQL parser 
+
+ * Java   - compilation of Java classes and library generation
+
+ * Bundles - creation of standalone bundles
+
+ []
+
+Compilation 
+
+  <<Generating the parser takes the most time of the build process (approximately 30 minutes) and is unnecessary if changes are made only to Java, XLST or batch/shell scripts>>.
+ 
+
++--
+mvn package                     Compilation including JavaCC generation
+mvn -D skipJavacc=true package  Compilation skipping JavaCC generation
+mvn install                     Compile and install artefacts into local repository (required for subsequent 
+                                use in maven-pldoc-plugin)
++--
+
+ <<Since PLDoc version 1.1.3 Maven may require a larger heap size to complete JavaCC generation; when I encountered generation errors, I specified lots of heap memory just to get the parser generated, i.e.>>   
+
++--
+export MAVEN_OPTS=-Xmx1024m 
++--
+
+
+Site Generation
+
+  Site generation takes much less time (less than 2 minutes).
+
++--
+mvn site         Site generation to target directory
+mvn site:deploy  Refresh site at Sourceforge
++--
+
+Code Release 
+
+  New versions should be released using the Maven release plugin which automates a lot of the steps needs to create a successful release. A successful release will automatically be deployed to the {{{http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22net.sourceforge.pldoc%22%20AND%20a%3A%22pldoc%22}central Maven repository}}, via rsync synchronisation. The synchronisation process may take several days.
+
+  For more information about the steps required to deploy to Sourceforge, refer to {{{http://maven.apache.org/plugins/maven-site-plugin/examples/site-deploy-to-sourceforge.net.html}Deployment to Sourceforge}}.
+
+ <<The prepare step takes a significant amount of time, simply because the build process is performed twice, once to validate the project and once to build the release artefacts>>.
+ 
++--
+mvn release:prepare                          Validate code tree (including build), extract code from SCM and build
+ssh -t <username>,pldoc@shell.sf.net create  Create remote Sourceforge shell required for site deployment
+mvn release:perform                          Deploy release artefacts to Sourceforge and update pldoc.sourceforge.net site
++--
+
+
+

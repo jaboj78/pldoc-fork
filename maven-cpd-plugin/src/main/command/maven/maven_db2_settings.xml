@@ -1,0 +1,46 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <!-- 
+        Put ths profile information into ~/.m2/settings.xml 
+    -->
+    <profiles>
+        <profile>
+	  <id>db2-direct</id>
+	  <properties>
+	    <maven.pldoc.dbUser>db2inst1</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>db2inst1</maven.pldoc.dbPassword>
+	    <maven.pldoc.driverName>com.ibm.db2.jcc.DB2Driver</maven.pldoc.driverName>
+	    <maven.pldoc.getMetadataStatement>BEGIN SELECT text INTO ? FROM dba_source WHERE type =  ? AND name = ? AND owner = ? AND  ? LIKE '%'  AND ? LIKE '%' AND ? LIKE '%' ; END;</maven.pldoc.getMetadataStatement>
+	    <maven.pldoc.getMetadataStatementReturnType>2005</maven.pldoc.getMetadataStatementReturnType>
+	    <maven.pldoc.dbUrl>jdbc:db2:db </maven.pldoc.dbUrl>
+	    <maven.pldoc.applicationTitleGoal>Maven Goal Enterprise PLDoc - DB2 Direct</maven.pldoc.applicationTitleGoal>
+	    <maven.pldoc.destDirGoal>Goal-Enterprise-DB2-Direct</maven.pldoc.destDirGoal>
+	    <maven.pldoc.applicationTitleSite>Maven Site Enterprise PLDoc- DB2 Direct</maven.pldoc.applicationTitleSite>
+	    <maven.pldoc.destDirSite>Site-Enterprise-DB2-Direct</maven.pldoc.destDirSite>
+	  </properties>
+        </profile>
+        <profile>
+	  <id>db2-client</id>
+	  <properties>
+	    <maven.pldoc.dbUser>db2inst1</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>db2inst1</maven.pldoc.dbPassword>
+	    <maven.pldoc.driverName>com.ibm.db2.jcc.DB2Driver</maven.pldoc.driverName>
+	    <maven.pldoc.getMetadataStatement>BEGIN SELECT text INTO ? FROM dba_source WHERE type =  ? AND name = ? AND owner = ? AND  ? LIKE '%'  AND ? LIKE '%' AND ? LIKE '%' ; END;</maven.pldoc.getMetadataStatement>
+	    <maven.pldoc.getMetadataStatementReturnType>2005</maven.pldoc.getMetadataStatementReturnType>
+	    <maven.pldoc.dbUrl>jdbc:db2://localhost:50000/db</maven.pldoc.dbUrl>
+	    <maven.pldoc.applicationTitleGoal>Maven Goal Enterprise PLDoc - DB2 Client</maven.pldoc.applicationTitleGoal>
+	    <maven.pldoc.destDirGoal>Goal-Enterprise-DB2-Client</maven.pldoc.destDirGoal>
+	    <maven.pldoc.applicationTitleSite>Maven Site Enterprise PLDoc- DB2 Client</maven.pldoc.applicationTitleSite>
+	    <maven.pldoc.destDirSite>Site-Enterprise-DB2-Client</maven.pldoc.destDirSite>
+	  </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+      <activeProfile>db2-direct</activeProfile>
+    </activeProfiles>
+
+</settings>

@@ -1,0 +1,98 @@
+Latest Downloads
+
+ The PLDoc CPD Maven plug-in is available from Maven Central and here.
+
+JAR files 
+
+ These files may be used to refresh an existing local PLDoc CPD installation.
+
+*---------------------------------------------------------------------------------+
+|{{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}.jar}Latest PLDoc CPD Plug-In JAR}} |
+*---------------------------------------------------------------------------------+
+JAR files 
+
+
+Bundles
+
+ The bundles are the easiest way of installing and running the PLDoc CPD plugin into a local Maven repository. All bundles contain example POM files and scripts for Windows and Unix/Linux: with Oracle JDBC drivers you have immediate access to PLDoc.
+
+*---------------------------------------------------------------------------------+
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.zip}ZIP bundle}}|
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.tar.gz}TGZ bundle}}|
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.tar.bz2}TBZ bundle}}|
+*---------------------------------------------------------------------------------+
+Bundles
+
+Installation
+
+ Download a PLDoc CPD plugin bundle and unzip/untar the bundle. All bundles contain scripts for Windows and Unix/Linux.
+
+
+ If you do not already have Oracle access via JDBC, download {{{http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html}Oracle JDBC drivers}} suitable for your Java version (Java 6 is recommended). 
+
+ Set the ORACLE_HOME environment variable to the location of the directory containing the JDBC JAR files: the scripts assume that the JDBC JAR files are located under $\{ORACLE_HOME}/jdbc/lib (Normal Oracle installation) or ${ORACLE_HOME} (Oracle Instant Client installation).
+
+ * Windows
+
++--
+ SET ORACLE_HOME=<Folder Path>
++--
+ e.g.
+
++--
+ SET ORACLE_HOME=C:\Applications\Oracle\JDBC
++--
+
+ * Unix/Linux
+
++--
+ ORACLE_HOME=<Folder Path> ; export ORACLE_HOME
++--
+ e.g.
+
++--
+ ORACLE_HOME=/var/app/oracle/product/JDBC ; export ORACLE_HOME
++--
+
+ Alternatively, download {{{http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html}Oracle Instant Client}} and follow the {{{http://www.oracle.com/technetwork/database/features/instant-client/index-100365.html}Installation instructions}}. Set the ORACLE_HOME environment variable to the location of the expanded Instant Client files.
+
+
+ Install the Oracle JDBC drivers into the local repository: 
+
+ * Windows
+
++--
+ mvn install:install-file -Dfile=%ORACLE_HOME%/ojdbc14.jar -Dpackaging=jar -DgroupId=com.oracle -DartifactId=ojdbc14 -Dversion=10.2.0.3 -Dpackage=jar -DgeneratePom=true 
++--
+
+ * Unix/Linux
+
++--
+ mvn install:install-file -Dfile=${ORACLE_HOME}/ojdbc14.jar -Dpackaging=jar -DgroupId=com.oracle -DartifactId=ojdbc14 -Dversion=10.2.0.3 -Dpackage=jar -DgeneratePom=true 
++--
+
+
+ Optionally, install the PLDoc CPD Maven plugin into the local repository: 
+
++--
+ mvn install:install-file -Dfile=target/${velocityBuildFinalName}.jar -Dpackaging=jar -DgroupId=net.sourceforge.pldoc -DartifactId=maven-cpd-plugin -Dversion=${velocityProjectVersion} -Dpackage=jar -DgeneratePom=true 
++--
+
+ Check that installation has been successful:
+
+ * Windows
+
++--
+ pldoc_maven_example.bat 
++--
+
+ * Unix/Linux
+
++--
+ pldoc_maven_example.sh 
++--
+
+
+
+
+

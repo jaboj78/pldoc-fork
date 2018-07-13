@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://maven.apache.org/changes/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/changes/1.0.0 http://maven.apache.org/xsd/changes-1.0.0.xsd">
+    <properties>
+        <title>PLDoc CPD Project</title>
+        <author email="altumano at users.sourceforge.net">Albert Tumanov</author>
+    </properties>
+    <body>
+        <release version="0.1.16" date="2015-01-05"  description="Generate CPD links which match new source code link names" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.16</action>
+        </release>
+        <release version="0.1.15" date="2014-08-09"  description="Generate CPD links which match new source code link names" >
+		<action type="fix" dev="sturton" >Upgrade cpdhtml.xsl to generate links to new PMD/JXR format link names</action>
+        </release>
+        <release version="0.1.14" date="2014-08-08"  description="Reissue because of signing problems" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.15 and PMD version 5.1.2</action>
+        </release>
+        <release version="0.1.13" date="2014-08-07"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.15 and PMD version 5.1.2</action>
+        </release>
+        <release version="0.1.12" date="2014-08-07"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.15 and PMD version 5.1.2</action>
+        </release>
+        <release version="0.1.11" date="2014-02-23"  description="Require latest versions of PLDoc" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.14 and PMD version 5.1.0</action>
+            <action type="fix" dev="sturton" issue="103" >Strip BOM from UTF* InputStreams</action>
+        </release>
+        <release version="0.1.10" date="2013-10-21"  description="Require latest versions of PLDoc" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.7</action>
+        </release>
+        <release version="0.1.9" date="2013-08-04"  description="Require latest versions of PLDoc" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.6</action>
+        </release>
+        <release version="0.1.8" date="2013-07-22"  description="Require latest versions of PLDoc" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.5</action>
+        </release>
+        <release version="0.1.7" date="2013-07-17"  description="Require latest versions of PLDoc" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.4</action>
+        </release>
+        <release version="0.1.6" date="2013-06-17"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.3 and PMD version 5.0.4</action>
+        </release>
+        <release version="0.1.5" date="2013-05-30"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" >_CORRECTLY_ escape Windows directory separators in outputRootPath when generating relative paths</action>
+        </release>
+        <release version="0.1.4" date="2013-05-28"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" >Escape Windows directory separators in outputRootPath when generating relative paths</action>
+        </release>
+        <release version="0.1.3" date="2013-05-25"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.2</action>
+        </release>
+        <release version="0.1.2" date="2013-05-22"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.1</action>
+        </release>
+        <release version="0.1.1" date="2013-05-20"  description="Correct database reading when not scraping source code" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.5.0</action>
+            <action type="fix" dev="sturton" >Correct regression whilst reading database when not scraping source code</action>
+        </release>
+        <release version="0.1.0" date="2013-05-15"  description="Scrape database sources whilst processing it" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.4.3</action>
+            <action type="add" dev="sturton" >Optionally extract source code to file system when reading database code</action>
+        </release>
+        <release version="0.0.4" date="2013-04-12"  description="Require latest versions of PLDoc and PMD" >
+            <action type="update" dev="sturton" >Project POM file - require PLDoc version 1.3.11</action>
+            <action type="update" dev="sturton" >Project POM file - require PMD version 5.0.3</action>
+        </release>
+        <release version="0.0.3" date="2013-04-01"  description=" Migrate to new Sourceforge format and Sonatype OSSRH releases" >
+            <action type="update" dev="sturton" >Project POM file - require PLdoc version 1.3.9</action>
+            <action type="update" dev="sturton" >Project POM file - update to Sonatype OSS parent </action>
+            <action type="update" dev="sturton" >Project POM file - update SCM locations for new Sourceforge project format</action>
+        </release>
+
+        <release version="0.0.2"  date="2012-08-05" >
+            <action type="fix" dev="sturton" issue="3553725" >Incorporate PLDoc 1.3.3 changes - support "AT LOCAL" and "AT TIME ZONE (DBTIMEZONE|SESSIONTIMEZONE|literal|expression)" time zone clauses</action>
+            <action type="fix" dev="sturton" >Support directory command line parameter (-d) in Settings command-line parser</action>
+            <action type="fix" dev="sturton" >Use Settings.outputDirectory value when writing output file in PLDocCPDTask</action>
+        </release>
+        <release version="0.0.1"  date="2012-07-25" >
+            <action type="add" dev="sturton" >Reverse engineer JJTree AST from PLDoc 1.3.2 and generate PMD PLSQL Language</action>
+            <action type="add" dev="sturton" >Cut and Paste PLDoc Settings.java, etc. in order to generate a version of CPD (Cut and Paste detector- ironic eh?) that can run against source stored in databases.</action>
+        </release>
+
+    </body>
+</document>

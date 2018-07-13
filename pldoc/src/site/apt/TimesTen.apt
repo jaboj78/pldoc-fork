@@ -1,0 +1,148 @@
+TimesTen 
+
+ Oracle TimesTen 11.2.* supports {{{http://docs.oracle.com/cd/E11882_01/timesten.112/e21639/toc.htm#BEGIN}PL/SQL}}: the JDBC drivers may be installed from the TimesTen client. 
+
+
+ Source code loaded via ttisql retains comments and thus PLDoc comments; the SYS.DBA_SOURCE table is similar to Oracle's view of the same name.
+ In order to retrieve the source code as a single Java object, each line in the tables must be concatenated. Try something like the code below:
+
++------------------------------------------------------------------------------------------------------------------+ 
+ CREATE OR REPLACE FUNCTION pls.get_source 
+  /** 
+   *Return TimesTen PLSQL source code as a VARCHAR2 (TimesTen 11.2.1 does not support DBMS_LOB). 
+   *
+   *<p>This function apes DBMS_METADATA.GET_DDL, so must take 6 parameters; currently only the 
+   *P_OBJECT_TYPE, `P_OBJECT_NAME, `P_OWNER parameters are used.
+   *</p>
+   *<p><b><u>Because this function returns a VARCHAR2, this function will return a maximum of 4MB.</u></b></p>
+   *
+   *@param p_object_type Object Type
+   *@param p_object_name Object Name 
+   *@param p_owner Object Owner 
+   *@param p_version Object Version 
+   *@param p_model  Object Model 
+   *@param p_transform Required Return format 
+   *@return Object Source as a VARCHAR2(up to 4MB in TimesTen) 
+   */
+ (p_object_type VARCHAR2
+ ,p_object_name VARCHAR2
+ ,p_owner VARCHAR2
+ ,p_version     IN VARCHAR2 DEFAULT 'COMPATIBLE'
+ ,p_model       IN VARCHAR2 DEFAULT 'ORACLE'
+ ,p_transform   IN VARCHAR2 DEFAULT 'DDL'
+ )
+ RETURN VARCHAR2 
+ AS
+  /** largest possible VARCHAR2 */ 
+  --l_source  VARCHAR2(4194304) := '';
+  l_object_type  VARCHAR2(30) ;
+  l_source  VARCHAR2(32767) := '';
+  l_source_lines_t  dbms_preprocessor.source_lines_t;
+ BEGIN
+         --As the passed parameters are designed for DBMS_METADATA.GET_DDL, 
+         --this function must convert Object Types such as 'PACKAGE_BODY' back to 'PACKAGE BODY') 
+         l_object_type := CASE p_object_type
+                         WHEN 'PACKAGE_BODY' THEN 'PACKAGE BODY'
+                         WHEN 'PACKAGE_SPEC' THEN 'PACKAGE'
+                         WHEN 'TYPE_BODY' THEN 'TYPE BODY'
+                         WHEN 'TYPE_SPEC' THEN 'TYPE'
+                         ELSE p_object_type
+                         END;
+ 	l_source_lines_t :=  DBMS_PREPROCESSOR.GET_POST_PROCESSED_SOURCE ( l_object_type, p_owner, p_object_name) ;
+ 	IF l_source_lines_t.COUNT > 0
+ 	THEN 
+ 		FOR l IN 1 .. l_source_lines_t.COUNT
+ 		LOOP
+ 			l_source := 
+ 				CASE l
+ 				WHEN 1 THEN  l_source_lines_t(l)
+ 				ELSE l_source || l_source_lines_t(l)
+ 				END;
+ 		END LOOP;
+ 	END IF;
+ 	RETURN l_source ;
+ END get_source;
+ /
+
+ SHOW ERRORS 
+
++------------------------------------------------------------------------------------------------------------------+ 
+ 
+
+ Oracle TimesTen 11.2.1 does not support CLOBs
+
++------------------------------------------------------------------------------------------------------------------+ 
+ ./pldoc-timesten.sh -doctitle \"Sample TimesTen Application\" -d TimesTen-Example -url -types "'PACKAGE,PACKAGE BODY,PROCEDURE,FUNCTION'"   -driver -returntype 12 -getmetadata -user pls -password pls  -sql "PLS.%,TTHR.%" -showSkippedPackages 
++------------------------------------------------------------------------------------------------------------------+ 
+
+ Oracle TimesTen 11.2.2 supports CLOBs
+
++------------------------------------------------------------------------------------------------------------------+ 
+  CREATE OR REPLACE FUNCTION pls.get_source_lob 
+   /** 
+    *Return TimesTen PLSQL source code as a CLOB (TimesTen 11.2.2 and after support DBMS_LOB). 
+    *
+    *<p>This function apes DBMS_METADATA.GET_DDL, so must take 6 parameters; currently only the 
+    *P_OBJECT_TYPE, `P_OBJECT_NAME, `P_OWNER parameters are used.
+    *</p>
+    *
+    *@param p_object_type Object Type
+    *@param p_object_name Object Name 
+    *@param p_owner Object Owner 
+    *@param p_version Object Version 
+    *@param p_model  Object Model 
+    *@param p_transform Required Return format 
+    *@return Object Source as a CLOB 
+    *
+    *@see http://docs.oracle.com/cd/E11882_01/timesten.112/e21645/d_lob.htm#i999503
+    */
+  (p_object_type VARCHAR2
+  ,p_object_name VARCHAR2
+  ,p_owner VARCHAR2
+  ,p_version     IN VARCHAR2 DEFAULT 'COMPATIBLE'
+  ,p_model       IN VARCHAR2 DEFAULT 'ORACLE'
+  ,p_transform   IN VARCHAR2 DEFAULT 'DDL'
+  )
+  RETURN CLOB 
+  AS
+   l_object_type  VARCHAR2(30) ;
+   l_source  CLOB;
+   l_source_lines_t  dbms_preprocessor.source_lines_t;
+  BEGIN
+          --As the passed parameters are designed for DBMS_METADATA.GET_DDL, 
+          --this function must convert Object Types such as 'PACKAGE_BODY' back to 'PACKAGE BODY') 
+          l_object_type := CASE p_object_type
+                          WHEN 'PACKAGE_BODY' THEN 'PACKAGE BODY'
+                          WHEN 'PACKAGE_SPEC' THEN 'PACKAGE'
+                          WHEN 'TYPE_BODY' THEN 'TYPE BODY'
+                          WHEN 'TYPE_SPEC' THEN 'TYPE'
+                          ELSE p_object_type
+                          END;
+  	l_source_lines_t :=  DBMS_PREPROCESSOR.GET_POST_PROCESSED_SOURCE ( l_object_type, p_owner, p_object_name) ;
+  	IF l_source_lines_t.COUNT > 0
+  	THEN 
+  		FOR l IN 1 .. l_source_lines_t.COUNT
+  		LOOP
+  			CASE l
+  			WHEN 1 THEN  
+  				SYS.DBMS_LOB.CREATETEMPORARY (l_source, TRUE); 
+  				SYS.DBMS_LOB.WRITE (l_source, LENGTH(l_source_lines_t(l)), 1, l_source_lines_t(l) ); 
+  			ELSE 
+  				SYS.DBMS_LOB.WRITEAPPEND (l_source, LENGTH(l_source_lines_t(l)), l_source_lines_t(l) ); 
+  			END CASE;
+  		END LOOP;
+  	END IF;
+  	RETURN l_source ;
+  END get_source_lob;
+  /
+
+  SHOW ERRORS 
+
++------------------------------------------------------------------------------------------------------------------+ 
+
++------------------------------------------------------------------------------------------------------------------+ 
+ ./pldoc-timesten.sh -doctitle \"Sample TimesTen Application\" -d TimesTen-Example -url -types "'PACKAGE,PACKAGE BODY,PROCEDURE,FUNCTION'"   -driver -returntype 2005 -getmetadata -user pls -password pls  -sql "PLS.%,TTHR.%" -showSkippedPackages 
++------------------------------------------------------------------------------------------------------------------+ 
+
+ 
+  

@@ -1,0 +1,422 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.sourceforge.pldoc</groupId>
+    <artifactId>pldoc-cpd</artifactId>
+    <packaging>jar</packaging>
+    <version>0.1.17-SNAPSHOT</version>
+    <name>PLDoc CPD Plugin - ${project.version}</name>
+    <description>The CPD Plugin is an extension that combines the PMD/CPD and PLDoc codebases
+            to check for duplicated code in PLSQL code.
+    </description>
+    <url>http://pldoc.sourceforge.net</url>
+    <licenses>
+        <license>
+            <distribution>repo</distribution>
+            <name>lgpl</name>
+            <url>http://www.gnu.org/licenses/lgpl-2.1.txt</url>
+        </license>
+    </licenses>
+
+    <issueManagement>
+        <system>Sourceforge2</system>
+	<url>https://sourceforge.net/p/pldoc/bugs/</url>
+    </issueManagement>
+
+    <parent>
+      <groupId>org.sonatype.oss</groupId>
+      <artifactId>oss-parent</artifactId>
+      <version>7</version>
+    </parent>
+
+    <mailingLists>
+      <mailingList>
+	<name>PLDoc Development Mailing list</name>
+	<subscribe>http://lists.sourceforge.net/mailman/listinfo/pldoc-chat</subscribe>
+	<unsubscribe>http://lists.sourceforge.net/mailman/listinfo/pldoc-chat</unsubscribe>
+	<archive>http://sourceforge.net/mailarchive/forum.php?forum_name=pldoc-chat</archive>
+	<post>pldoc-chat@lists.sourceforge.net</post>
+      </mailingList>
+    </mailingLists>
+
+    <scm>
+	<connection>scm:svn:https://svn.code.sf.net/p/pldoc/code/cpd/trunk</connection>
+	<developerConnection>scm:svn:https://svn.code.sf.net/p/pldoc/code/cpd/trunk</developerConnection>
+        <url>https://sourceforge.net/p/pldoc/code/HEAD/tree/cpd/</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Albert Tumanov</name>
+            <id>altumano</id>
+            <email>altumano@users.sourceforge.net</email>
+            <roles>
+                <role>Project Manager</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Zoltan Farkas</name>
+            <id>zolyfarkas</id>
+            <email>zolyfarkas@users.sourceforge.net</email>
+            <roles>
+                <role>Software Developer</role>
+            </roles>
+        </developer>
+        <developer>
+            <name>Stuart Turton</name>
+            <id>sturton</id>
+            <email>sturton@users.sourceforge.net</email>
+            <roles>
+                <role>Software Developer</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <distributionManagement>
+	 <!-- Repositories now defined in parent POM 
+        <repository>
+            <id>release.pldoc.sf.net</id>
+            <name>PLDoc Release Repository</name>
+            <url>sftp://web.sourceforge.net/home/project-web/pldoc/htdocs/m2/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshot.pldoc.sf.net</id>
+            <name>PLDoc Snapshot Repository</name>
+            <url>sftp://web.sourceforge.net/home/project-web/pldoc/htdocs/m2-snapshot/</url>
+        </snapshotRepository>
+        -->
+        <site>
+            <id>site.pldoc.sf.net</id>
+            <name>PLDoc CPD Site</name>
+            <url>scp://shell.sourceforge.net/home/project-web/pldoc/htdocs/maven-site/pldoc-cpd</url>
+        </site>
+    </distributionManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.sourceforge.pldoc</groupId>
+            <artifactId>pldoc</artifactId>
+	    <!-- Require greater than or equal to PLDoc 1.5.16 -->
+            <version>[1.5.16,)</version>
+        </dependency>
+        <dependency>
+            <groupId>net.sourceforge.pmd</groupId>
+            <artifactId>pmd</artifactId>
+            <version>5.1.2</version>
+        </dependency>
+	<!-- Development Only -->
+	    <dependency>
+	     <groupId>com.oracle</groupId>
+	     <artifactId>ojdbc14</artifactId>
+	     <version>10.2.0.3</version>
+	     <scope>runtime</scope>
+	    </dependency>
+	    <!-- Maven -->
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-plugin-api</artifactId>
+            <version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.reporting</groupId>
+            <artifactId>maven-reporting-api</artifactId>
+            <version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven</groupId>
+            <artifactId>maven-project</artifactId>
+            <version>2.0</version>
+        </dependency>
+
+    </dependencies>
+
+    <properties>
+      <project.build.sourceEncoding>UTF8</project.build.sourceEncoding>
+      <project.report.outputEncoding>UTF8</project.report.outputEncoding>
+         <!-- 
+	   apt uses velocity to replace variables, which does not support variable names containing periods/full stops 
+       -->
+      <velocityProjectVersion>${project.version}</velocityProjectVersion>
+      <velocityBuildFinalName>${project.build.finalName}</velocityBuildFinalName>
+      <velocityDownloadRoot>https://oss.sonatype.org/content/repositories/releases/net/sourceforge/pldoc/pldoc-cpd</velocityDownloadRoot>
+      <!--
+	   Correct Change Log Report File Activity Report Links for subproject
+      -->
+      <maven.changelog.svn.baseurl>https://sourceforge.net/p/pldoc/code/HEAD/tree/cpd/</maven.changelog.svn.baseurl>
+    </properties>
+
+    <build>
+
+
+   
+      <!-- Needed for deployment to Sourceforge --> 
+      <extensions>
+	<extension>
+	  <groupId>org.apache.maven.wagon</groupId>
+	  <artifactId>wagon-ssh</artifactId>
+	  <version>1.0-beta-6</version>
+	</extension>
+      </extensions>  
+	  
+
+      <plugins>
+        <!-- 
+	     Make executable JAR file 
+	--> 
+	<plugin>
+	  <artifactId>maven-assembly-plugin</artifactId>
+	  <version>2.2.1</version>
+	  <executions>
+	    <execution>
+              <id>make-assembly</id> <!-- this is used for inheritance merges -->
+              <phase>package</phase> <!-- bind to the packaging phase -->
+	      <goals>
+		<goal>single</goal>
+	      </goals>
+		<configuration>
+		  <descriptorRefs>
+		    <descriptorRef>jar-with-dependencies</descriptorRef>
+		  </descriptorRefs>
+		  <!--
+		    <finalName>pldoc</finalName>
+		    <appendAssemblyId>false</appendAssemblyId>
+		  -->
+		  <archive>
+		    <manifest>
+		      <mainClass>net.sourceforge.pldoc.cpd.CPD</mainClass>
+		    </manifest>
+		  </archive>
+		</configuration>
+	    </execution>
+            <execution>
+              <id>distribution</id> 
+              <phase>package</phase> <!-- bind to the packaging phase -->
+              <goals>
+                <goal>single</goal>
+              </goals>
+	      <configuration>
+		    <descriptors>
+		      <descriptor>${basedir}/src/main/assembly/distribution.xml</descriptor>
+		    </descriptors>
+	      </configuration>
+            </execution>
+	  </executions>
+	</plugin>
+	
+	<plugin>
+	  <artifactId>maven-clean-plugin</artifactId>
+	  <version>2.4.1</version>
+	  <configuration>
+	    <filesets>
+	      <fileset>
+		<directory>${basedir}</directory>
+		<includes>
+		  <include>**/*.tmp</include>
+		  <include>**/*.log</include>
+		  <include>cpd.bat</include>
+		  <include>cpd.sh</include>
+		  <include>cpd.bat</include>
+		  <include>cpd.sh</include>
+		  <include>cpd_drop.bat</include>
+		  <include>samples</include>
+		  <include>testinput</include>
+		  <include>ant*_example.properties</include>
+		  <include>ant*_example.xml</include>
+		  <include>cpd*_example.bat</include>
+		  <include>cpd*_example.sh</include>
+		</includes>
+		<followSymlinks>false</followSymlinks>
+	      </fileset>
+	    </filesets>
+	  </configuration>
+	</plugin>
+      
+	<plugin>
+	    <groupId>org.apache.maven.plugins</groupId>
+	    <artifactId>maven-site-plugin</artifactId>
+	    <version>3.0</version>
+	    <!--
+	    <configuration>
+		<xdocDirectory>src/site/xdocs</xdocDirectory>
+	    </configuration>
+	    -->
+   		<configuration>
+		<reportPlugins>
+		    <plugin>
+		      <groupId>org.apache.maven.plugins</groupId>
+		      <artifactId>maven-changes-plugin</artifactId>
+		      <!-- <inherited>false</inherited> -->
+		      <version>2.9</version>
+		      <reportSets>
+			<reportSet>
+			  <reports>
+			    <report>changes-report</report>
+			  </reports>
+			</reportSet>
+		      </reportSets>
+		      <configuration>
+			<issueManagementSystems>
+			    <issueManagementSystem>changes.xml</issueManagementSystem>
+			    <issueManagementSystem>Sourceforge2</issueManagementSystem>
+	                     <url>https://sourceforge.net/p/pldoc/bugs/</url>
+			</issueManagementSystems>
+		      </configuration>
+		    </plugin>
+		    <plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-project-info-reports-plugin</artifactId>
+			<!--version>2.4</version -->
+		    </plugin>
+		    <plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-changelog-plugin</artifactId>
+			<!-- version>2.2</version --> 
+		    </plugin>
+		    <plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-javadoc-plugin</artifactId>
+			<version>2.9.1</version>
+			<configuration>
+			    <javadocVersion>1.5</javadocVersion>
+			    <!--aggregate>true</aggregate-->
+			    <excludePackageNames>net.sourceforge.pmd.*</excludePackageNames>
+			</configuration>
+		    </plugin>
+		    <!--
+		    <plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-checkstyle-plugin</artifactId>
+			<-version>2.7</version>
+		    </plugin>
+		    -->
+		</reportPlugins>
+		</configuration>
+
+	</plugin>
+
+	<!--
+	 Override on the command-line 
+	 mvn -Dchanges.smtpHost=localhost -Dchanges.toAddresses=sturton@sf.net -Dchanges.fromDeveloperId=sturton changes:announcement-mail
+	-->
+	<plugin>
+	  <groupId>org.apache.maven.plugins</groupId>
+	  <artifactId>maven-changes-plugin</artifactId>
+	  <!-- <inherited>false</inherited> -->
+	  <version>2.9</version>
+	      <configuration>
+		<!--smtpHost>localhost</smtpHost>
+		<smtpPort implementation="java.lang.Integer">25</smtpPort-->
+		<mailSender>
+		    <name>PLDoc Release Management</name>
+		    <email>noreply@pldoc.sourceforge.net</email>
+		</mailSender>
+		<toAddresses>
+		  <toAddress implementation="java.lang.String">altumano@users.sourceforge.net</toAddress>
+		  <toAddress implementation="java.lang.String">pldoc-chat@lists.sourceforge.net</toAddress>
+		</toAddresses>
+	      </configuration>
+	  <executions>
+	    <execution>
+	      <id>announcement-generate</id>
+	      <phase>deploy</phase>
+	      <goals>
+		  <goal>announcement-generate</goal>
+	      </goals>
+	    </execution>
+	    <execution>
+	      <id>announcement-mail</id>
+	      <phase>deploy</phase>
+	      <goals>
+		<goal>announcement-mail</goal>
+	      </goals>
+	    </execution>
+	    </executions>
+	</plugin>
+	  
+      
+    <!-- Force conservative source and target requirements --> 
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+       <artifactId>maven-compiler-plugin</artifactId>
+       <version>3.1</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+    </plugin>
+
+    <plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-javadoc-plugin</artifactId>
+	<version>2.9.1</version>
+	<configuration>
+	    <javadocVersion>1.5</javadocVersion>
+	    <!-- Do not generate Javadoc for generated Java source -->
+	    <excludePackageNames>net.sourceforge.pmd.*</excludePackageNames>
+	</configuration>
+    </plugin>
+
+
+      </plugins>
+
+   <resources>
+	   <resource>
+	      <filtering>true</filtering>
+	      <directory>${basedir}/src/main/resources</directory>
+	    </resource>
+	   <resource>
+	      <filtering>true</filtering>
+	      <directory>${basedir}/src/main/command/ant</directory>
+	      <targetPath>${basedir}</targetPath>
+	    </resource>
+	   <resource>
+	      <filtering>true</filtering>
+	      <directory>${basedir}/src/main/command</directory>
+	      <includes>
+		<include>cpd.bat</include>
+		<include>cpd.sh</include>
+		<include>cpd_example.bat</include>
+		<include>cpd_example.sh</include>
+		<include>cpd_ant_example.bat</include>
+		<include>cpd_ant_example.sh</include>
+		<include>cpd_drop.bat</include>
+	      </includes>
+	      <targetPath>${basedir}</targetPath>
+	    </resource>
+            <!-- Filter Java source in order to generate Version.java -->
+	   <resource>
+	      <filtering>true</filtering>
+	      <directory>${basedir}/src/main/java</directory>
+	      <targetPath>${basedir}/target/generated-sources/java</targetPath>
+	    </resource>
+    </resources>
+
+   <testResources>
+	   <testResource>
+	      <filtering>false</filtering>
+	      <directory>${basedir}/src/test/resources</directory>
+	    </testResource>
+	   <testResource>
+	      <filtering>false</filtering>
+	      <directory>${basedir}/src/test/resources/samples</directory>
+	      <targetPath>${basedir}/test/samples</targetPath>
+	    </testResource>
+	   <testResource>
+	      <filtering>true</filtering>
+	      <directory>${basedir}/src/test/command</directory>
+	      <includes>
+		<include>cpd_test.bat</include>
+		<include>cpd_test.sh</include>
+	      </includes>
+	      <targetPath>${basedir}/test</targetPath>
+	    </testResource>
+	   <testResource>
+	      <filtering>false</filtering>
+	      <directory>${basedir}/src/test/resources</directory>
+	      <targetPath>${basedir}</targetPath>
+	    </testResource>
+    </testResources>
+
+	    
+  </build>
+</project>

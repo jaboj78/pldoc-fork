@@ -1,0 +1,27 @@
+
+SET SQLBLANKLINES ON
+
+
+--DROP TYPE ty_classification_tab;
+
+CREATE OR REPLACE
+TYPE ty_classification AS 
+OBJECT (
+ -- heading@prod 
+ short_descr VARCHAR2(45)
+,descr VARCHAR2(360)
+,national VARCHAR2(1)
+,used     VARCHAR2(10)
+
+,MEMBER FUNCTION get_short_descr RETURN VARCHAR2
+,MEMBER FUNCTION get_descr  RETURN VARCHAR2
+,MEMBER FUNCTION get_national RETURN VARCHAR2
+,MEMBER FUNCTION get_used RETURN VARCHAR2
+
+);
+/
+
+
+SHOW ERRORS
+
+--@@ TY_CLASSIFICATION_TAB.tps 

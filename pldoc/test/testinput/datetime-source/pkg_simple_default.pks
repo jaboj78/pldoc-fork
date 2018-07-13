@@ -1,0 +1,10 @@
+
+
+CREATE OR REPLACE PACKAGE pkg_simple_default AS 
+  -- DATE 
+  v_date DATE DEFAULT TO_DATE('20090601235959','YYYYMMDDHH24MISS');
+END;
+/
+
+
+

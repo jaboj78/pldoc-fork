@@ -1,0 +1,46 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <!-- 
+        Put ths profile information into ~/.m2/settings.xml 
+    -->
+    <profiles>
+        <profile>
+	  <id>timesten-direct</id>
+	  <properties>
+	    <maven.pldoc.dbUser>pls</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>pls</maven.pldoc.dbPassword>
+	    <maven.pldoc.driverName>com.timesten.jdbc.TimesTenDriver</maven.pldoc.driverName>
+	    <maven.pldoc.getMetadataStatement>{ ? = call PLS.GET_SOURCE_LOB( ? ,  ? ,  ? ,  ? , ? , ? ) }</maven.pldoc.getMetadataStatement>
+	    <maven.pldoc.getMetadataStatementReturnType>2005</maven.pldoc.getMetadataStatementReturnType>
+	    <maven.pldoc.dbUrl>jdbc:timesten:direct:plsqldb </maven.pldoc.dbUrl>
+	    <maven.pldoc.applicationTitleGoal>Maven Goal Enterprise PLDoc - Timesten Direct</maven.pldoc.applicationTitleGoal>
+	    <maven.pldoc.destDirGoal>Goal-Enterprise-TimesTen-Direct</maven.pldoc.destDirGoal>
+	    <maven.pldoc.applicationTitleSite>Maven Site Enterprise PLDoc- Timesten Direct</maven.pldoc.applicationTitleSite>
+	    <maven.pldoc.destDirSite>Site-Enterprise-TimesTen-Direct</maven.pldoc.destDirSite>
+	  </properties>
+        </profile>
+        <profile>
+	  <id>timesten-client</id>
+	  <properties>
+	    <maven.pldoc.dbUser>pls</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>pls</maven.pldoc.dbPassword>
+	    <maven.pldoc.driverName>com.timesten.jdbc.TimesTenDriver</maven.pldoc.driverName>
+	    <maven.pldoc.getMetadataStatement>{ ? = call PLS.GET_SOURCE_LOB( ? ,  ? ,  ? ,  ? , ? , ? ) }</maven.pldoc.getMetadataStatement>
+	    <maven.pldoc.getMetadataStatementReturnType>2005</maven.pldoc.getMetadataStatementReturnType>
+	    <maven.pldoc.dbUrl>jdbc:timesten:client:TTC_SERVER=localhost;TCP_PORT=53393;TTC_SERVER_DSN=plsqldb</maven.pldoc.dbUrl>
+	    <maven.pldoc.applicationTitleGoal>Maven Goal Enterprise PLDoc - Timesten Client</maven.pldoc.applicationTitleGoal>
+	    <maven.pldoc.destDirGoal>Goal-Enterprise-TimesTen-Client</maven.pldoc.destDirGoal>
+	    <maven.pldoc.applicationTitleSite>Maven Site Enterprise PLDoc- Timesten Client</maven.pldoc.applicationTitleSite>
+	    <maven.pldoc.destDirSite>Site-Enterprise-TimesTen-Client</maven.pldoc.destDirSite>
+	  </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+      <activeProfile>timesten-direct</activeProfile>
+    </activeProfiles>
+
+</settings>

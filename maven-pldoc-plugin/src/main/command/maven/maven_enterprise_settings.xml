@@ -1,0 +1,24 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <!-- 
+        Put ths profile information into ~/.m2/settings.xml 
+    -->
+    <profiles>
+        <profile>
+	  <id>enterprise</id>
+	  <properties>
+	    <maven.pldoc.dbUser>system</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>oracle</maven.pldoc.dbPassword>
+	    <maven.pldoc.dbUrl>jdbc:oracle:thin:@//192.168.0.12:1521/orcl</maven.pldoc.dbUrl>
+	  </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+      <activeProfile>enterprise</activeProfile>
+    </activeProfiles>
+
+</settings>

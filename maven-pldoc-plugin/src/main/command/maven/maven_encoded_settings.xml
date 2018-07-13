@@ -1,0 +1,58 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <servers>
+	<!-- Database Passwords-->
+        <server>
+	  <id>192.168.0.12:1521/orcl</id>
+          <username>system</username>
+          <password>{gLXBGCu37EgHxBdEHKJQM/DmkpfdbUhHWWNcVgRaASmPO/iZHN1AZlEO5F6MhnMJ}</password>
+        </server>
+        <server>
+	  <id>192.168.0.12:1521</id>
+          <username>system</username>
+          <password>{groc25r3gmAHqr5hMmTVklpCzaFDEJatEc0GTKfM3hk3Jl4C7xBDzz2ajf6mjm/o}</password>
+        </server>
+        <server>
+	  <id>192.168.0.12</id>
+          <username>system</username>
+          <password>{QAd3TI7/aekHMe1eHChwemFTL8X2WQtJQSw/EM6p7LC7ltoiq2GUZT84r2yclIHh}</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12:1521/orcl</id>
+          <username>system</username>
+          <password>{QAd3TI7/aekHMe1eHChwemFTL8X2WQtJQSw/EM6p7LC7ltoiq2GUZT84r2yclIHh}</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12:1521</id>
+          <username>system</username>
+          <password>{0LRaMnfdHE8HRgEO/SF30mpEBGYSlg6rq9c1Nxs9tbC/rUCdzN/AypP/03WqGZ/7}</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12</id>
+          <username>system</username>
+          <password>{Y7JpmTyqMJIHMAknEtJoM0RMeMsxqM0H30VhkFELxm7rRid7tVDjL3AOcRjSlt4o}</password>
+        </server>
+    </servers>
+
+    <!-- 
+        Put ths profile information into ~/.m2/settings.xml 
+    -->
+    <profiles>
+        <profile>
+	  <id>encoded</id>
+	  <properties>
+	    <maven.pldoc.dbUser>system</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>{Aq1inJYnWH4HA7ba5zgFLr7KwW3TIUfY61z79y38N4g=}</maven.pldoc.dbPassword>
+	    <maven.pldoc.dbUrl>jdbc:oracle:thin:@//192.168.0.12:1521/orcl</maven.pldoc.dbUrl>
+	  </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+      <activeProfile>encoded</activeProfile>
+    </activeProfiles>
+
+</settings>

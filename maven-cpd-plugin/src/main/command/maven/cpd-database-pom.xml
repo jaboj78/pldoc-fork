@@ -1,0 +1,83 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.mycompany.app</groupId>
+  <artifactId>my-app</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>Maven Quick Start Archetype</name>
+  <url>http://maven.apache.org</url>
+
+  <build>
+    <plugins>
+      <plugin>
+	<groupId>net.sourceforge.pldoc</groupId>
+	<artifactId>maven-cpd-plugin</artifactId>
+	<version>${project.version}</version>
+	  <dependencies>
+	    <dependency>
+	     <groupId>com.oracle</groupId>
+	     <artifactId>ojdbc14</artifactId>
+	     <version>10.2.0.3</version>
+	    </dependency>
+	  </dependencies>
+	<configuration>
+	  <applicationTitle>Maven Goal Enterprise PLDoc</applicationTitle>
+	  <!-- sourceDirectory>src/test/resources/samples</sourceDirectory>
+	  <includes>*.sql</includes -->
+	  <destDir>Goal-Enterprise</destDir>
+	  <!-- Ignored unless reportOutputDirectory is undefined  
+	  <outputDirectory>target/docs/apidocs/outputDirectory</outputDirectory>
+	  -->
+	  <reportOutputDirectory>target/docs/apidocs</reportOutputDirectory>
+	  <ignoreComments>true</ignoreComments>
+	  <ignoreIdentifiers>true</ignoreIdentifiers>
+	  <ignoreLiterals>true</ignoreLiterals>
+	  <format>xml</format>
+	  <outputFile>CPD-maven-out.xml</outputFile>
+	  <stylesheetFile>cpdhtml.xslt</stylesheetFile>
+	  <showSkippedPackages>true</showSkippedPackages>
+	  <dbUrl>jdbc:oracle:thin:@//192.168.100.22:1521/orcl</dbUrl>
+	  <dbUser>system</dbUser>
+	  <dbPassword>oracle</dbPassword>
+	  <inputTypes>PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY</inputTypes>
+	  <inputObjects>ANONYMOUS.%,APEX_040000.%,APEX_PUBLIC_USER.%,APPQOSSYS.%,BI.%,CACHEADM.%,CTXSYS.%,DBSNMP.%,DEMO.%,DIP.%,EXFSYS.%,FLOWS_FILES.%,HR.%,HR1.%,HR_TRIG.%,IX.%,MDDATA.%,MDSYS.%,MGMT_VIEW.%,OBE.%,OE.%,OE1.%,OLAPSYS.%,ORACLE_OCM.%,ORDDATA.%,ORDPLUGINS.%,ORDSYS.%,OUTLN.%,OWBSYS.%,OWBSYS_AUDIT.%,PHPDEMO.%,PLS.%,PM.%,SCOTT.%,SH.%,SI_INFORMTN_SCHEMA.%,SPATIAL_CSW_ADMIN_USR.%,SPATIAL_WFS_ADMIN_USR.%,SYS.%,SYSMAN.%,SYSTEM.%,TIMESTEN.%,TTHR.%,WMSYS.%,XDB.%,XDBMETADATA.%,XDBPM.%,XFILES.%,XS$NULL.%</inputObjects>
+	</configuration>                    
+      </plugin>
+
+          <plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-site-plugin</artifactId>
+		<version>3.0</version>
+		<configuration>
+		  <xdocDirectory>src/site/xdocs</xdocDirectory>
+		<reportPlugins>
+		  <plugin>
+		    <groupId>net.sourceforge.pldoc</groupId>
+		    <artifactId>maven-cpd-plugin</artifactId>
+		    <version>LATEST</version>
+		    <configuration>
+		      <name>Maven Site PLDoc Database Example</name>
+		      <applicationTitle>Maven Site PLDoc Database Example</applicationTitle>
+		      <!--sourceDirectory>src/sql</sourceDirectory>
+		      <includes>*.sql</includes -->
+		      <destDir>Site-Enterprise</destDir>
+		      <!-- Ignored in Site Report reportOutputDirectory>target/site/apidocs</reportOutputDirectory -->
+		      <showSkippedPackages>true</showSkippedPackages>
+		      <dbUrl>jdbc:oracle:thin:@//192.168.100.22:1521/orcl</dbUrl>
+		      <dbUser>system</dbUser>
+		      <dbPassword>oracle</dbPassword>
+		      <format>xml</format>
+		      <outputFile>index.xml</outputFile>
+		      <inputTypes>PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY</inputTypes>
+		      <inputObjects>ANONYMOUS.%,APEX_040000.%,APEX_PUBLIC_USER.%,APPQOSSYS.%,BI.%,CACHEADM.%,CTXSYS.%,DBSNMP.%,DEMO.%,DIP.%,EXFSYS.%,FLOWS_FILES.%,HR.%,HR1.%,HR_TRIG.%,IX.%,MDDATA.%,MDSYS.%,MGMT_VIEW.%,OBE.%,OE.%,OE1.%,OLAPSYS.%,ORACLE_OCM.%,ORDDATA.%,ORDPLUGINS.%,ORDSYS.%,OUTLN.%,OWBSYS.%,OWBSYS_AUDIT.%,PHPDEMO.%,PLS.%,PM.%,SCOTT.%,SH.%,SI_INFORMTN_SCHEMA.%,SPATIAL_CSW_ADMIN_USR.%,SPATIAL_WFS_ADMIN_USR.%,SYS.%,SYSMAN.%,SYSTEM.%,TIMESTEN.%,TTHR.%,WMSYS.%,XDB.%,XDBMETADATA.%,XDBPM.%,XFILES.%,XS$NULL.%</inputObjects>
+		    </configuration>                    
+		  </plugin>
+		</reportPlugins>
+		</configuration>
+	    </plugin>
+    </plugins>
+  </build>
+</project>

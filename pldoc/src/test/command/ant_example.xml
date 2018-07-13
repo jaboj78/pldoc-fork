@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="samples" default="plsql-doc" basedir=".">
+  <description>
+    Example of using pldoc Ant task.
+    Run it using a command like this:
+
+      ant -f ant_example.xml
+
+    NB: if you are using Java 1.4 or later, you'll need to override the embedded XML classes.
+    The simplest way to do this is to define environment variable ANT_OPTS before running Ant:
+
+      export ANT_OPTS=-Djava.endorsed.dirs=$PLDOC_HOME/xalan/bin
+
+    or on Windows:
+
+      set ANT_OPTS=-Djava.endorsed.dirs=%PLDOC_HOME%\xalan\bin
+
+    where PLDOC_HOME is the directory where pldoc is installed.
+  </description>
+
+  <taskdef name="pldoc" classname="net.sourceforge.pldoc.ant.PLDocTask">
+    <classpath>
+      <pathelement location="xalan/bin/xml-apis.jar"/>
+      <pathelement location="xalan/bin/xalan.jar"/>
+      <pathelement location="xalan/bin/xercesImpl.jar"/>
+      <pathelement location="pldoc.jar"/>
+    </classpath>
+  </taskdef>
+
+  <target name="plsql-doc" description="PL/SQL documentation generator">
+    <pldoc
+          verbose="yes"
+          destdir="SampleApplicationDoc"
+          doctitle="Sample Application"
+          overview="samples/overview1.html">
+       <fileset dir="samples" includes="sample*.sql"/> <!-- here should be included any other masks for PL/SQL files -->
+    </pldoc>
+  </target>
+</project>

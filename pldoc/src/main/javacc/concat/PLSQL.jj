@@ -1,0 +1,6861 @@
+/* Copyright (C) 2002 Albert Tumanov
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+*/
+
+// $Header: /cvsroot/pldoc/sources/src/javacc/Parser.jj,v 1.2 2003/10/30 20:59:25 dvoytenko Exp $
+//
+options {
+	DEBUG_PARSER = false ;
+	DEBUG_TOKEN_MANAGER = false;
+	DEBUG_LOOKAHEAD = false;
+	IGNORE_CASE = true;
+	STATIC = false;
+	LOOKAHEAD = 1;
+	CHOICE_AMBIGUITY_CHECK = 2; // 3;
+	OTHER_AMBIGUITY_CHECK = 1;
+	ERROR_REPORTING = true;
+        JAVA_UNICODE_ESCAPE = false; //true 
+	UNICODE_INPUT = true;
+	USER_TOKEN_MANAGER = false;
+	USER_CHAR_STREAM = false;
+	BUILD_PARSER = true;
+	BUILD_TOKEN_MANAGER = true;
+	SANITY_CHECK = true;
+	FORCE_LA_CHECK = false;
+}
+
+PARSER_BEGIN(PLSQLParser)
+
+/* Copyright (C) 2002 Albert Tumanov
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+
+*/
+
+package net.sourceforge.pldoc.parser;
+
+import java.io.*;
+import java.util.*;
+import org.xml.sax.SAXException;
+import org.w3c.dom.*;
+import net.sourceforge.pldoc.*;
+import uk.co.anyware.html.HTMLEscaper;
+import org.xml.sax.SAXException;
+import net.sourceforge.pmd.lang.java.ast.ASTCompilationUnit;
+import net.sourceforge.pmd.lang.java.ast.JavaParser;
+import net.sourceforge.pmd.lang.java.ast.JavaParserTokenManager;
+
+public class PLSQLParser {
+
+	/** Reserved Tags, those tags were special treated by the parser. */
+	static final String[] RESERVED_TAGS = {"param", "return", "throws"};
+	
+	private XMLWriter m_out;
+	private boolean ignoreInformalComments = false;
+  	private String defaultKeywordscase = "upper"; 
+  	private String defaultNamescase = "upper"; 
+  	private boolean namesDefaultcase = true;
+  	private boolean namesUppercase = false;
+  	private boolean namesLowercase = false;
+  	private boolean keywordsDefaultcase = true;
+  	private boolean keywordsUppercase = false; //SRT 20110419
+  	private boolean keywordsLowercase = false; //SRT 20110419
+  	private String schemaName = ""; //SRT 20110418
+  	private String globalPackageName = "_GLOBAL"; //SRT 20110418
+  	
+  
+	/** Sets the stream to receive output XML text.
+	*/
+	public void setXMLWriter(XMLWriter out)
+	{
+		m_out = out;
+	}
+	
+	/**
+	* Sets to ignore informal comments (default false).
+	*/
+	public void setIgnoreInformalComments(boolean ignoreInformalComments)
+	{
+	  this.ignoreInformalComments = ignoreInformalComments;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to defaultcase (default true).
+	*/
+	public void setNamesDefaultcase(boolean namesUppercase)
+	{
+	  this.namesDefaultcase = namesDefaultcase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to uppercase (default false).
+	*/
+	public void setNamesUppercase(boolean namesUppercase)
+	{
+	  this.namesUppercase = namesUppercase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL identifiers to lowercase (default false).
+	*/
+	public void setNamesLowercase(boolean namesLowercase)
+	{
+	  this.namesLowercase = namesLowercase;
+	}
+
+	/**
+	* Specifies default case (upper or lower case- default upper) of unquoted PL/SQL identifiers .
+	*/
+	public void setDefaultNamescase(String defaultNamescase)
+	{
+	  this.defaultNamescase = defaultNamescase;
+	}
+	
+	/**
+	* Specifies default case (upper or lower case- default upper) of PL/SQL keywords.
+	*/
+	public void setDefaultKeywordscase(String defaultKeywordscase)
+	{
+	  this.defaultKeywordscase = defaultKeywordscase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to defaultcase (default true).
+	*/
+	public void setKeywordsDefaultcase(boolean keywordsDefaultcase)
+	{
+	  this.keywordsDefaultcase = keywordsDefaultcase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to uppercase (default false).
+	*/
+	public void setKeywordsUppercase(boolean keywordsUppercase)
+	{
+	  this.keywordsUppercase = keywordsUppercase;
+	}
+	
+	/**
+	* Sets conversion of all PL/SQL keywords to lowercase (default false).
+	*/
+	public void setKeywordsLowercase(boolean keywordsLowercase)
+	{
+	  this.keywordsLowercase = keywordsLowercase;
+	}
+
+	/**
+	* Sets the SchemaName for this parser 
+	*/
+	public void setSchemaName(String schemaName)
+	{
+	  this.schemaName = schemaName;
+	}
+
+	/**
+	* Sets the GlobalPackageName for this parser 
+	*/
+	public void setGlobalPackageName(String globalPackageName)
+	{
+	  this.globalPackageName = globalPackageName;
+	}
+
+	/**
+	Output summary for the parsed object.
+
+	@param parsedObject - PL/SQL type - procedure, trigger, object type 
+	@param baseLine - start line number of containing PL/SQL or 0 if the parsed object is a top-level object: normalise the line numbers to match *_SOURCE tables and PL/SCOPE 
+	@param startToken - first Token (usually the object name) 
+	@param endToken - last token (usually the terminating ";" )
+	*/
+	void printSummary(String parsedObject, int baseLine, Token startToken, Token endToken)
+        throws SAXException 
+	{
+	    //Decrement baseLine to convert from an absolute line number into an adjustment 
+	    if (baseLine > 0) 
+	    {
+	       baseLine--;
+	    }
+
+	    if (null != m_out)
+	    {
+ 		    m_out.pushAttribute("START_LINE", Integer.toString(startToken.beginLine - baseLine)   );
+ 		    m_out.pushAttribute("START_COLUMN", Integer.toString(startToken.beginColumn) );
+ 		    m_out.pushAttribute("END_LINE", Integer.toString(endToken.beginLine - baseLine) );
+ 		    m_out.pushAttribute("END_COLUMN", Integer.toString(endToken.beginColumn) );
+ 		    m_out.pushAttribute("LINES", Integer.toString(endToken.beginLine - startToken.beginLine  + 1));
+		    m_out.startElement("SUMMARY");
+		    m_out.endElement("SUMMARY");
+	    }
+	}
+
+	/** Processes a package comment.
+	* Searches for possible package-level formal comment before the current token.
+	* If found, generates COMMENT element for the package.
+	*/
+	private void processPackageComment(Token token)
+      throws SAXException {
+		Hashtable packageCommentTags = new Hashtable();
+		String packageComment = null;
+
+                //SRT 20110422 System.err.println("processPackageComment(" + ((null == token) ?  "<empty token>" : token.toString()) +")"  );
+		// get the text, if present
+		while (token != null && token.specialToken != null) { //Tracker Issue 1433480 
+		//SRT 20110422 System.err.println("processPackageComment(specialToken)"  );
+			token = token.specialToken;
+			int kind = token.kind;
+			String comment = token.toString();
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment): ["+ comment +"]"  );
+			if (comment != null && kind == EOL) {//Tracker Issue 1433480 - skip EOLs 
+			  continue;
+			} 
+			if (comment != null && kind == FORMAL_COMMENT) {
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment FORMAL_COMMENT): ["+ comment +"]"  );
+				CommentParser commentParser = new CommentParser(comment);
+				// get the package comment text
+		//SRT		packageComment = commentParser.getText();
+				packageComment = commentParser.getPackageComment();
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment commentParser.toString()): ["+ commentParser.toString() +"]"  );
+		//SRT 20110422 System.err.println("processPackageComment(specialToken comment packageComment): ["+ packageComment +"]"  );
+				if (packageComment != null) {
+					// extract tags from the package comment
+					packageCommentTags.putAll(commentParser.getTags());
+				}
+			}
+		        break; // Tracker Issue 1433480 - Only process the first comment before the package
+		}
+
+		// print the package comment
+		printPackageComment(packageComment, packageCommentTags);
+	}
+
+	/**  Writes a list of Tokens to standard error 
+	*/
+	private void stringWalk(Token token)
+      throws SAXException {
+
+		// get the text, if present
+		for ( ; token != null ; token = token.specialToken) {
+			
+			System.err.println("stringWalk: [[" + token.toString() +"]]" );
+		}
+
+	}
+
+	/** Processes a package member.
+	* Searches for possible package-level comment before the member.
+	* If found, generates COMMENT element for the package.
+	* For the package member, generates open tag with the given element name
+	* with memberName as NAME attribute.
+	* Inserts COMMENT_FIRST_LINE and COMMENT elements.
+	* <B>Closing member tag is <U>NOT</U> added.</B>
+	* <B>elementName and memberName may be null: this allows processing of memberComments at arbitrary locations in source code </B>
+	* @return table of tags found in the formal comment
+	*/
+	private Hashtable processMemberComment(Token token, String elementName, String memberName)
+      throws SAXException {
+	 // A Package will not have an action (add, replace, delete) or a version number)
+         return processMemberComment(token, elementName, memberName, null);
+      }
+
+	/** Processes an object type member.
+	* Searches for possible package-level comment before the member.
+	* If found, generates COMMENT element for the package.
+	* For the package member, generates open tag with the given element name
+	* with memberName as NAME attribute.
+	* Inserts COMMENT_FIRST_LINE and COMMENT elements.
+	* <B>Closing member tag is <U>NOT</U> added.</B>
+	* @return table of tags found in the formal comment
+	*/
+	
+	private Hashtable processMemberComment(Token token, String elementName, String memberName, Hashtable attributes)
+      throws SAXException {
+		String commentFirstLine = null, commentAll = null;
+		String packageComment = null, returnComment = null;
+		Hashtable tags = new Hashtable();
+		Hashtable packageCommentTags = new Hashtable();
+
+		//SRT 20110422 System.err.println("processMemberComment:  starting with Token=" + token.toString());
+
+		// Should handle multiple comment blocks ? Then use "while".
+		// Otherwise, use "if".
+		while (token.specialToken != null) {
+
+			token = token.specialToken;
+			int kind = token.kind;
+			String comment = token.toString();
+
+			if (comment != null && kind == EOL) {//Tracker Issue 1433480 - skip EOLs 
+			  continue;
+			} 
+			//SRT 20110422 System.err.println("processMemberComment:  stepped to Token of kind(" + kind + ")=" + token.toString());
+			if (comment != null && (kind == FORMAL_COMMENT || ! ignoreInformalComments)) {
+
+				CommentParser commentParser = new CommentParser(comment);
+				// get package comment, if any
+				packageComment = commentParser.getPackageComment();
+				//SRT 20110422 System.err.println("processMemberComment:  found packageComment tags" + commentParser.getTags().toString());
+				if (packageComment != null) {
+				//SRT 20110422 System.err.println("processMemberComment:  saving packageComment tags" + commentParser.getTags().toString());
+					// extract tags from package comment
+					packageCommentTags.putAll(commentParser.getTags());
+				}
+				//ISRT 20110427 f comment is a Package Comment do not add the tags to the method  
+				else
+				{
+				  tags.putAll(commentParser.getTags());
+				}
+
+
+				// only the main sentence from the first comment block is used, others are ignored
+				if (commentFirstLine == null) {
+					commentFirstLine = commentParser.getMainSentence();
+				//SRT 20110422 System.err.println("processMemberComment: assigned Main Sentence=" + commentFirstLine);
+					if (kind != FORMAL_COMMENT) {
+						if(ignoreInformalComments) {
+							// ignore informal comments
+							commentFirstLine = "";
+						} else {
+							// informal comment may have "<" etc inside
+							commentFirstLine = HTMLEscaper.escape(commentFirstLine);
+						}
+					}
+				}
+
+				// only the comment text from the first comment block is used, others are ignored
+				//SRT 20110422 System.err.println("processMemberComment:  commentParser.getText" + commentParser.getText());
+				if (commentAll == null) {
+					commentAll = commentParser.getText();
+				//SRT 20110422 System.err.println("processMemberComment: assigned Comment Text=" + commentAll);
+					if (kind != FORMAL_COMMENT) {
+						if(ignoreInformalComments) {
+							// ignore informal comments
+							commentAll = "";
+						} else {
+							// informal comment may have "<" etc inside
+							commentAll = HTMLEscaper.escape(commentAll);
+						}
+					}
+				}
+
+				// tags are out together (duplicate names will be overwritten)
+				// 20110427 tags.putAll(commentParser.getTags());
+
+				//SRT 20110422 System.err.println("processMemberComment:  saving tags (again) " + commentParser.getTags().toString());
+			}
+
+		}
+
+		// print package-level stuff
+		//SRT 20110422 System.err.println("processMemberComment:  post loop Comment First Line =" + commentFirstLine);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop Comment =" + commentAll);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printing tags-" +  tags.toString());
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printing Package Comment-" + packageComment + "/"+ packageCommentTags.toString());
+		printPackageComment(packageComment, packageCommentTags);
+		//SRT 20110422 System.err.println("processMemberComment:  post loop printed Package Comment");
+
+		// now start the program unit
+		//Cope with Comment Search in arbitrary location in object source 
+		if ( null != elementName)
+		{
+		  String purifiedElementName = purifyKeyword(elementName);
+		  if (null!=purifiedElementName && !"".equals(purifiedElementName)) 
+		  {
+ 		    m_out.pushAttribute("NAME", purifyIdentifier(memberName));
+		    printAttributes(attributes) ;
+		    m_out.startElement(purifyKeyword(elementName));
+		  }
+		}
+
+		if (commentFirstLine != null) {
+		//SRT 20110422 System.err.println("processMemberComment:  WRITING Comment First Line =" + commentFirstLine);
+			m_out.startElement("COMMENT_FIRST_LINE");
+			m_out.cdata(commentFirstLine);
+			m_out.endElement("COMMENT_FIRST_LINE");
+		}
+		if (commentAll != null) {
+		//SRT 20110422 System.err.println("processMemberComment:  WRITING Comment =" + commentFirstLine);
+			m_out.startElement("COMMENT");
+			m_out.cdata(commentAll);
+			m_out.endElement("COMMENT");
+		}
+
+		//SRT 20110422 System.err.println("processMemberComment:  RETURNING tags " + tags.toString());
+		return tags;
+	}
+
+	/** Prints the package comment into the stream.
+	 *
+	 * 2006-05-22 - Matthias Hendler - refactored
+	 */
+	private void printPackageComment(String packageComment, Hashtable packageCommentTags)
+      throws SAXException {
+		// print package-level stuff
+		if (packageComment != null) {
+			// print package comment, it goes under PACKAGE tag
+			m_out.startElement("COMMENT");
+			m_out.cdata(packageComment);
+			m_out.endElement("COMMENT");
+			
+			printCustomTags(packageCommentTags);
+      	}
+    }
+  
+
+
+	/**
+	* Gets the comment for the parameter named <code>paramName</code> from the table of tags.
+	*
+	* @param paramName	name of the parameter
+	* @param tags		table of tags
+	* @return		comment or <code>null</code> if comment not found
+	*/
+	private String getParamComment(String paramName, Hashtable tags)
+	{
+		String paramComment = null;
+		Collection tagValues = (Collection) tags.get("@param");
+		if (tagValues != null) {
+			Iterator it = tagValues.iterator();
+			while (it.hasNext()) {
+				String value = (String) it.next();
+
+				// extract parameter name
+				String extractedParamName = null;
+				// use tokenizer, because tokens maybe separated by spaces or tabs
+				StringTokenizer st = new StringTokenizer(value);
+				// extract parameter name, the rest is the comment
+				if (st.hasMoreTokens()) {
+					extractedParamName = st.nextToken();
+				}
+
+				if (extractedParamName != null && extractedParamName.equalsIgnoreCase(paramName)) {
+					int paramCommentStart = value.indexOf(extractedParamName) + extractedParamName.length() + 1;
+					if (paramCommentStart < value.length()) {
+						paramComment = value.substring(paramCommentStart).trim();
+					}
+					break;
+	}
+			}
+		}
+		return paramComment;
+	}
+
+  /** Purifies an identifier: changes to uppercase, removes quotes.
+  */
+  private String purifyIdentifier(String name)
+  {
+    // SRT 20100428 Return any literals unchanged 
+    if (
+       ( null != name && name.length() > 2 && '\'' == name.charAt(0) && '\'' == name.charAt(name.length()-1) ) // Simple Literal
+       || //Q-Quoted literal
+       ( null != name && name.length() > 3 && 'Q' == name.toUpperCase().charAt(0) && '\'' == name.charAt(1) && '\'' == name.charAt(name.length()-1) )
+       )
+    {
+      return name ; 
+    }
+
+
+    // SRT 20100418 Change case of unquoted identifiers to default case
+
+    if (namesDefaultcase && -1 == name.indexOf('"') && !defaultNamescase.equalsIgnoreCase("mixed") )
+    {
+      name = defaultNamescase.equalsIgnoreCase("upper") ? name.toUpperCase() : name.toLowerCase() ;
+    }
+
+    // Force Change case as requested in settings
+    if (namesUppercase) {
+      name = name.toUpperCase();
+    }
+    if (namesLowercase) {
+      name = name.toLowerCase();
+    }
+
+    // remove any double quotes
+    StringBuffer s = new StringBuffer(name.trim());
+    for (int i=0; i<s.length(); i++) {
+      if (s.charAt(i) == '"') {
+        s.deleteCharAt(i);
+        i--;
+      }
+    }
+    return s.toString();
+  }
+
+
+  /** Purifies a keyword: changes to correct case
+  */
+  private String purifyKeyword(String keyword)
+  {
+
+    if (keywordsDefaultcase)
+    {
+      keyword = defaultKeywordscase.equalsIgnoreCase("upper") ? keyword.toUpperCase() : keyword.toLowerCase() ;
+    }
+
+    // Force Change case as requested in settings
+    if (keywordsUppercase) {
+      keyword = keyword.toUpperCase();
+    }
+    if (keywordsLowercase) {
+      keyword = keyword.toLowerCase();
+    }
+
+    return keyword.trim();
+  }
+
+
+
+	/**
+	 * Print all custom tags.
+	 * Custom tags are those, which have NO direct link to the documented language.
+	 * Linked/reserved tags are RETURN, PARAM/ARGUMENT and THROWS. 
+	 * Linked tags have a link to the language cause we can automatically find the return type of a function.
+	 * These linked tags will NOT be printed out to the XML document as custom tags.
+	 * All other tags just have a desciptive task.
+	 *
+	 * 2006-05-22 - Matthias Hendler - added
+	 *
+	 * @param pTags		all tags
+	 */
+	private void printCustomTags(Map pTags) throws SAXException {
+      final Iterator keyIter = pTags.keySet().iterator();
+      while (keyIter.hasNext()) {
+        final String key = (String) keyIter.next();
+        final Collection tagValues = (Collection) pTags.get(key);
+        if (tagValues != null && !isReservedTag(key)) {
+          for(Iterator iter = tagValues.iterator(); iter.hasNext(); ) {
+            final String comment = (String) iter.next();
+			printTag(key, comment);
+          }
+        }
+      }
+	}
+
+	/**
+	 * Print all Attributes
+	 *
+	 * @param pTags	all  Attributes
+	 */
+	private void printAttributes(Map attributes) throws SAXException {
+	  if (null != attributes)
+	  {
+	  final Iterator keyIter = attributes.keySet().iterator();
+	  while (keyIter.hasNext()) {
+          final String key = (String) keyIter.next();
+          final String value = (String) attributes.get(key);
+ 		     m_out.pushAttribute(key, purifyIdentifier(value));
+         }
+        }
+      }
+
+
+
+	/**
+	 * Is the given Tag a linked/reserved Tag?
+	 *
+	 * 2005-05-22 - Matthias Hendler - added
+	 *
+	 * @return 		TRUE: tag is one of the reserved tags.
+	 */
+	private boolean isReservedTag(String pTag) {
+		boolean result = false;
+		
+		for (int index=0; index < RESERVED_TAGS.length; index++) {
+			result = result || RESERVED_TAGS[index].equalsIgnoreCase(pTag);
+		}
+		
+		return result;
+	}
+
+
+
+	/**
+	 * Add a comment tag to the current node.
+	 *
+	 * 2006-05-18 - Matthias Hendler - added
+	 */
+	private void printTag(String pTagName, String pComment) throws SAXException {
+		m_out.pushAttribute("TYPE", purifyIdentifier(pTagName));
+      	m_out.startElement("TAG");
+      	if (pComment != null) {
+        	m_out.startElement("COMMENT");
+        	m_out.cdata(pComment);
+        	m_out.endElement("COMMENT");
+      	}
+      	m_out.endElement("TAG");
+	}
+
+  /**
+   * main method, for testing only.
+   * @param args
+   */
+  public static void main(String[] args)
+      throws ParseException, SAXException {
+
+    PLSQLParser parser = new PLSQLParser(System.in);
+    parser.input();
+
+    String s;
+    s = "qwerty";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\"";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\".uiop";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+    s = "\"qwerty\".\"uiop\"";
+//    System.err.println(s + " -> " + parser.purifyIdentifier(s));
+  }
+
+
+  /** Java compilation unit from PMD Java parser delegated to parse Java code.
+   */
+  private ASTCompilationUnit  fromDelegatedJavaParser()
+  throws ParseException
+  {
+         // create a Java parser that we will delegate to
+          JavaCharStreamAdapter a = new JavaCharStreamAdapter( jj_input_stream );
+          JavaParserTokenManager tm = new JavaParserTokenManager( a );
+          JavaParser jp = new JavaParser( tm );
+
+	  //Oracle 11G Java 5 
+          jp.setJdkVersion(5);
+
+          // the parser fills in an empty query template
+          ASTCompilationUnit cu = null; // new ASTCompilationUnit();
+          //jp.setASTCompilationUnit( cu );
+          //setPrefixes( cu );
+
+          try {
+              // parse to the end of the query
+              cu = jp.CompilationUnit();
+              //cu.setSyntax(Syntax.syntaxJava);
+
+              // push back the final char, which the Java parser will have
+              // consumed to know that the query was finished
+              jj_input_stream.backup(1);
+          }
+          catch (net.sourceforge.pmd.lang.java.ast.ParseException javaParseException) {
+                String message = javaParseException.getMessage();
+                 
+	      //System.err.println("JavaParserException:"+message);
+              /* Normal PLSQL-wrapped Java will have the terminating "/" 
+                 Which causes the Java Parser to fail.
+                 If this is the reason, then ignore it
+
+                 This is a nasty work-around to avoid hacking the PMD Java parser
+                 to play nicer with bad terminating text. 
+               */
+              if (
+                     message.startsWith("Encountered \" \"/\" \"/ \"\" at line ")
+                     ||message.contains("Was expecting one of:")
+                     ||message.contains("<EOF>")
+                 )
+              {
+                // Push back the final char, which the Java parser will have
+                // consumed to know that the query was finished
+                jj_input_stream.backup(1);
+              }
+              else
+              {
+                ParseException plsqlParseException =
+                new ParseException( "Error reported by Java parser: " + message);
+                throw (ParseException) plsqlParseException.initCause( javaParseException );
+               }
+          }
+
+          return cu;
+  }
+
+
+}
+
+PARSER_END(PLSQLParser)
+/**
+ * 2006-05-22 - Matthias Hendler - Added parsing of triggers and global functions/procedures
+ *                                 Refactored printing of custom tags into the XML/DOM.
+ *                                 Custom tags are language independent. Reserved tags are linked
+ *                                 to the documented language like RETURN, PARAM and THROWS.
+ */
+
+/**
+ * 2006-05-22 - Matthias Hendler - added globalBody()
+ */
+void input() throws org.xml.sax.SAXException : {}
+{
+	// SRT 2011-04-17 This syntax breaks the parser when fields of record.attach* are referenced (attachLibrary())*
+	(
+        //    (LOOKAHEAD(6) packageSpec() | LOOKAHEAD(6) packageBody() | LOOKAHEAD(6) typeSpec() | LOOKAHEAD(6) typeBody() | LOOKAHEAD(6) programUnit(true) | sqlPlusCommand())
+	 // SRT 20110514 before (LOOKAHEAD(6) packageSpec() | LOOKAHEAD(6) packageBody() | LOOKAHEAD(6) typeSpec() | LOOKAHEAD(6) typeBody() | LOOKAHEAD(6) table() | LOOKAHEAD(6) view()  | global() | sqlPlusCommand())	("/")*
+	 (LOOKAHEAD(8) javaSpec()  
+	 |LOOKAHEAD(7) packageSpec()  
+	 | LOOKAHEAD(7) packageBody()  
+	 | LOOKAHEAD(6) typeSpec()  
+	 //| LOOKAHEAD(6) typeBody()  {system.err.println("typeSpec"); }
+	 | LOOKAHEAD(6) table()  
+	 | LOOKAHEAD(6) view()   
+	 | LOOKAHEAD(6) triggerUnit()  
+	 | LOOKAHEAD(6) alterTrigger()  
+	 | LOOKAHEAD(6) Synonym()   
+	 | LOOKAHEAD(6) Directory()   
+	 | LOOKAHEAD(6) DatabaseLink()   
+	 | LOOKAHEAD(6) global()  
+	 | LOOKAHEAD(4) programUnit(true,null) 
+	 | LOOKAHEAD(6) DDLCommand()   
+	 | LOOKAHEAD(6) sqlPlusCommand() 
+	 |(<SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<LOCK><TABLE>|<MERGE>|<WITH>) skipPastNextTokenOccurrence(SQLPLUS_TERMINATOR) //Ignore SQL statements in scripts
+	 )	
+	 ("/")*
+	)*
+	<EOF>
+}
+
+
+void DDLCommand() : 
+{ 
+}
+{
+  (
+    DDLEvent()
+    skipPastNextTokenOccurrence(SQLPLUS_TERMINATOR) 
+  )
+}
+
+
+void sqlPlusCommand() : {}
+{
+  // e.g. SHOW ERRORS, GRANT EXECUTE ON ... TO ...
+  // SQLPLUS commands
+  ( "@" 
+  | <ACCEPT>
+  | <COLUMN>
+  | <CONNECT>
+  | <COPY>
+  | <DEFINE>
+  | <DISCONNECT>
+  | <EXECUTE> 
+  | <EXIT> 
+  | <HOST> 
+  | <PRINT> 
+  | <PROMPT> 
+  | <QUIT> 
+  | <REMARK> 
+  | <SET> 
+  | <SHOW> 
+  | <SPOOL> 
+  | <START> 
+  | <UNDEFINE> 
+  | <VARIABLE> 
+  | <WHENEVER> 
+  // DDL that might be encountered
+  | <COMMENT>
+  | <GRANT>
+  | <REVOKE>
+  | <DROP>
+  | <IDENTIFIER>
+  // Attach Library 
+  | "." <ATTACH>
+  )
+  skip2NextTokenOccurrence(EOL) //Tracker Issue 1433480 skip until next EOL Special Token   
+  //[";" | "-"]
+}
+
+/*
+SRT 2011-04-17 This syntax breaks the parser when fields of record.attach* are referenced  in PL/SQL 
+void attachLibrary() :
+{}
+{
+	<".attach"> <IDENTIFIER> <IDENTIFIER> <END> <IDENTIFIER>
+}
+*/
+
+/**
+ * All global definitions of triggers, functions and procedures are evaluated here.
+ * Every occurence goes under a new PACKAGE-Node in the XML document.
+ * This happens, cause a global "block" does not have a definied start and end token 
+ * like a package specification or a package body.
+ * Thats why every construct is handled like a new part of the global package.
+ * To overcome this problem, I could use an infinity lookahead - which should solve the problem 
+ * and slow down the whole parsing.
+ * Another idea would be to lookahead the next tokens and decide wether they belong to a package definition or not.
+ * Then I could decide to stay in this global parsing state. By now lookahead gives the parser a hint to
+ * choose the correct way on a given base. So we can't negate it easily.
+ * On the other hand I could also hold the global state in a global variable. 
+ * But this does not seems the correct way to solve the problem, I think.
+ *
+ * 2006-05-17 - Matthias Hendler - added
+ */
+void global() throws SAXException :
+{ 
+	Token name = null; 
+}
+{
+	{
+		if (m_out != null)
+		{
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(globalPackageName));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaName));
+			// System.err.println("startElement @ global() " );
+			m_out.startElement("PACKAGE");
+		}
+	}
+
+	//SRT Work In progress (LOOKAHEAD ([<DECLARE> declarativeSection(false)] <BEGIN>) globalBlock() | LOOKAHEAD (4) programUnit(true) // | triggerUnit()
+	/*
+	  Remove triggers from global processing because their schema may be defined in the trigger code itself
+	  Still wrap the trigger in a fake package but make the package name dependent on the actual schema 
+	  defaulting to the globalPackageName if it cannot be found 
+	*/
+	(
+	globalBlock(token) 
+	//LOOKAHEAD ( ( label() )* [<DECLARE> declarativeSection(false,token)] <BEGIN>) globalBlock(token) // | LOOKAHEAD (4) programUnit(true,token) 
+	)
+
+	{
+		if (m_out != null)
+		{
+			// System.err.println("endElement @ global() " );
+			m_out.endElement("PACKAGE");
+		}
+	}
+
+}
+
+
+
+/**
+ * Static blocks like package initializers.
+ * 
+ * 2006-05-17 - Matthias Hendler - added
+ */
+void globalBlock(Token objectStart) throws SAXException :
+{ 
+	Token name = null; 
+}
+{
+	(
+		label()
+	)*
+	[
+		<DECLARE>
+		declarativeSection(false, objectStart)
+	]
+	
+	<BEGIN> (statement())* (exceptionHandler())? <END> [<IDENTIFIER>] ";"
+}
+
+
+
+void javaSpec() throws SAXException :
+{ ASTCompilationUnit javaCompilationUnit = null ;
+  Token schema = null, name = null, tokenCreate = null, tokenPackage = null, tokenJavaType = null, tokenIsAs = null, lastToken = null ; 
+}
+{
+    
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <AND> ( <COMPILE> | <RESOLVE> )  ] ]
+	tokenPackage=<JAVA> 
+    (
+      ( ( tokenJavaType = <SOURCE> | tokenJavaType = <RESOURCE> )  <NAMED> (LOOKAHEAD(2) schema=ID()".")? name=ID() )
+      |
+      ( tokenJavaType = <CLASS> [ <SCHEMA> schema=ID() ] )
+    )
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier( (null==name) ? "Unnamed" : name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.pushAttribute("TYPE", purifyIdentifier(tokenJavaType.toString()));
+			m_out.startElement("JAVA");
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+// 		System.err.println("processPackageComment @ packageSpec() " );
+		processPackageComment(tokenPackage);
+	}
+
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+	(tokenIsAs=<ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                          ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                      ")" 
+        )
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+	(tokenIsAs=<RESOLVER> "("  ( "("  ( "*" | <QUOTED_LITERAL> )  [","] ( "-" | unqualifiedID()  )  ")"  )+    ")"    )?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+   (
+	  (
+	    (tokenIsAs=<USING>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+
+        (
+           LOOKAHEAD(<BFILE> "(")  ( <BFILE>  "(" unqualifiedID() "," StringLiteral()  ")" )
+          | LOOKAHEAD( ( <CLOB> | <BLOB> | <BFILE> ) <SELECT> ) ( ( <CLOB> | <BLOB> | <BFILE> ) sqlStatement(null,";") [";"] )
+          | StringLiteral()
+        )
+	  )
+      |
+      (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+
+	    //Populate javaCompilationUnit with productions returned from the wrapped PMD Java parser (also JavaCC generated)
+	    { 
+           javaCompilationUnit = fromDelegatedJavaParser(); 
+        }
+	  )
+	)
+	{ 
+		if (m_out != null) m_out.endElement("JAVA"); 
+	}
+}
+
+
+void packageSpec() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenPackage = null, tokenIsAs = null, lastToken = null ; }
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	tokenPackage=<PACKAGE> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			// System.err.println("startElement @ packageSpec() " );
+			m_out.startElement("PACKAGE");
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+// 		System.err.println("processPackageComment @ packageSpec() " );
+		processPackageComment(tokenPackage);
+	}
+
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+        [
+	(tokenIsAs=<ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                         ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                      ")" 
+        )
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+	]
+
+        (
+	  (
+	    wrappedObject()
+	  )
+	  |
+	  (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+	    declarativeSection(true,name)
+
+	    <END> [ID()] ";" { printSummary("Package Specification", name.beginLine, name, token); }
+	  )
+	)
+	{ 
+		if (m_out != null) m_out.endElement("PACKAGE"); 
+	}
+}
+
+void packageBody() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenModuleType = null, tokenIsAs = null; }
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>]  [ <EDITIONABLE> | <NONEDITIONABLE> ]  ]
+	( tokenModuleType = <PACKAGE> | tokenModuleType = <TYPE> ) <BODY> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.startElement(
+					    tokenModuleType.image.toUpperCase().equals("PACKAGE")
+			                    ?  "PACKAGE_BODY"
+			                    :  "OBJECT_BODY"
+			                  );
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+		processPackageComment(tokenModuleType);
+	}
+
+	(
+	  (
+	    wrappedObject()
+	  )
+	  |
+	  (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+		  declarativeSection(true,name) //SRT 20110524 Allow PLDOc in Type Bodies 
+
+						    
+	  [ <BEGIN> (statement())* (exceptionHandler())? ] <END> [ID()] ";" 
+	  { printSummary(tokenModuleType.image.toUpperCase().equals("PACKAGE") ?  "Package Body" :  "Object Type Body", name.beginLine, name, token); }
+	  )
+	)
+	{
+		if (m_out != null) m_out.endElement(
+						    tokenModuleType.image.toUpperCase().equals("PACKAGE")
+						    ?  "PACKAGE_BODY"
+						    :  "OBJECT_BODY"
+						   );
+	}
+}
+
+void declarativeUnit(boolean isPackageLevel, Token objectStart) throws SAXException :
+{}
+{
+		pragma(isPackageLevel) |
+		LOOKAHEAD(2)
+		exceptionDeclaration(isPackageLevel) |
+		LOOKAHEAD((<TYPE>|<SUBTYPE>) qualifiedID() (<IS> | <AS> )  ) //SRT 20110616 - make sue soen't break object type
+		subtype_definition(isPackageLevel) |
+		LOOKAHEAD((<FUNCTION>|<PROCEDURE>) qualifiedID() ) //SRT 20111117 - Special case of parameterless methods:choose method in preference to variable 
+		programUnit(isPackageLevel,objectStart)  |
+		LOOKAHEAD(4)
+		variableOrConstantDeclaration(isPackageLevel) |
+		LOOKAHEAD(2)
+		cursorSpec(isPackageLevel) |
+		cursorBody(isPackageLevel) |
+		collectionDeclaration(isPackageLevel) |
+		programUnit(isPackageLevel,objectStart) 
+		|typeMethod(isPackageLevel,1, null,objectStart) //SRT 20110523
+		|CompilationDeclarationFragment(isPackageLevel,objectStart) 
+}
+
+void declarativeSection(boolean isPackageLevel, Token objectStart) throws SAXException :
+{}
+{
+	(
+		declarativeUnit(isPackageLevel, objectStart) 
+	)*
+}
+
+void CompilationDeclarationFragment(boolean isPackageLevel, Token objectStart) throws SAXException :
+{ 
+}
+{
+	( //SRT 20110601 
+	  <CC_IF>  
+	  ConditionalOrExpression()  
+	  <CC_THEN>  
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+
+	  ( 
+	    <CC_ELSIF> 
+	    ConditionalOrExpression() 
+	    <CC_THEN> 
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> 
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+	  )*
+	  <CC_END> 
+	)
+ { 
+   return ;
+ }
+}
+
+
+
+/**
+ * 2006-05-22 - Matthias Hendler - Printing of custom tag "@deprecated" removed.
+ *                                 Printing of any custom tag added. Now user can define his own
+ *								   custom tags which he can evaluate in the XSLT.
+ *                                 This methode also documents global functions/procedures.
+ */
+void programUnit(boolean isPackageLevel, Token objectStart) throws SAXException :
+{
+	Token start, name;
+	Token schema = null;
+	Token globalStart = null;
+	Token startToken = null;
+	Token tokenODCIAggregateType = null; 
+	Token tokenIsAs = null; 
+	String memberName = null;
+	String type = null;
+	Hashtable tags;
+}
+{
+	(
+
+	[globalStart=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] 
+         
+        ]
+
+	(start=<FUNCTION>|start=<PROCEDURE>) (LOOKAHEAD(2) schema = ID()".")? name=ID()
+	{
+// 		System.err.println("programUnit: isPackageLevel==" + isPackageLevel);
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+
+			//This is actually a global object 
+			if (null== objectStart)
+			{
+			  String packageString = globalPackageName; // Default Global Package Name 
+			  String schemaString = schemaName; // Default Schema 
+
+
+			  // Attempt to base 
+			  if (null != schema )
+			  {
+			    schemaString = schema.toString();
+			    packageString = ("_" + schemaString ) ; //Base global package name on Schema
+			  }
+
+			  m_out.pushAttribute("NAME", purifyIdentifier(packageString));
+			  m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString));
+			  m_out.startElement("PACKAGE");
+			}
+
+
+			memberName = purifyKeyword(start.toString()); // SRT 20110420 --start.toString().toUpperCase();
+			/*
+			startToken = (globalStart == null) ? start : globalStart;
+			System.err.println("programUnit: calling processMemberComment @ " + startToken.toString());
+			tags = processMemberComment(startToken, memberName, name.toString());
+			*/
+			if (globalStart == null) 
+			{ // Look for Package Comments and member comments before the start keyword
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ " + start.toString());
+				tags = processMemberComment(start, memberName, name.toString()); 
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ START==" + tags.toString());
+				tags.putAll(processMemberComment(name, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ NAME==" + tags.toString());
+			}
+			else
+			{ // Look for Package Comments and member comments before the CREATE OR REPLACE, then the start keyword
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment GLOBAlSTART " + globalStart.toString());
+				tags = processMemberComment(globalStart, memberName, name.toString()); // Should find stuff in scripts only
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ GLOBALSTART==" + start.toString());
+				tags.putAll(processMemberComment(start, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ START==" + tags.toString());
+				tags.putAll(processMemberComment(name, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ NAME==" + name.toString());
+			}
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+	( 
+	( wrappedObject() ) 
+	|//UnwrappedCode
+	( ("(") {
+	          /*
+	           Last chance to collect member comment before hitting the parameters
+		   Using DBMS_METADATA.GET_DDL here (between the name and the parameter start is the only 
+		   place to put a comment that contains parameter/return tags.
+
+		   This is because even if the comment occurs before the object name in the original source code,
+		   e.g. <OBJECT TYPE> <COMMENT> <QUALIFIED OBJECT NAME>, 
+		   DBMS_METADATA.GET_DDL returns the code in the form <OBJECT TYPE> <QUALIFIED OBJECT NAME> <COMMENT>
+		 */
+	          tags.putAll(processMemberComment(token, null, null));
+	        } 
+	  parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+	{
+		//SRT 20110422 System.err.println("programUnit: found ParameterDeclaration" );
+	}
+
+	[(<RETURN>){
+	          /*
+	           Last chance to collect member comment (and the return tag) before hitting the RETURN statement
+		 */
+	          tags.putAll(processMemberComment(token, null, null));
+	        }  
+	 type=datatype()
+	{
+		//SRT 20110422 System.err.println("programUnit:  RETURN FOUND matching tags in tags=" + tags.toString());
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) 
+		{
+			// @return
+			String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null) 
+			{
+				for(Iterator it = tagValues.iterator(); it.hasNext(); )
+					returnComment = (String) it.next();
+			}
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+	}
+	]
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			// @throws
+			String throwsComment = null;
+			String exceptionName = null;
+			Collection tagValues = (Collection) tags.get("@throws");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while(it.hasNext()) {
+					throwsComment = (String) it.next();
+					// extract when first word - it's the exception name
+					StringTokenizer st = new StringTokenizer(throwsComment);
+					if (st.hasMoreTokens())
+						 exceptionName = st.nextToken();
+					if (exceptionName != null)
+					{
+						m_out.pushAttribute("NAME", purifyIdentifier(exceptionName));
+						m_out.startElement("THROWS");
+						if (throwsComment != null)
+						{
+							m_out.startElement("COMMENT");
+							m_out.cdata(throwsComment.substring(exceptionName.length()));
+							m_out.endElement("COMMENT");
+						}
+						m_out.endElement("THROWS");
+					}
+				}
+			}
+		//SRT 20110422 System.err.println("programUnit: THROW Processing" );
+		}
+		
+		// now print all custom tags
+		if (m_out != null && isPackageLevel)
+		{
+			//SRT 20110422 System.err.println("programUnit:  pre printCustomTags is tags " + tags.toString());
+			printCustomTags(tags);
+		}
+	}
+
+	/*
+	//SRT 20110516  Cope with AUTHID  for schema level functions and procedures 
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		if (m_out != null && isPackageLevel)
+		{
+			if (memberName.toUpperCase().equals("PACKAGE"))
+			{
+				processPackageComment(tokenIsAs);
+			}
+			else 
+			{
+			/*
+			  We are looking to process any comment only; the member is being dealt with elsewhere
+			* /
+			tags.putAll(processMemberComment(tokenIsAs, null, null /* memberName, name.toString() * /));
+			}
+		}	
+	}
+	*/
+
+	( (<AUTHID> ( <CURRENT_USER> | <DEFINER> ) ) 
+	    | (<ACCESSIBLE> <BY>  "(" 
+                                    [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                   ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                  ")" 
+              )
+
+            | <DETERMINISTIC> 
+	    | <PARALLEL_ENABLE>  [ parallel_clause() ] [ <USING> ID() ["." ID()] ] 
+	   | <PIPELINED> [ ( <USING> ID() ["." ID()] ) 
+	                   |  //20110531
+			   (( <ORDER> | <CLUSTER> ) [ID()] <BY> "(" ID() ( "," ID() )*  ")" ) 
+			 ] //  drvparx.IndexMapDocuments
+	   | <RESULT_CACHE> [ <RELIES_ON> "(" ID() ["." ID()] ( "," ID() ["." ID()])*  ")" ]
+           | CompilationExpression() // Allow Conditional PRAGMA
+	) *
+	
+	[ <AGGREGATE> <USING> tokenODCIAggregateType=ID() ] 
+
+	// body
+	[
+	        
+		(tokenIsAs=<IS> | tokenIsAs=<AS>)
+		{
+			//SRT 20110422 System.err.println("tokenIsAs @ " + tokenIsAs.toString());
+			if (m_out != null && isPackageLevel)
+			{
+				if (memberName.toUpperCase().equals("PACKAGE"))
+				{
+					//SRT 20110422 System.err.println("calling processPackageComment @ " + tokenIsAs.toString() );
+					processPackageComment(tokenIsAs);
+				}
+				else 
+				{
+				//Look for memberComment embedded in the code 
+				//SRT 20110422 System.err.println("calling processMemberComment @ " + tokenIsAs.toString()
+				//SRT 20110422                    + ",memberName=" + memberName
+				//SRT 20110422                    + "name=" + name.toString()
+				//SRT		  );
+				/*
+				  We are looking to process any comment only; the member is being dealt with elsewhere
+				*/
+				tags = processMemberComment(tokenIsAs, null, null /* memberName, name.toString() */);
+				//SRT 20110422 System.err.println("called processMemberComment @ " + tokenIsAs.toString()
+				//SRT 20110422                    + ",memberName=" + memberName
+				//SRT 20110422                    + "name=" + name.toString()
+				//SRT 20110422   );
+				}
+			}	
+		}
+		//SRT (<IS> | <AS>)
+		(
+			LOOKAHEAD(2)
+			callSpecTail(isPackageLevel) //{ System.err.println("Found callSpecTail") ; }
+			|
+			(
+				declarativeSection(false,objectStart)
+				<BEGIN> (statement())* (exceptionHandler())? <END> [ID()]
+			)
+		)
+	]
+	";" //SRT 20110416 { System.err.println("Found terminating semi-colon") ; }
+        {
+	   //Do not generate Summaries for interanl programUnits that are not output 
+           if (isPackageLevel) printSummary("Program Unit", (isPackageLevel && (null != objectStart) ? objectStart.beginLine : name.beginLine), name, token);
+        }
+
+	) //UnwrappedCode
+	) 
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+// 			System.err.println("endElement@ " + start.toString());
+			m_out.endElement(purifyKeyword(start.toString())); // SRT20110420 m_out.endElement(purifyIdentifier(start.toString().toUpperCase()))
+			//This is actually a global object 
+			if (null== objectStart)
+			{
+			  m_out.endElement(purifyKeyword("PACKAGE")); //Wrap the trigger element in a fake package
+			}
+		}
+	}
+}
+
+void parameterDeclaration(Hashtable tags,boolean isPackageLevel) throws SAXException :
+{
+	Token name;
+	Token parameterType = null;
+	String defaultValue = null;
+	String paramMode = "IN", paramType;
+}
+{
+	name=ID()
+	// the order of outer "|" is important !
+	( LOOKAHEAD(2) ( LOOKAHEAD(2) ( (<OUT>{paramMode = "OUT";}|(<IN> <OUT>{paramMode = "IN OUT";})) (LOOKAHEAD(2) <NOCOPY> {paramMode += " NOCOPY" ; } )? ) | <IN> ) )?
+	(parameterType = "..."    /* PL/SQL VARARG */ { paramType = "..." ; }| paramType=datatype())  { parameterType = token;}
+	( (":" "="|<_DEFAULT>) defaultValue =Expression() )?
+	{
+
+		if (m_out != null && isPackageLevel)
+		{
+			String paramName = name.toString();
+			String paramComment = getParamComment(paramName, tags);
+			m_out.pushAttribute("NAME", purifyIdentifier(paramName));
+			m_out.pushAttribute("MODE", paramMode);
+			m_out.pushAttribute("TYPE", purifyIdentifier(paramType));
+			if (null != defaultValue) m_out.pushAttribute("DEFAULT", purifyIdentifier(defaultValue));
+			m_out.startElement("ARGUMENT");
+			if (paramComment != null) {
+				m_out.startElement("COMMENT");
+				m_out.cdata(paramComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("ARGUMENT");
+		}
+	}
+}
+
+
+
+
+String datatype() :
+{ String name = null, dblink = null ; }
+{
+	(
+		// this should be first
+		name = CompilationDataType() |
+		LOOKAHEAD(2) name=scalar_datatype_name()
+		|
+		(
+		  ( [LOOKAHEAD(2) <REF>] name=qualifiedName() 
+		    //Bug 35352414 - datatype may include dblink 
+		    ["@" dblink = qualifiedName() {name += "@" + dblink ;} ]
+		    ["%" (<TYPE>{name += "%TYPE";}|<ROWTYPE>{name += "%ROWTYPE";})] )
+		)
+	)
+	{ return name; }
+}
+
+String CompilationDataType() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	(
+	  <CC_IF> {sb.append(" "); sb.append(token.image) ; } 
+	  string= ConditionalOrExpression() {sb.append(" "); sb.append(string); } 
+	  <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	  string = datatype() {sb.append(" "); sb.append(string); } 
+
+	  ( 
+	    <CC_ELSIF> {sb.append(" "); sb.append(token.image); } 
+	    string = ConditionalOrExpression() {sb.append(" "); sb.append(string); }  
+	    <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	    string = datatype() {sb.append(" "); sb.append(string); } 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> {sb.append(" "); sb.append(token.image); } 
+	    string = datatype()  {sb.append(" "); sb.append(string); } 
+	  )*
+
+	  <CC_END> {sb.append(" "); sb.append(token.image); } 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String collection_type_name() :
+{ Token size=null, precision=null;
+	String name = null;
+}
+{
+     (
+	// Collection types
+  	<TABLE> | <VARRAY> | (<VARYING><ARRAY> {name = "VARYING ARRAY";}) 
+     )
+
+    {
+      if (name == null) {
+        name = token.toString();
+      }
+    }
+	(LOOKAHEAD(2) "(" size=numericLiteral() {name += "(" + size;}
+		["," precision=numericLiteral() {name += "," + precision;}]
+		[ <CHAR> {name += " CHAR" ;}]
+		[ <BYTE> {name += " BYTE" ;}]
+	")" {name += ")";})?
+
+      { return name; }
+}
+
+
+String scalar_datatype_name() :
+{ Token size=null, precision=null ;
+	String name = null, precisionString=null ;
+	String string = null;
+}
+{
+	(
+	//Base types used in SYS.STANDARD
+	<BFILE_BASE> |
+	<BLOB_BASE> |
+	<CHAR_BASE> |
+	<CLOB_BASE> |
+	<DATE_BASE> |
+	<NUMBER_BASE> | 
+
+	// scalar types - numeric:
+  	<BINARY_INTEGER> | <DEC> | <DECIMAL> | (<DOUBLE><PRECISION> {name = "DOUBLE PRECISION";}) |
+  	<FLOAT> | <INT> | <INTEGER> | <NATURAL> |
+	<NATURALN> | <NUMBER> | <NUMERIC> | <PLS_INTEGER> | <POSITIVE> | <POSITIVEN> | <REAL> | <SIGNTYPE> |
+	<SMALLINT> |
+
+	// scalar types - character:
+	(
+	  (
+	  <CHAR> | <CHARACTER> 
+	  //SRT | LOOKAHEAD(2) (<LONG><RAW> {name = "LONG RAW";}) | LOOKAHEAD(2) <LONG> | 
+	  | LOOKAHEAD(2) (<LONG><RAW> {name = "LONG RAW";}) | <LONG> | 
+	  <NCHAR> | <NVARCHAR2> | <RAW> | <ROWID> |
+	  <STRING> | <UROWID> | <VARCHAR> | <VARCHAR2> | <CLOB> | <NCLOB> 
+	  )
+	)
+	|
+	  // scalar types - boolean:
+	  <BOOLEAN> 
+	
+	|
+
+	// composite types
+  	//SRT 20090531 <TABLE> | <VARRAY> | (<VARYING><ARRAY> {name = "VARYING ARRAY";}) |
+	// <RECORD> - defined elsewhere
+
+	// LOB types
+	<BFILE> | <BLOB> |
+
+	// reference types
+  	<SYS_REFCURSOR> | //SRT Added to support pre-defined weak REF CURSOR
+  	(<REF><CURSOR> {name = "REF CURSOR";}) |
+	//<REF> object_type - defined elsewhere
+
+	// scalar types - date/time:
+	<DATE> |
+        LOOKAHEAD(2) (<INTERVAL><YEAR> {name = "INTERVAL YEAR";}) |
+        LOOKAHEAD(2) (<INTERVAL><DAY> {name = "INTERVAL DAY";}) |
+	<TIME> |
+	<TIMESTAMP> |
+      (<SELF><AS><RESULT> {name = "SELF AS RESULT";})  //SRT Added to support CONSTRUCTOR methods 
+     )
+
+    {
+      if (name == null) {
+        name = token.toString();
+      }
+    }
+	(LOOKAHEAD(2) "(" size=numericLiteral() {name += "(" + size;}
+		["," precisionString=UnaryExpression(true) {name += "," + precisionString;}] //NUMBERS may have negative precision
+		[ <CHAR> {name += " CHAR" ;}]
+		[ <BYTE> {name += " BYTE" ;}]
+	")" {name += ")";})?
+
+        /*
+	    LOOKAHEAD(3) (<DAY><TO><SECOND> {name += " DAY TO SECOND";}) |
+	    LOOKAHEAD(3) (YEAR><TO><MONTH> {name += " YEAR TO MONTH";}) |
+	    LOOKAHEAD(4) (<WITH><LOCAL><TIME><ZONE> {name += " WITH LOCAL TIME ZONE";}) |
+	    LOOKAHEAD(3) (<WITH><TIME><ZONE> {name += " WITH TIME ZONE";}) |
+            INTERVAL YEAR[(year_precision)] TO MONTH
+
+            INTERVAL DAY[(day_precision)] TO SECOND[(fractional_seconds_precision)]
+
+            INTERVAL '2-6' YEAR TO MONTH
+            INTERVAL '3 12:30:06.7' DAY TO SECOND(1)
+            
+          Add any fractional_seconds_precision
+        */
+    [
+      /*
+      function NOOP(Str varchar2 CHARACTER SET ANY_CS)
+	       return varchar2 CHARACTER SET Str%CHARSET;
+
+      function NOOP(Str clob CHARACTER SET ANY_CS)
+	       return clob CHARACTER SET Str%CHARSET;
+      */
+
+
+    (<CHARACTER> <SET> string = Name() {name += " CHARACTER SET " + string ;} ) |
+	  
+    LOOKAHEAD(4) (<WITH><LOCAL><TIME><ZONE> {name += " WITH LOCAL TIME ZONE";}) |
+    LOOKAHEAD(3) (<WITH><TIME><ZONE> {name += " WITH TIME ZONE";}) |
+    LOOKAHEAD(2) (<TO><MONTH> {name += " TO MONTH";}) |
+    LOOKAHEAD(2) (<TO><SECOND> {name += " TO SECOND";} 
+			(
+			  LOOKAHEAD(2) "(" precision=numericLiteral() {name += "(" + precision;}
+					")" {name += ")";}
+			)?
+                 )
+   ]
+
+      { return name; }
+}
+
+String DateTimeLiteral() :
+{ Token literal_type= null, type1=null, type2=null, size=null;
+	String literal_string = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  /*
+    INTERVAL Syntax
+
+    INTERVAL'y-m' YEAR[(precision1)] TO MONTH
+    INTERVAL'y' YEAR(precision1)
+    INTERVAL'm' MONTH(precision1)
+
+    INTERVAL'd[h[:m[:s]]]' unit1[(precision1)] TO unit2[(precision2)]
+      unit1,unit2 = {DAY,HOUR,MINUTE,SECOND}
+      constraint unit1 always longer than unit2, i.e. DAY is longer than MINUTE
+      so can have DAY to MINUTE, but not MINUTE to DAY
+  */
+	(
+        <INTERVAL> 
+	|<DATE> //Support ANSI DATE Literals 
+	|<TIMESTAMP> 
+        )
+        { sb.append(token.toString()); }
+
+        (
+         // 20110526 <STRING_LITERAL> 
+         <CHARACTER_LITERAL> {sb.append(" "); sb.append(token.toString()) ;} 
+         |literal_string = StringLiteral() {sb.append(" "); sb.append(literal_string); } 
+        )
+        (  type1 = <YEAR>  
+         | type1 = <MONTH>
+         | type1 = <DAY>
+         | type1 = <HOUR>
+         | type1 = <MINUTE>
+         | type1 = <SECOND>
+        )?
+        { 
+	      if (type1 != null) 
+              {
+		sb.append(" "); sb.append(type1.toString()) ;
+	      }
+           
+        }
+        
+
+	(LOOKAHEAD(2) "(" size=numericLiteral() {sb.append("("); sb.append(size); } 
+	")" {sb.append(")"); } 
+        )?
+
+
+    [
+     (<WITH> {sb.append(" "); sb.append(token.toString()) ;} 
+      (<LOCAL> {sb.append(" "); sb.append(token.toString()) ;} )? 
+      <TIME><ZONE> {sb.append(" TIME ZONE"); }
+     ) 
+    |(<TO> {sb.append(" "); sb.append(token.toString()) ;} 
+        (  type2 = <YEAR>  
+         | type2 = <MONTH>
+         | type2 = <DAY>
+         | type2 = <HOUR>
+         | type2 = <MINUTE>
+         | type2 = <SECOND>
+        )
+        {sb.append(" "); sb.append(type2.toString()) ;} 
+	(LOOKAHEAD(2) "(" size=numericLiteral() {sb.append("("); sb.append(size);} 
+	")" {sb.append(")"); } 
+        )?
+    )
+   ]
+/*
+*/
+
+      { 
+      return sb.toString(); 
+      }
+}
+
+void exceptionHandler() throws org.xml.sax.SAXException :
+{}
+{
+	<EXCEPTION>
+		( LOOKAHEAD(2) <WHEN> qualifiedName() (<OR> qualifiedName())* <THEN> (statement())+ )*
+		[ <WHEN> <OTHERS> <THEN> (statement())+ ]
+}
+
+void skip2NextTerminator(String initiator,String terminator) :
+{
+  Token t = getToken(1);
+  int count = (initiator == null) ? 0 : 1;
+  if(t.image.equals(initiator)) count++;
+  while (count > 0 || !t.image.equals(terminator))
+  {
+    t = getNextToken();
+    t = getToken(1);
+	  if(t.image.equals(initiator)) count++;
+	  if(t.image.equals(terminator)) count--;
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target String. 
+*/
+void skip2NextOccurrence(String target) :
+{
+  Token nextToken = getToken(1);
+  while (!nextToken.image.equals(target)
+	 && (null == nextToken.specialToken || !nextToken.specialToken.image.equals(target) ) //In case the target is a Special Token
+	 && nextToken.kind!=EOF //SRT 20110521 - Prevent endless loop when target does not exist in the input stream
+        )
+  {
+    nextToken = getNextToken();
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to and including the target String. 
+*/
+void skipPastNextOccurrence(String target) :
+{
+  Token t = null;
+  skip2NextOccurrence(target) ;
+  t = getNextToken(); // Chomp this one 
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target Token.kind. 
+*/
+void skip2NextTokenOccurrence(int target) :
+{
+  Token nextToken = getToken(1);
+  Token specToken = null ;
+  while (nextToken.kind!=target
+	 && (null == nextToken.specialToken || nextToken.specialToken.kind!=target ) //In case the target is a Special Token
+	 && nextToken.kind!=EOF //SRT 20110521 - Prevent endless loop when target does not exist in the input stream
+        )
+  {
+  /*
+	Check if the target appears as a SpecialToken 
+
+
+	nextToken.specialToken points to the _LAST_ of any SpecialTokens before the current normal Token.
+
+	It is the head of a doubly-linked list:
+
+	The ${specialToken}.specialToken field POINTS BACKWARDS TOWARDS the FIRST occurring SpecialToken
+	The ${specialToken}.next field POINTS FORWARDS to to the LAST occurring SpecialToken
+
+	This means that if the program is interested in a specific SpecialToken, it must examine the linked list for every Token which has nexToken.specialToken != null.
+    
+    */
+    specToken = nextToken.specialToken;
+    if (null!= specToken) 
+    {
+	    //Walk backwards through the list looking for this Token as a Special Token 
+       while (specToken != null && specToken.kind != target) 
+	    {
+		    specToken = specToken.specialToken;
+	    }
+
+	     //We have found the target as a SpecialToken - break out of normal Token search
+      if (null != specToken && specToken.kind == target) 
+	    {
+		    break;
+      }
+    }
+
+    nextToken = getNextToken();
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to and including the target Token.kind. 
+*/
+void skipPastNextTokenOccurrence(int target) :
+{
+  Token t = null;
+  skip2NextTokenOccurrence(target) ;
+  t = getNextToken(); // Chomp this one 
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target String. 
+*/
+String read2NextOccurrence(String target) :
+{
+  StringBuffer sb = new StringBuffer();
+  Token nextToken = getToken(1);
+  while (!nextToken.image.equals(target)
+	 && nextToken.kind!=EOF 
+        )
+  {
+    nextToken = getNextToken();
+    sb.append(nextToken.image);
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return sb.toString(); }
+}
+
+/*
+ Read Tokens up to and including the target String. 
+*/
+String readPastNextOccurrence(String target) :
+{
+  StringBuffer sb = new StringBuffer();
+  Token t = null;
+  sb.append(read2NextOccurrence(target)) ;
+  t = getNextToken(); // Chomp this one 
+  sb.append(t.image);
+}
+{
+	{ return sb.toString(); }
+}
+
+/**
+ * 2006-05-24 - Matthias Hendler - added MERGE
+ */
+void sqlStatement(String initiator, String terminator) throws SAXException :
+{}
+{
+	(<SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<EXECUTE>|<SET><TRANSACTION>|<LOCK><TABLE>|<MERGE>|<WITH>)
+	skip2NextTerminator(initiator,terminator)
+}
+
+
+/**
+ * 2011-05-15 - SRT - Added to cope with wrapped objects
+  A wrapped function looks like this (always terminated by one or more equals signs "="):-
+  "  CREATE OR REPLACE FUNCTION "TESTUSER"."GET_DATE_STRING"
+/ ** Return SYSDATE formatted using the provided template.
+ *
+ *
+ *  @param p_date_format normal TO_CHARE/TO_DATE date template
+ *  @return formatted datestring
+ *  @see http://www.oracle-base.com/articles/10g/WrapAndDBMS_DDL_10gR2.php#dbms_ddl
+ * /
+wrapped
+a000000
+369
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+8
+89 b6
+/SBrhM8+1iUO4QAih+qD2SK8kSowg8eZgcfLCNL+XlquYvSuoVah8JbRPpdHDLHn479SdFLw
+v04omzJ0zOfHdMAzuHQlw+fAsr2ym9YI8I521pRTbnFVAHOOUw4JqPkIyj7wj4VwyL17nhYb
+3qPVuL6SvhZTmEBnRtaErHpzaDuIpqZ0G4s=
+  "
+ */
+
+
+
+void wrappedObject() throws SAXException :
+{}
+{
+	<WRAPPED>
+	{
+	   Token nextToken; 
+		
+		nextToken = getToken(1); //ReadAhead
+		while (
+		     null != nextToken && nextToken.kind!=EOF
+		     )  
+		{
+		        nextToken = getNextToken(); 
+
+			//Execute manual readahead 
+			nextToken = getToken(1); //ReadAhead 1 Token 
+		}
+		return;
+	}
+}
+
+
+// ============================================================================
+// S T A T E M E N T S
+// ============================================================================
+
+/**
+ * 2006-05-24 - Matthias Hendler - added MERGE, EXECUTE choice and LOOKAHEAD at <LOOP>
+ */
+void statement() throws SAXException :
+{}
+{
+	LOOKAHEAD(["("] <SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<EXECUTE>|<SET><TRANSACTION>|<LOCK><TABLE>|<MERGE>|<WITH>) sqlStatement(null,";") [";"] 
+		| LOOKAHEAD(3) <CONTINUE> [ <IDENTIFIER> ] [ <WHEN> Expression() ] ";" // 11G CONTINUE statement  
+
+		| <CASE> ( Expression() )?
+                ( <WHEN> Expression() <THEN> (statement())+ )*
+		( <ELSE> (statement())+ )*
+		<END> <CASE>  [<IDENTIFIER>]  ";"
+	| <IF> Expression() <THEN> (statement())+
+		( <ELSIF> Expression() <THEN> (statement())+ )*
+		( <ELSE> (statement())+ )*
+		<END> <IF> ";"
+	| <FOR> ID() <IN> [<REVERSE>] Expression()[".."Expression()] <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	| <FORALL> ID() <IN> 
+			    (
+	                     ( <INDICES> | <VALUES> ) <OF> Expression() // Add support for sparse collections
+	                     | Expression() [".." Expression()]
+			    )
+			    [ <SAVE> <EXCEPTIONS> ] sqlStatement(null,";") ";"
+	| LOOKAHEAD(2) <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	| <WHILE> Expression() <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	//
+	| <GOTO> qualifiedName() ";"
+	| <RETURN> [Expression()] ";"
+	| <EXIT> [<WHEN> Expression() | <IDENTIFIER> [<WHEN> Expression()]] ";"
+	| <RAISE> [qualifiedName()] ";"
+	//
+	| <CLOSE> qualifiedName() ";"
+	| <OPEN> [Expression()]
+		//[LOOKAHEAD(functionCall()) functionCall() | qualifiedName()]
+		[<FOR> Expression() [<USING> Expression() ("," Expression())*]] ";"
+	| <FETCH> qualifiedName() [<BULK> <COLLECT>]
+	  //MMUE 04/08/2005 <INTO> (LOOKAHEAD(functionCall()) functionCall() | qualifiedName()) ("," (LOOKAHEAD(functionCall()) functionCall() | qualifiedName()))* ";"
+	  <INTO> Expression() ("," Expression())* [<LIMIT> Expression()] ";"
+	//
+	| label() statement()
+	| [<DECLARE> declarativeSection(false,token)] <BEGIN> (statement())* (exceptionHandler())? <END> [<IDENTIFIER>] ";"
+	//
+        | <EXECUTE> <IMMEDIATE> Expression() /* <STRING_LITERAL> */ 
+	  [ [ <BULK> <COLLECT> ] <INTO> Name() ("," Name())* ] 
+	  [ <USING> [ <IN> [ <OUT> ] | <OUT> ]  Expression() ("," [ <IN> [ <OUT> ] | <OUT> ] Expression())* ] 
+	  [ ( <RETURN> | <RETURNING> ) [ <BULK> <COLLECT> ] <INTO> Expression() ("," Expression())* ] 
+          ";"
+
+	//SRT 20110429 | <EXECUTE> <IMMEDIATE> StringExpression()  [<USING> Expression() ("," Expression())*] ";"
+	// PIPELINED FUNCTION OUTPUT
+	| <PIPE> <ROW> Expression()  ";"
+	// CONDITIONAL COMPILATION 
+	| <CC_IF> ConditionalOrExpression() <CC_THEN> (statement())*
+		( <CC_ELSIF> ConditionalOrExpression() <CC_THEN> (statement())+ )*
+		( <CC_ELSE> (statement())+ )*
+		<CC_END> 
+	| <CC_ERROR> Expression() <CC_END> 
+        | <PRAGMA> Expression() ";"
+        | Expression() ";"
+}
+
+void subtype_definition(boolean isPackageLevel) throws SAXException :
+{
+	Token start, subtype_name=null, constraint=null, base_type=null;
+	Token collection = null, collection2 = null;
+	Token notNullable = null;
+	String startElement = null, endElement = null;
+	String baseType = null, returnType = null, indexBy = null, string = null;
+	Hashtable tags = null;
+	int lastField = 0;
+}
+{
+
+	(
+		( 
+		  start=<SUBTYPE> subtype_name=qualifiedID() // SRT 20110605 to Parse SYS.standars ned to allow nprmally reserved words which are low-level types 
+			{
+				// element generated only on the package level
+				if (m_out != null && isPackageLevel) {
+					tags = processMemberComment(start, "TYPE", subtype_name.toString());
+				}
+			}
+			<IS> baseType=datatype() 
+			{
+				returnType = baseType;
+			}
+			[
+			  ( "(" constraint=<IDENTIFIER> ")") // SRT 20110604 [<NOT> <NULL> ]
+			  {
+				  if (constraint != null) {
+					  returnType += "(" + constraint + ")";
+				  }
+			  }
+			  |
+			  ( constraint = <RANGE> startElement = UnaryExpression(true)  ".." endElement = UnaryExpression(true) ) // In "RANGE -1 .. 31" -1 is a unary Expression
+			  {
+				  if (constraint != null) {
+					  returnType += " RANGE " + startElement + ".." + endElement ;
+				  }
+			  }
+			]
+
+			[<NOT> <NULL> { returnType += " NOT NULL"; } ] //SRT 20110604
+		)
+		 |
+		( start=<TYPE> subtype_name=qualifiedID() // SRT 20110605 to Parse SYS.standars ned to allow nprmally reserved words which are low-level types 
+			{
+				// element generated only on the package level
+				if (m_out != null && isPackageLevel) {
+					tags = processMemberComment(start, "TYPE", subtype_name.toString());
+				}
+			}
+			(<IS>|<AS>)
+			(
+				LOOKAHEAD(2) <NEW> (
+				                    base_type = <CHAR_BASE> 
+				                    |base_type = <DATE_BASE> 
+				                    |base_type = <CLOB_BASE> 
+				                    |base_type = <BLOB_BASE> 
+				                    |base_type = <BFILE_BASE> 
+				                    |base_type = <NUMBER_BASE> 
+				                   ) 
+				  { returnType = "NEW " + base_type.toString().toUpperCase() ; }
+				|
+				//SRT 20110606 SYS.STANDRD 
+				(<OBJECT> {baseType = "OBJECT";} "(" fieldDeclaration(isPackageLevel, tags) ("," fieldDeclaration(isPackageLevel, tags))* ")" )
+					{
+						returnType = "OBJECT";
+						// end for
+					}
+				|
+				(<RECORD> {baseType = "RECORD";} "(" fieldDeclaration(isPackageLevel, tags) ("," fieldDeclaration(isPackageLevel, tags))* ")" )
+				{
+					returnType = "RECORD";
+					// end for
+				}
+				|
+				((collection=<TABLE> | collection=<VARRAY> | collection=<VARYING> collection2=<ARRAY>)["(" constraint=numericLiteral() ")"]
+				<OF> baseType=datatype() (notNullable = <NOT> <NULL>)? (<INDEX> <BY> indexBy=datatype())?)
+				{
+					returnType = collection.toString();
+					if (collection2 != null) {
+						returnType += " " + collection2;
+					}
+					if (constraint != null) {
+						returnType += "(" + constraint + ")";
+					}
+					returnType += " OF " + baseType;
+
+					if (notNullable != null) {
+						returnType += " NOT NULL";
+					}
+
+					if (indexBy != null) {
+						returnType += " INDEX BY " + indexBy;
+					}
+				}
+				|
+				<REF> <CURSOR> [<RETURN> baseType=datatype()]
+				{
+					returnType = "REF CURSOR";
+					if (baseType != null) {
+						returnType += " RETURN " + baseType;
+					}
+				}
+				//Enumeration 
+				| ( "(" 
+				      string = Expression() {returnType ="(" +  string; } 
+				              ( "," string = Expression() {returnType += "," +  string; } )* 
+				    ")" {returnType += ")"; } 
+			          )
+				//Alias for existing type  
+				| returnType = datatype() 
+			)
+		)
+	)
+	";"
+	{
+		// element generated only at the package level
+		if (m_out != null && isPackageLevel)
+		{
+			if (returnType != null)
+			{
+				m_out.pushAttribute("TYPE", returnType);
+				m_out.element("RETURN");
+			}
+			m_out.endElement("TYPE");
+		}
+	}
+}
+
+void fieldDeclaration(boolean isPackageLevel, Hashtable tags) throws SAXException :
+{
+	Token name;
+	String dataType;
+	String defaultValue = null;
+}
+{
+	name=ID() dataType=datatype() [[<NOT>] <NULL>] [ (":" "=" | <_DEFAULT>) defaultValue = Expression() ]  
+	{
+		if (m_out != null && isPackageLevel)
+		{
+			String paramName = name.toString();
+			String paramComment = getParamComment(paramName, tags);
+			m_out.pushAttribute("NAME", purifyIdentifier(paramName));
+			m_out.pushAttribute("TYPE", purifyIdentifier(dataType));
+			if (null != defaultValue) m_out.pushAttribute("DEFAULT", purifyIdentifier(defaultValue));
+			m_out.startElement("FIELD");
+			if (paramComment != null) {
+				m_out.startElement("COMMENT");
+				m_out.cdata(paramComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("FIELD");
+		}
+	}
+}
+
+void collection_type_definition() : {} { <IDENTIFIER> }
+void collectionDeclaration(boolean isPackageLevel) : {} { <IDENTIFIER> }
+void objectDeclaration() : {} { <IDENTIFIER> }
+
+/** Java stored procedure, external function*/
+void callSpecTail(boolean isPackageLevel) : {
+}
+{
+	// /* <LANGUAGE> (/*"C"*/<IDENTIFIER> | <JAVA>)
+
+	(
+		( <EXTERNAL>
+		|<LANGUAGE> (/*"C"*/<IDENTIFIER> | <JAVA>)
+
+		)//SRT 20110516 { System.err.println("Found EXTERNAL or LANG ") ; }
+		//These can appear in any order ....
+		(
+		  ( <LIBRARY> (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )
+			      [ "." (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )  ]
+		  )
+		  |
+		  ( <NAME> (<IDENTIFIER>  | <QUOTED_LITERAL> /* C */| StringLiteral() /* JAVA */ ) )
+		  //SRT 20110517  Need to cope with  callSpecTails in ObjectTypes  // skip2NextTerminator(null,";") 
+		  //skipPastNextOccurrence(")") // Read until we have eaten the closing bracket ")" 
+		  |
+		  (
+		    <WITH> <CONTEXT>
+		  )
+		  |
+		  (
+		    <PARAMETERS>
+		    skipPastNextOccurrence(")") // Read until we have eaten the closing bracket ")" 
+		  )
+		)*
+	)
+	{
+		return;
+	}
+
+	/* ### or:
+		<LIBRARY> library_name
+		[NAME c_string_literal_name]
+		[WITH CONTEXT]
+		[PARAMETERS (external_parameter[, external_parameter]...)];
+
+		Where library_name is the name of your alias library, c_string_literal_name is the name of your external C procedure, and external_parameter stands for:
+
+		{
+		   CONTEXT
+		 | SELF [{TDO | property}]
+		 | {parameter_name | RETURN} [property] [BY REFERENCE] [external_datatype]
+		 }
+
+		where property stands for:
+
+		{INDICATOR [{STRUCT | TDO}] | LENGTH | MAXLEN | CHARSETID | CHARSETFORM}
+
+		( <INDICATOR> [ <STRUCT> |  <TDO>] |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM>  )
+
+	*/
+
+  /*
+  "
+  (
+  (<EXTERNAL> |  <LANGUAGE> ( <JAVA> | <IDENTIFIER> )  )
+  <NAME> <IDENTIFIER>
+  <LIBRARY> <IDENTIFIER>
+  [ <WITH> <CONTEXT> ]
+  [<PARAMETERS> 
+    "("
+     <CONTEXT> 
+     ( ","
+             (
+	       <SELF> [ <TDO> | [ ( <INDICATOR> [ <STRUCT> |  <TDO>] ) |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM> ] ]
+	     | ( 
+	         (<IDENTIFIER> | <RETURN> )  
+		 [ <TDO> | [ ( <INDICATOR> [ <STRUCT> |  <TDO>] ) |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM> ] ]
+		 [<BY> <REFERENCE> ]
+		 [ <IDENTIFIER> ]
+               )
+	     )
+      )*
+     ")"
+  ]
+  )
+  {
+   return;
+  }
+  */
+}
+
+
+
+
+
+
+/** Cursor (common part of specification and body) */
+void cursorUnit(boolean isPackageLevel) throws SAXException :
+{
+	Token start, name;
+	String type;
+	Hashtable tags = new Hashtable();
+}
+{
+	(
+	start=<CURSOR> name=ID()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			tags = processMemberComment(start, purifyKeyword(start.toString()), name.toString());
+		} else {
+			tags = new Hashtable();
+		}
+	}
+	( "(" parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+	[<RETURN> type=datatype()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while (it.hasNext())
+					returnComment = (String) it.next();
+			}
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null)
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+	}
+	]
+	)
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			m_out.endElement(purifyKeyword(start.toString()));
+		}
+	}
+	[<IS> ("(")* sqlStatement(null,";")] ";"
+}
+
+void cursorSpec(boolean isPackageLevel) throws SAXException : {}
+{
+	cursorUnit(isPackageLevel)
+}
+
+void cursorBody(boolean isPackageLevel) throws SAXException : {}
+{
+	cursorUnit(isPackageLevel)
+//	<IS> /*<SQL_STATEMENT>*/
+}
+
+
+
+// ============================================================================
+// E X P R E S S I O N S
+// ============================================================================
+
+/*
+String expression() :
+{}
+{
+	"test"
+	{ return ""; }
+}
+*/
+
+
+
+String Expression() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	// Need syntactic lookahead to discriminate between Assignment and a procedure call
+	(
+  	LOOKAHEAD( PrimaryExpression() ":" "=" ) (string = Assignment()) {sb.append(string);  }  
+	| (string = ConditionalOrExpression() )  {sb.append(string); }  
+	//| (string = CompilationExpression() )  {sb.append(string); }  //SRT 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String CompilationExpression() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	(
+	  <CC_IF> {sb.append(" "); sb.append(token.image) ; } 
+	  string= ConditionalOrExpression() {sb.append(" "); sb.append(string); } 
+	  <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	  string = Expression() {sb.append(" "); sb.append(string); } 
+
+	  ( 
+	    <CC_ELSIF> {sb.append(" "); sb.append(token.image); } 
+	    string = ConditionalOrExpression() {sb.append(" "); sb.append(string); }  
+	    <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	    string = Expression() {sb.append(" "); sb.append(string); } 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> {sb.append(" "); sb.append(token.image); } 
+	    string = Expression()  {sb.append(" "); sb.append(string); } 
+	  )*
+
+	  <CC_END> {sb.append(" "); sb.append(token.image); } 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+String Assignment() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (string = PrimaryExpression() ) {sb.append(string);} 
+  (":" "="  ) {sb.append(" := ");} 
+  (string = Expression()) {sb.append(string);} 
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String CaseExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	thisToken = <CASE> { sb.append(thisToken.image);} 
+	( string = Expression() { sb.append(" "); sb.append(string); }  )?
+          ( thisToken = <WHEN> { sb.append("  "); sb.append(thisToken.image); } 
+	        string = Expression() { sb.append(" "); sb.append(string); }
+	     thisToken = <THEN>  { sb.append(" "); sb.append(thisToken.image); }
+	        string=  Expression() { sb.append(" "); sb.append(string); } 
+	   )+
+	  [ thisToken = <ELSE> { sb.append(" "); sb.append(thisToken.image);} 
+	        Expression() { sb.append(" "); sb.append(string); }
+	  ]
+	  thisToken = <END> { sb.append(" "); sb.append(thisToken.image);}
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/*
+LIKE ( Expression ) [ <ESCAPE> <STRINGLITERAL>
+*/
+String LikeExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+        string = PrimaryExpression() { sb.append(" "); sb.append(string); }
+	(thisToken = <LIKE> ) { sb.append(thisToken.image);} 
+	//["(" { sb.append("(");} ]
+	( string = StringExpression() { sb.append(" "); sb.append(string); }  )
+	//[ ")" { sb.append(")");} ]
+	[
+	<ESCAPE> { sb.append(" ESCAPE ");} 
+	(  <CHARACTER_LITERAL>{ sb.append(" "); sb.append(token.toString()); }  
+	  | string = StringLiteral() { sb.append(" "); sb.append(string); }  
+	)
+	]
+  )
+  ( "." string = Expression() { sb.append("."); sb.append(string); } )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String TrimExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	(thisToken = <TRIM> ) { sb.append(thisToken.image);} 
+	"(" { sb.append("(");} 
+	 [ ( <LEADING> | <TRAILING> | <BOTH> ){ sb.append(" "); sb.append(token.toString()); }  ]
+	 [ string = StringExpression() { sb.append(" "); sb.append(string); } ]
+	 ( <FROM>  )  { sb.append(thisToken.image);} 
+	 string = StringExpression() { sb.append(" "); sb.append(string); }  
+	")" { sb.append(")");} 
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+/*
+TREAT ( Expression AS datatype)
+CAST ( Expression AS datatype)
+*/
+String ObjectExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	(thisToken = <CAST> | thisToken = <TREAT> ) { sb.append(thisToken.image);} 
+	"(" { sb.append("(");} 
+	( string = Expression() { sb.append(" "); sb.append(string); }  )
+	[
+	 <AT> <TIME> <ZONE> string = PrimaryExpression() { sb.append(" AT TIME ZONE "); sb.append(string); }
+	]
+	<AS> { sb.append(" AS ");} 
+	( string = datatype() { sb.append(" "); sb.append(string); }  )
+	")" { sb.append(")");} 
+  )
+  ( "." Expression() )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ConditionalOrExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (string = ConditionalAndExpression() ) { sb.append(string);}
+  ( (<OR>) {sb.append(" OR ");}  
+    (string = ConditionalAndExpression() ) {sb.append(string);}
+  )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ConditionalAndExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+   (string = EqualityExpression() ) { sb.append(string);}
+   ( (<AND> ) {sb.append(" AND ");}  
+     (string = EqualityExpression() ) { sb.append(string);}
+   )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String EqualityExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  //RelationalExpression() ( ( "=" | "!=" | "<>" | <IS>) RelationalExpression() )*
+  (
+	  (
+	   string = RelationalExpression() 
+	  ) {sb.append(string);} 
+	  ( 
+	   ( ("=" ) {sb.append(" = ");}
+	   | ("!" "=" ) {sb.append(" != ");}
+	   // Now unde RelationalExpression | ("<" ">" ) {sb.append(" <> ");}
+	   | (<IS>) {sb.append(" IS ");}  
+           )
+	   (
+	   string = RelationalExpression() 
+	   ) {sb.append(string);} 
+	  )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/**
+ * 2006-05-23 - Matthias Hendler - added FROM
+ */
+String RelationalExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  //AdditiveExpression() ( ( "<" | ">" | "<=" | ">=" | [<NOT>] (<IN> | <BETWEEN> | <LIKE> | <FROM>) ) AdditiveExpression() )*
+  (string = AdditiveExpression() ) { sb.append(string); }
+  ( 
+   ( 
+      (
+	(
+	    (("<" ) { sb.append("<"); } 
+	     [">"  { sb.append(">"); } ] // <> 
+	    )
+	  | (">" ) { sb.append(">"); }
+	)
+	[ ("=" ) { sb.append("="); } ]
+    
+      )
+      { sb.append(" "); } 
+   | [(<NOT>) { sb.append(" NOT "); }] 
+     ((<IN>) { sb.append(" IN "); } 
+     | (<BETWEEN> ) { sb.append(" BETWEEN "); }
+     | (<LIKE> ) { sb.append(" LIKE "); }
+     | (<FROM>) { sb.append(" FROM "); }
+     | (
+	 (
+	   (<MEMBER>) { sb.append(" MEMBER "); }
+	   |
+	   (<SUBMULTISET>) { sb.append(" SUBMULTISET "); }
+	 )
+         [ <OF> { sb.append(" OF "); } ]
+       )
+     ) 
+    // MULTISET Operators 
+    | ( 
+       <MULTISET> { sb.append (" MULTISET " );}  
+       (   <EXCEPT>  { sb.append (" EXCEPT " );}  
+         | <INTERSECT>  { sb.append (" INTERSECT " );} 
+	 | <UNION>  { sb.append (" UNION " ); }    
+       )
+       [   <DISTINCT>  { sb.append (" DISTINCT " );} 
+         | <ALL>  { sb.append (" ALL " );}   
+       ]
+     ) 
+   ) 
+   (string=AdditiveExpression() ) { sb.append(string); }
+   [
+	<ESCAPE> { sb.append(" ESCAPE ");} 
+	(  <CHARACTER_LITERAL>{ sb.append(" "); sb.append(token.toString()); }  
+	  | string = StringLiteral() { sb.append(" "); sb.append(string); }  
+	)
+   ]
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String AdditiveExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  (string = MultiplicativeExpression() ) { sb.append(string); }
+  ( 
+    ( ("+" ) { sb.append(" + "); }
+    | ("-" ) { sb.append(" - "); }
+    | ("||" ) { sb.append(" || "); }
+    ) 
+    (string = MultiplicativeExpression() ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String StringExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  (string = PrimaryExpression() ) { sb.append(string); }
+  ( 
+     ("||" ) { sb.append(" || "); }
+    (string = PrimaryExpression() ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String MultiplicativeExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+
+  //UnaryExpression() ( ( "*" | "/" | <MOD> ) UnaryExpression() )*
+ (
+  (string = UnaryExpression(true) ) { sb.append(string); }
+  ( 
+    ( ("**"  ) { sb.append(" ** "); } //Exponentiation 
+    | ("*"  ) { sb.append(" * "); }
+    | ("/"  ) { sb.append(" / "); }
+    | (<MOD>  ) { sb.append(" MOD "); }
+    ) 
+    (string = UnaryExpression(true) ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String UnaryExpression(boolean isUnarySign) :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+   ( ("+" ) { sb.append(isUnarySign ? " +" : " + "); }
+   | ("-" ) { sb.append(isUnarySign ? " -" : " - "); }
+   ) 
+   (string = UnaryExpression(false) ) { sb.append(string); }
+  |
+   (string = UnaryExpressionNotPlusMinus() ) { sb.append(string); }
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String UnaryExpressionNotPlusMinus() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (<NOT>) {sb.append(" NOT "); } 
+  (string = UnaryExpression(false) ) { sb.append(string); }
+  |
+   (string = PrimaryExpression() ) { sb.append(string); }
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/**
+ * 2006-05-23 - Matthias Hendler - Added lookahead otherwise warning encountered.
+ *                                 Warning arised while adding methode triggerUnit(). 
+ * 2011-04-27 - SRT - Add optional NEW Keyword to cope with Object Type constructors
+ */
+String PrimaryExpression() :
+{ Token thisToken ; String string = null; StringBuffer sb = new StringBuffer() ;
+}
+{
+  ( 
+    ( // Explicitly cope with case where "NEW" is a Primary Prefix, such as in a Trigger WHEN clause  
+	    (<NEW_DOT> thisToken = qualifiedID()  ) { sb.append(" NEW."); sb.append(thisToken.toString()); }  
+      )
+    |
+    (
+      LOOKAHEAD( <NEW>  PrimaryPrefix() ) // Lookahead so that we can recover and treat NEW as an identifier 
+        <NEW> { sb.append(" NEW "); } (string = PrimaryPrefix() ) {sb.append(string);}  
+      |       (string = PrimaryPrefix() ) {sb.append(string);}  
+	  
+	  )
+	  ( LOOKAHEAD(2) (string = PrimarySuffix() ) { sb.append(string); }  )*
+  )
+
+ { 
+ return sb.toString(); 
+ }
+}
+
+String PrimaryPrefix() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; 
+
+}
+{
+(
+  ( string = Literal() ) { sb.append(string) ; } 
+| LOOKAHEAD(MultiSetCondition()) string = MultiSetCondition()
+| LOOKAHEAD(CompilationExpression()) string = CompilationExpression() //SRT 
+| LOOKAHEAD(TrimExpression()) string = TrimExpression() //SRT 20110613.3
+| LOOKAHEAD(CaseExpression()) ( string =CaseExpression() ) { sb.append(string) ; } //SRT 20110520
+| LOOKAHEAD(ObjectExpression() ) ( string = ObjectExpression() ) { sb.append(string) ; } //SRT 20110604
+//| LOOKAHEAD(LikeExpression()) ( string = LikeExpression() ) { sb.append(string) ; } //SRT 20110604 
+| ( string =Name() ) { sb.append(string) ; } 
+| LOOKAHEAD(<SELECT>) (<SELECT>) {sb.append("SELECT ..."); }  skip2NextTerminator(null,";")  
+| LOOKAHEAD(("(")+ <SELECT>) ("(") {sb.append("(SELECT ..."); }  skip2NextTerminator("(",")") ")"   
+| LOOKAHEAD(<WITH>) (<WITH>) {sb.append("WITH ..."); }  skip2NextTerminator(null,";")  
+| LOOKAHEAD(("(")+ <WITH>) ("(") {sb.append("(WITH ..."); }  skip2NextTerminator("(",")") ")"   
+|
+  ("(" ) {sb.append("("); } 
+  (string = Expression() ) {sb.append(string); } 
+  (
+    (",") {sb.append(", "); }  
+    (string = Expression() ) {sb.append(string); } 
+  )* 
+  (")") {sb.append(")"); } 
+
+)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String PrimarySuffix() :
+{ Token suffixToken = null ; String timeZoneExpression = null ; String arguments = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (".") {sb.append(".");}  (suffixToken = qualifiedID() ) { sb.append(suffixToken.toString()) ; }
+  //Bug 3535118 - Method call may include dblink 
+  //String dblink = null;
+  //["@" dblink = qualifiedName() {sb.append("@"); sb.append(dblink); } ]
+  | //Possible dblink 
+  ("@") {sb.append("@");}  (suffixToken = qualifiedID() ) { sb.append(suffixToken.toString()) ; }
+  | //Possible Date Time Expression - Bug 3553725  
+  ( <AT> {sb.append(" "); sb.append(token.image.toUpperCase());}  
+          (  <LOCAL> {sb.append(" "); sb.append(token.image.toUpperCase());}
+            | ( <TIME> <ZONE> {sb.append(" TIME ZONE");} ( <DBTIMEZONE> {sb.append(" "); sb.append(token.image.toUpperCase());}
+	        | <SESSIONTIMEZONE> {sb.append(" "); sb.append(token.image.toUpperCase());}
+	        | timeZoneExpression = StringLiteral() {sb.append(" "); sb.append(timeZoneExpression);}
+		| timeZoneExpression = Expression() ) {sb.append(" "); sb.append(timeZoneExpression);}
+	      )
+         )   
+  ) 
+  |
+  ( arguments = Arguments() ) {sb.append(arguments) ; }
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String Literal() :
+{ Token literalToken = null ; String literal = null ; }
+{
+  (
+  literalToken = numericLiteral() {literal = literalToken.toString(); }
+|
+  <CHARACTER_LITERAL> {literal = token.toString(); }
+|
+  //<STRING_LITERAL> {literal = token.toString(); }
+  literal = StringLiteral() //SRT 2010526 Cope with Q-QuotedStrings
+|
+  literal = BooleanLiteral()
+|
+  literal = NullLiteral()
+|
+  literal = DateTimeLiteral()
+  )
+
+ { 
+ return literal; 
+ }
+}
+
+String StringLiteral() :
+{
+Token thisToken = null;
+StringBuffer literal = new StringBuffer() ; 
+char startDelimiter ; 
+char endDelimiter ; 
+String terminator = null; 
+}
+{
+  //Essentially unchanged
+ (
+  thisToken = <STRING_LITERAL> 
+  { 
+   literal.append(thisToken.image); 
+   /*
+   This might be Q-Quoted string and this might be only a partial string
+   The token will only match up to the first single quote.
+   The code below appends any remaining part, theh returns the complete string
+   */
+   if (thisToken.image.toUpperCase().startsWith("Q'")
+       && thisToken.image.length() > 2
+      )
+   {
+   // Get the first token of the string so that the delimiter can be identified
+
+     startDelimiter= thisToken.image.charAt(2) ;
+     /*
+     if the start delimiter is one of [, {, <, or (, the end delimiter
+     is the corresponding closing character
+     */
+     switch (startDelimiter)
+     {
+      case '<' : endDelimiter = '>' ; break ; 
+      case '{' : endDelimiter = '}' ;  break ; 
+      case '(' : endDelimiter = ')' ;  break ; 
+      case '[' : endDelimiter = ']' ;  break ; 
+      default: endDelimiter = startDelimiter ; 
+     }
+
+     terminator = new String(endDelimiter + "'");
+     if (!thisToken.image.endsWith(terminator))
+     {
+       //Loop until we find atoken that ends with a single-quote precede by the terminator
+       literal.append(readPastNextOccurrence(terminator));
+     }
+   }
+  }
+ )
+ { return literal.toString(); }
+}
+
+
+String BooleanLiteral() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+ (
+  <TRUE> { literal = " TRUE " ; }
+	|
+  <FALSE> { literal = " FALSE " ; }
+ )
+ { return literal; }
+}
+
+String NullLiteral() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+  (
+  <NULL> { literal = " NULL " ; }
+  )
+ { 
+  return literal; 
+  }
+}
+
+String MultiSetCondition() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+  (
+  <A> <SET> { literal = " A SET " ; }
+  |
+  <EMPTY> { literal = " EMPTY " ; }
+  )
+ { 
+  return literal; 
+  }
+}
+
+/** Recognizes a numeric literal.
+* This may look like token, but it isn't. Not atomic enough.
+* E.g. "+1" would be valid literal, which make parsing of "i+1" impossible
+* (here, we have tokens "i", "+" and "1")
+*/
+Token numericLiteral() :
+{ Token main = null; }
+{
+	(
+	  //Essentially unchanged, as it previouly returned a Token 
+		main=<UNSIGNED_NUMERIC_LITERAL>
+	)
+	{ 
+	 return main; 
+	}
+}
+
+/** Recognizes a labe.
+* This may look like token, but it isn't. Not atomic enough.
+* E.g. "+1" would be valid literal, which make parsing of "i+1" impossible
+* (here, we have tokens "i", "+" and "1")
+*/
+String label() :
+{ 
+Token labelID = null; 
+StringBuffer sb = new StringBuffer(); 
+}
+{
+	(
+	  //This cannot be a token because these are valid labels '<< next_msg >>", '<<"OUTER LOOP">>'  
+	"<<" labelID = unqualifiedID() ">>" {sb.append("<<");  sb.append(labelID);  sb.append(">>");  }
+	)
+	{ 
+	 return(sb.toString()); 
+	}
+}
+
+String Name() :
+{
+	Token thisToken = null;
+	Token separatorToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //unqualifiedID() (LOOKAHEAD(2) ("." | "%") qualifiedID())*
+  (thisToken=unqualifiedID()) {sb.append(thisToken); }
+  (
+   LOOKAHEAD(2) 
+    ("." {sb.append(".");} | "%" {sb.append("%");}) //qualifiedID() 
+    thisToken = qualifiedID() {sb.append(thisToken);}
+  )*
+  {
+  return(sb.toString()); 
+  }
+}
+
+String qualifiedName() :
+{
+	Token thisToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //Essentially unchanged as it previously returned a String 
+	(thisToken=unqualifiedID()) {sb.append(thisToken); }
+	( ("." thisToken=qualifiedID()) { sb.append("."); sb.append(thisToken); } )*
+	{ 
+	 return(sb.toString()); 
+	}
+}
+
+String Arguments() :
+{
+	String argumentList = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //"(" [ ArgumentList() ] ")"
+  ("(") { sb.append("("); }  
+  [ (argumentList = ArgumentList()) { sb.append(argumentList); } ] 
+  (")") { sb.append(")"); }  
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ArgumentList() :
+{
+	String argument = null;
+	Token thisToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //Argument() ("," token=Argument())*
+  (argument = Argument()) { sb.append(argument); } 
+  (("," ) { sb.append(", "); }  (argument = Argument()) {sb.append(argument); } )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String Argument() :
+{
+	Token thisToken = null;
+	String string = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+	//[LOOKAHEAD(2) unqualifiedID() "=>"] Expression()
+	[LOOKAHEAD(2) (thisToken=unqualifiedID()) {sb.append(thisToken); } ("=>" | <AS> ) { sb.append(" "); sb.append(token.image.toUpperCase()); sb.append(" "); } ] 
+        (string = Expression() ) {sb.append(string); } 
+	//Allow Using CharacterSet suffix clause  
+	[
+	   ( <USING>  )  { sb.append(" "); sb.append(token.image.toUpperCase()); } 
+	   ( <CHAR_CS> | <NCHAR_CS>  )  { sb.append(" "); sb.append(token.image.toUpperCase()); } 
+	]
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+
+// ============================================================================
+// D E C L A R A T I O N S
+// ============================================================================
+
+void variableOrConstantDeclaration(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	String elementName = "VARIABLE";
+	String defaultValue = null;
+	Hashtable variableAttributes = new Hashtable();
+}
+{
+	name=ID() [LOOKAHEAD(2) <CONSTANT> {elementName = "CONSTANT";}] type=datatype()
+	[[<NOT>] <NULL>]
+	[
+	//SRT 20110427 (":=" | <_DEFAULT>) Expression()
+	(":" "=" | <_DEFAULT>) (defaultValue = Expression() )
+	] ";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			if (null != defaultValue) variableAttributes.put("DEFAULT"
+			                                                , (defaultValue.startsWith("'") 
+			                                                   ||defaultValue.toUpperCase().startsWith("Q'") 
+									  ) // Literal
+									  ?HTMLEscaper.escape(defaultValue) //Escape Literal
+									  :purifyIdentifier(defaultValue)
+			                                                );
+			tags = processMemberComment(name, elementName, name.toString(),variableAttributes);
+			m_out.pushAttribute("TYPE", purifyIdentifier(type));
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+void datatypeDeclaration() : {} { <IDENTIFIER> }
+
+void pragma(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token start,name = null,functionName,exceptionName,errorNumber; Hashtable tags = null; 
+  String string = null ; 
+}
+{
+	start=<PRAGMA>
+	(
+		name=<SERIALLY_REUSABLE>
+		|
+		name=<AUTONOMOUS_TRANSACTION>
+		|
+		name=<TIMESTAMP> "(" StringLiteral() ")"
+		|
+		name=<RESTRICT_REFERENCES> "(" (functionName=ID() /*| <_DEFAULT>*/)
+		("," (ID() | StringLiteral() /* 20110526 <STRING_LITERAL> */ ) )+	")"
+		|
+		name=<EXCEPTION_INIT> "(" exceptionName=<IDENTIFIER> "," ["+"|"-"] errorNumber=numericLiteral() ")"
+		|
+		name=<INTERFACE> "(" <IDENTIFIER> "," ID() [ "," numericLiteral() ] ")"
+		| //SRT 20110531 
+		string=qualifiedName() "(" readPastNextOccurrence(")") 
+	)
+	";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			tags = processMemberComment(start, start.toString().toUpperCase()
+			, (null != name) ? name.toString() : string
+			);
+			m_out.endElement("PRAGMA");
+		}
+	}
+}
+
+void exceptionDeclaration(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token exception_name; Hashtable tags = null; }
+{
+	exception_name=ID() <EXCEPTION> ";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			tags = processMemberComment(exception_name, "EXCEPTION", exception_name.toString());
+			m_out.endElement("EXCEPTION");
+		}
+	}
+}
+
+void parallel_clause() throws org.xml.sax.SAXException :
+{
+}
+{
+    (
+	    ( "(" <PARTITION> ID()  <BY> 
+	       (<ANY> 
+	        |
+	        ( (<HASH> | <RANGE> ) "(" ID() ( "," ID() )* ")" )
+               )
+	    ")"  
+	    )
+    )
+    [ ( <ORDER> | <CLUSTER> ) <BY> "(" ID() ( "," ID() )*  ")" ] 
+
+}
+
+// Copyright (C) 2002 Albert Tumanov
+
+/**
+ * 2006-05-10 - Matthias Hendler - merged SIV and sourceforge sources
+ */
+
+// SRT *
+void table() throws SAXException :
+
+{ Token schema = null, name = null, tokenCreate = null, tokenTable = null;
+}
+{
+  tokenCreate=<CREATE> [<GLOBAL> <TEMPORARY>]
+  tokenTable=<TABLE> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+  {
+    String schemaString = "";
+    if (schema != null) {
+      schemaString = schema.toString();
+    }
+    // now start printing the package
+    m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+    m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+    m_out.startElement("TABLE");
+    // possibly, package comment is here
+//    processPackageComment(tokenCreate);
+//    processPackageComment(tokenPackage);
+  }
+  "(" tableColumn() ("," tableColumn())* ")"
+  [LOOKAHEAD(2) <ON> <COMMIT> (<DELETE> | <PRESERVE>) <ROWS>]
+  //### [physicalProperties()]
+  //### [tableProperties()]
+  [";"]
+  { m_out.endElement("TABLE"); }
+}
+
+void tableColumn() throws SAXException :
+{ Token column = null;
+  String datatype = null, constraint = null; }
+{
+  column=ID() datatype=datatype() [<_DEFAULT> Expression()] [[<NOT> {constraint = "NOT NULL";}] <NULL>]
+  {
+    m_out.pushAttribute("NAME", String.valueOf(column));
+    m_out.pushAttribute("TYPE", datatype);
+    if (constraint != null)
+      m_out.pushAttribute("CONSTRAINT", constraint);
+    m_out.element("COLUMN");
+  }
+}
+
+
+
+void view() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenView = null;
+}
+{
+  tokenCreate=<CREATE> [<OR> <REPLACE>]
+  [[<NO>] <FORCE>]
+  tokenView=<VIEW> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+  {
+    String schemaString = "";
+    if (schema != null) {
+      schemaString = schema.toString();
+    }
+    // now start printing the view
+    m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+    m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+    m_out.startElement("VIEW");
+  }
+  ["(" viewColumn() ("," viewColumn())* ")"]
+  //### OF ... WITH OBJECT IDENTIFIER...
+  <AS>
+  statement() //SRT select()
+  //### WITH ...
+  (";" | "/")
+  { m_out.endElement("VIEW"); }
+}
+
+
+void Synonym()  :
+{ 
+}
+{
+  <CREATE> [<OR> <REPLACE>]
+  [<PUBLIC>] <SYNONYM>
+  ObjectNameDeclaration()
+  <FOR>
+  ObjectNameDeclaration()
+  (";" | "/")
+}
+
+void Directory()  :
+{ 
+}
+{
+  <CREATE> [<OR> <REPLACE>]
+   <DIRECTORY>
+  ObjectNameDeclaration()
+  <AS>
+  StringLiteral()
+  (";" | "/")
+  
+}
+
+void DatabaseLink()  :
+{ 
+}
+{
+  <CREATE> 
+   [ <SHARED> ] [ <PUBLIC> ]
+   <DATABASE> <LINK>
+  ObjectNameDeclaration()
+  (
+   <CONNECT> <TO> 
+    (
+    	(<CURRENT_USER> )
+	|
+	(
+	unqualifiedID() <IDENTIFIED> <BY> unqualifiedID()
+	<AUTHENTICATED> <BY> 
+	unqualifiedID() <IDENTIFIED> <BY> unqualifiedID()
+	)
+
+    )
+    |
+    unqualifiedID() <IDENTIFIED> <BY> unqualifiedID()
+  )
+  [ <USING> StringLiteral() ]
+  (";" | "/")
+  
+}
+
+
+void DDLEvent(): {}
+{
+  ( <ALTER> 
+  | <ANALYZE> 
+  | <ASSOCIATE> <STATISTICS> 
+  | <AUDIT>
+  | <COMMENT>
+  | <CREATE>
+  | <DISASSOCIATE> <STATISTICS>
+  | <DROP>
+  | <GRANT>
+  | <NOAUDIT>
+  | <RENAME>
+  | <REVOKE>
+  | <TRUNCATE>
+  | <DDL>
+  )
+}
+
+
+String ObjectNameDeclaration() :
+{
+Token schemaName = null, objectName = null ; 
+}
+{
+  [ LOOKAHEAD(2) schemaName = ID() "." ] objectName = ID() 
+  {
+  return  (null == schemaName) ?  objectName.toString() : (schemaName.toString() + "." + objectName.toString() )  ; 
+  }
+}
+
+void viewColumn() throws SAXException :
+{ Token column = null; }
+{
+  column=ID()
+  {
+    m_out.pushAttribute("NAME", String.valueOf(column));
+    m_out.element("COLUMN");
+  }
+}
+
+void comment() throws SAXException :
+{ Token schema = null, table = null, column = null, name = null, tokenComment = null, tokenOn = null;
+  String schemaString;
+  Node commentedObjectNode;
+  Element commentElement;
+}
+{
+  <COMMENT> <ON> (
+    ((tokenOn=<TABLE> | tokenOn=<OPERATOR> | tokenOn=<INDEXTYPE>) [LOOKAHEAD(2) schema=ID()"."] name=ID()) |
+    (tokenOn=<COLUMN> [LOOKAHEAD(ID()"."ID()"."ID()) schema=ID()"."] table=ID() "." column=ID())
+  )
+  {
+    schemaString = "";
+    if (schema != null) {
+      schemaString = schema.toString();
+    }
+    // find the database object where the comment belongs to
+    if (name != null) {
+      commentedObjectNode = m_out.findObjectNode(
+        purifyIdentifier(schemaString), purifyIdentifier(name.toString()));
+      /* SRT 
+      if (commentedObjectNode == null) {
+        System.err.println("Not found '" + purifyIdentifier(tokenOn.toString()) + " " +
+          purifyIdentifier(schemaString) + "." +
+          purifyIdentifier(name.toString()) +
+          "' for comment.");
+      }
+      */
+    } else {
+      Node commentedTableObjectNode = m_out.findObjectNode(
+        purifyIdentifier(schemaString), purifyIdentifier(table.toString()));
+      // find the COLUMN child
+      commentedObjectNode = null;
+      for (Node n = commentedTableObjectNode.getFirstChild(); n != null; n = n.getNextSibling()) {
+        Element e = (Element) n;
+        if (e.getTagName().equals("COLUMN") &&
+           e.getAttribute("NAME").equalsIgnoreCase(purifyIdentifier(column.toString()))) {
+           commentedObjectNode = e;
+           break;
+        }
+      }
+      /* SRT 
+      if (commentedObjectNode == null) {
+        System.err.println("Not found '" + purifyIdentifier(tokenOn.toString()) + " " +
+          purifyIdentifier(schemaString) + "." +
+          purifyIdentifier(table.toString()) + "." +
+          purifyIdentifier(column.toString()) +
+          "' for comment.");
+      }
+      */
+    }
+    // now append the comment to the object
+    commentElement = m_out.createElement("COMMENT");
+  }
+  <IS> tokenComment=<STRING_LITERAL>
+  {
+    String commentString = tokenComment.toString();
+    commentElement.appendChild(m_out.createCDATASection(commentString.substring(1, commentString.length()-1)));
+    if (commentedObjectNode != null) {
+      commentedObjectNode.appendChild(commentElement);
+    }
+  }
+  [";"]
+}
+// SRT * /
+
+
+
+void typeMethod(boolean isPackageLevel,int typeVersion, String alterTypeAction, Token objectStart) throws SAXException :
+{
+	Token schemaName = null;
+	Token scope, start,  name;
+	Token tokenIsAs = null;
+	Token mapOrderMethod = null;
+	Token inheritanceClause = null;
+	Token startToken = null;
+	Token returnToken = null;
+	String methodName = null;
+	String methodType = null;
+	String methodScope = null;
+	String methodOrdering = "";
+	String methodInheritance = "";
+	String methodPrefix = "";
+	String type = null;
+	String returnComment = null;
+	Hashtable tags;
+	Hashtable attributes = new Hashtable();
+}
+{
+
+        //inheritance CLAUSE
+        { 
+        startToken = getToken(1); 
+        //System.err.println("typeMethod: Result of getToken(1) is \"" + startToken.toString() + "\"" );
+        } //SRT added to check Token List walking 
+        ( [ <NOT> ] ( <OVERRIDING> | <INSTANTIABLE> | <FINAL> )  )*
+
+        //[ MAP | ORDER ] 
+        //[ [<NOT>] <FINAL> ] [ [<NOT>] <INSTANTIABLE>  ] 
+        [ mapOrderMethod = <MAP> | mapOrderMethod = <ORDER> ]
+        
+        
+	(scope=<CONSTRUCTOR> | scope = <MEMBER> | scope = <STATIC> ) ( start= <FUNCTION> | start= <PROCEDURE> ) (LOOKAHEAD(2) schemaName = ID()".")? name=ID()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			attributes = new Hashtable(); //SRT 20110427
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			//SRT 20110420 if (null!=alterTypeAction) m_out.pushAttribute("ACTION",alterTypeAction);
+		         //SRT Walk lists
+		        Token p = startToken ;
+		        if (null != mapOrderMethod )
+		        {
+				for( ; p != mapOrderMethod ; p = p.next ) 
+				{
+				    methodInheritance += " " + p.image ; 
+
+				} 		     
+				methodOrdering = mapOrderMethod.toString();
+			}
+			else
+			{
+				for( ; p != scope ; p = p.next ) 
+				{
+				    methodInheritance += " " + p.image ; 
+
+				} 		     
+
+			}
+			
+
+			methodScope = scope.toString();
+
+			//SRT 20110419 
+			if (null!=methodInheritance && !"".equals(methodInheritance)) attributes.put("INHERITANCE",purifyKeyword(methodInheritance));
+			if (null!=methodOrdering && !"".equals(methodOrdering))  attributes.put("ORDERING",purifyKeyword(methodOrdering));
+			if (null!=methodScope && !"".equals(methodScope))  attributes.put("SCOPE",purifyKeyword(methodScope));
+
+			methodType = purifyKeyword(start.toString()); //SRT 20110420
+
+			/*
+			System.err.print( "\nEnd of List Walk (Inheritance,Mapping,Scope,Type)=" 
+			                  + "(" + methodInheritance
+			                  + "," + methodOrdering
+			                  + "," + methodScope
+			                  + "," + methodType
+			                  + ")\n" 
+			                  ) ; 
+		        */ 
+			
+			methodName = purifyKeyword(start.toString());
+			//SRT 20081003 startToken = (mapOrderMethod == null) ? scope : mapOrderMethod;
+			tags = processMemberComment(startToken, methodName, name.toString(),attributes);
+
+			//Construct the pseudo-return type, incorporating any inheritance, mapping and scope clauses
+			methodPrefix = (purifyKeyword(methodInheritance
+					       + " " + methodOrdering
+					       + " " + methodScope)
+					       + " " + purifyIdentifier(methodType)
+					       + " " 
+				       ).replaceAll("  ", " ")
+				       ;
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+		       
+	( "(" parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+//	[<RETURN> ( <SELF> <AS> <RESULT> | type=datatype() )
+	[<RETURN> ( type=datatype() ) //datatype changed to include <SELF> <AS> <RESULT> 
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) 
+		{
+			// @return
+			//SRT String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null) 
+			{
+				for(Iterator it = tagValues.iterator(); it.hasNext(); )
+					returnComment = (String) it.next();
+			}
+			//SRT m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			methodPrefix += purifyIdentifier(type.toString());
+			
+			/* SRT
+			An object procedure method with non-default inheritance, mapping and scope
+			will have a pseudo return value despite not returning a value
+			This this means that we should move the output outside this block 
+			m_out.pushAttribute("TYPE",methodPrefix);
+
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		        */
+		}
+	}
+	]
+
+	
+	{
+
+		//Output the pseudo return value even if not real value is returned
+		if (null != methodPrefix )
+		{
+			m_out.pushAttribute("TYPE",methodPrefix.trim());
+
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			// @throws
+			String throwsComment = null;
+			String exceptionName = null;
+			Collection tagValues = (Collection) tags.get("@throws");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while(it.hasNext()) {
+					throwsComment = (String) it.next();
+					// extract when first word - it's the exception name
+					StringTokenizer st = new StringTokenizer(throwsComment);
+					if (st.hasMoreTokens())
+						 exceptionName = st.nextToken();
+					if (exceptionName != null)
+					{
+						m_out.pushAttribute("NAME", purifyIdentifier(exceptionName));
+						m_out.startElement("THROWS");
+						if (throwsComment != null)
+						{
+							m_out.startElement("COMMENT");
+							m_out.cdata(throwsComment.substring(exceptionName.length()));
+							m_out.endElement("COMMENT");
+						}
+						m_out.endElement("THROWS");
+					}
+				}
+			}
+		}
+		
+		// now print all custom tags
+		if (m_out != null && isPackageLevel)
+		{
+			printCustomTags(tags);
+		}
+	}
+
+	/* Bug-109 */
+	( (<AUTHID> ( <CURRENT_USER> | <DEFINER> ) ) 
+	    | (<ACCESSIBLE> <BY>  "(" 
+                                    [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                   ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                  ")" 
+              )
+
+            | <DETERMINISTIC> 
+	    | <PARALLEL_ENABLE>  [ parallel_clause() ] [ <USING> ID() ["." ID()] ] 
+	   | <PIPELINED> [ ( <USING> ID() ["." ID()] ) 
+	                   |  
+			   (( <ORDER> | <CLUSTER> ) [ID()] <BY> "(" ID() ( "," ID() )*  ")" ) 
+			 ] //  drvparx.IndexMapDocuments
+	   | <RESULT_CACHE> [ <RELIES_ON> "(" ID() ["." ID()] ( "," ID() ["." ID()])*  ")" ]
+           | CompilationExpression() // Allow Conditional PRAGMA
+	) *
+	
+
+	// Java or C function wrapped with PL/SQL wrapper declaration 
+	[
+	        
+		(tokenIsAs=<IS> | tokenIsAs=<AS>)
+		{
+			if (m_out != null && isPackageLevel)
+			{
+				processPackageComment(tokenIsAs);
+			}	
+		}
+		(
+		  callSpecTail(true)
+ 		  [ ";" ] // This only exists in the type body
+		  | // SRT 20110524 Not really a Declaration any more ...  
+		  (
+			declarativeSection(false,objectStart)
+			 <BEGIN> (statement())* (exceptionHandler())?  <END> [ID()] 
+			 ";" // This only exists in the type body
+		  )
+		)
+	]
+        { printSummary("Object Type Method", objectStart.beginLine, name, token); }
+
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			m_out.endElement(purifyKeyword(start.toString())); //SRT
+		}
+	}
+}
+
+
+void typeSpec() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenType = null
+        , schemaSuperType = null, nameSuperType = null, tokenSuperType = null
+        ,tokenIsAsUnder = null, tokenSpecificationForm = null
+        ,tokenTypeTerminator= null
+        ; 
+        boolean isPackageLevel = true;
+        String collectionType = null ;
+        String baseType = "" ;
+        int typeVersion = 1; // The version of this type
+}
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	tokenType=<TYPE> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110503 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.startElement("OBJECT_TYPE"); //OBJECT_TYPE
+		}
+		// possibly, package comment is here
+		processPackageComment(tokenCreate);
+		processPackageComment(tokenType);
+	}
+
+	//ID 3599012
+	[
+		tokenIsAsUnder=<FORCE> 
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+
+        // incomplete_type_spec (empty) 
+        // object_type_spec
+        // varray_type_spec
+        // nested_table_type 
+	
+	[
+		LOOKAHEAD(2) tokenIsAsUnder=<OID> <STRING_LITERAL> 
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+        
+        [
+		LOOKAHEAD(2) tokenIsAsUnder=<AUTHID> (<CURRENT_USER> | <DEFINER>)
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+
+        [
+	        LOOKAHEAD(3) (tokenIsAsUnder= <ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  ("," qualifiedName() )*  ")" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+        ]
+
+	//(tokenIsAsUnder=<IS> | tokenIsAs=<AS> )
+	//{
+	//	// possibly, package comment is here
+	//	processPackageComment(tokenIsAsUnder);
+	//}
+
+        [
+		( 
+		    tokenIsAsUnder=<UNDER> (LOOKAHEAD(2) schemaSuperType=ID()".")? nameSuperType=ID()  //SUBTYPE
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OBJECT>  // OBJECT TYPE
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OPAQUE> <VARYING> "(*)" // OPAQUE TYPE
+		                                                                <USING> <LIBRARY>  (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )
+			                                                                             [ "." (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() ) ]
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> ) collectionType = collection_type_name() <OF> baseType = datatype() 
+
+		) 
+		{
+                    //System.err.println("typeSpec: Matched Type");
+			//Output the SuperType if it has been identified 
+			if (m_out != null && nameSuperType != null)
+			{
+			  processPackageComment(tokenIsAsUnder);   
+				String schemaSuperTypeString = nameSuperType.toString();
+				if (schemaSuperType != null) {
+					schemaSuperTypeString = schemaSuperType.toString()
+                                                                 + "."
+					                         + nameSuperType.toString();
+				}
+				// Add link to SuperType
+				//m_out.startElement("VARIABLE"); //OBJECT_TYPE");
+				//m_out.pushAttribute("TYPE", schemaSuperTypeString);
+				//m_out.endElement("VARIABLE"); //OBJECT_TYPE");
+				m_out.pushAttribute("NAME", purifyIdentifier(schemaSuperTypeString) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE");
+						m_out.pushAttribute("TYPE", purifyIdentifier(schemaSuperTypeString) );
+						m_out.startElement("RETURN"); //OBJECT_TYPE");
+						m_out.endElement("RETURN"); //OBJECT_TYPE");
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE");
+			}
+			// Output the Collection SuperType if it has been identified
+                        if (m_out != null && collectionType != null)
+			{
+				String schemaSuperTypeString = "";
+				m_out.pushAttribute("NAME", purifyIdentifier(collectionType) );
+				m_out.startElement("COLLECTIONTYPE"); 
+				m_out.endElement("COLLECTIONTYPE"); 
+				// Add link to Collection SuperType
+				m_out.pushAttribute("NAME", purifyIdentifier(baseType) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE");
+					m_out.pushAttribute("TYPE", purifyIdentifier(collectionType + " OF " + baseType) );
+					m_out.pushAttribute("NAME", "COLLECTION" );
+					m_out.pushAttribute("COLLECTIONTYPE", purifyIdentifier(collectionType) );
+					m_out.pushAttribute("SUPERTYPE", purifyIdentifier(baseType) );
+					m_out.startElement("RETURN"); //OBJECT_TYPE");
+							m_out.startElement("COMMENT");
+							m_out.cdata("Collection Type : " + collectionType + " OF " + baseType );
+							m_out.endElement("COMMENT"); //OBJECT_TYPE");
+					m_out.endElement("RETURN"); //OBJECT_TYPE");
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE");
+			}
+/*
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+*/
+
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+			if (null!= tokenSpecificationForm)
+			{
+			   processPackageComment(tokenSpecificationForm);
+			}
+		}
+	]
+	
+	//
+	[ 
+	 LOOKAHEAD(8)   
+	//tokenIsAsUnder=
+	//<EXTERNAL> "NAME" <IDENTIFIER> <LANGUAGE> <JAVA> <USING> <IDENTIFIER> //javaInterfaceClass() //(<SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS> ) 
+	tokenIsAsUnder=
+	<EXTERNAL> <IDENTIFIER> <IDENTIFIER> <LANGUAGE> <JAVA> <USING> <IDENTIFIER> //javaInterfaceClass() //(<SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS> ) 
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAsUnder);
+	}
+	] 
+
+	[
+	  wrappedObject()
+	]
+
+        // //incomplete OBJECT TYPE and COLLECTION TYPEs will not have this 
+        [
+		(tokenIsAsUnder= "(" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                //Try matching against keywords first to allow FINCTION and procedure as a fallback
+		(LOOKAHEAD(2)  typeMethod(isPackageLevel,typeVersion,null,name) | attributeDeclaration(typeVersion,null) 
+		 | pragma_clause()
+		)* //SRT 20111125 This part may be completely empty if is a subtype which is effectively an alias for the supertype 
+		( "," (  typeMethod(isPackageLevel,typeVersion,null,name) | LOOKAHEAD(2) attributeDeclaration(typeVersion,null) 
+		      | pragma_clause()
+		      ) 
+		)*
+
+		")" 
+	]        
+        
+	( [ <NOT> ] 
+	  (
+	    <FINAL>   /*OBJECTS TYPES ONLY */ 
+          | <INSTANTIABLE>   //OBJECT TYPES ONLY 
+	  | <NULL>   //COLLECTION TYPES ONLY 
+	  )
+	)*
+
+        //Original Type Specification may be followed by a series of modifications
+        ( alterTypeSpec(++typeVersion,name) ) *
+
+
+        [
+	(tokenTypeTerminator = ";" | tokenTypeTerminator =  "/" )
+	{ 
+		//System.err.println("ObjectType Specification ("+ name.toString() +  "): Terminator="+ tokenTypeTerminator.toString() );
+		// possibly, package comment is here
+		processPackageComment(tokenTypeTerminator);
+	}
+        ( alterTypeSpec(++typeVersion,name) ( "/" | ";" ) )* //SRT 20110529 There may be more after the first terminator 
+        ]
+	 { printSummary("Object Type Specification", name.beginLine, name, token); }
+	{
+		if (m_out != null) m_out.endElement("OBJECT_TYPE"); //OBJECT_TYPE
+	}
+}
+
+
+void alterTypeSpec(int typeVersion, Token objectStart) throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenType = null
+        , schemaSuperType = null, nameSuperType = null, tokenSuperType = null
+        ,tokenIsAsUnder = null, tokenSpecificationForm = null
+        ,tokenAlterType= null
+        ,tokenCollectionSize= null
+        ; 
+        boolean isPackageLevel = true;
+        String typeName = "" ;
+        String collectionType = null ;
+        String collectionSize = "" ;
+        String baseType = "" ;
+        String exceptionsName = "" ;
+        String tokenAlterTypeString = null ;
+}
+{
+	tokenCreate=<ALTER> 
+	tokenType=<TYPE> typeName = qualifiedName() 
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenCreate);
+		processPackageComment(tokenType);
+	}
+
+        // REPLACE invoker_rights_clause AS OBJECT 
+        //alter_method_spec 
+        //(tokenAlterType = <ADD>|tokenAlterType = <MODIFY> |tokenAlterType = <DROP> |tokenAlterType = <REPLACE>)
+            
+         //SRT 20110529 Each ALTER TYPE statement may contaon 0 or more ADD or DROP clause 
+         //When more than one clause exists, each clause is separated by comma ","  
+       (
+       (
+         [","] 
+        (tokenAlterType = <ADD> | tokenAlterType = <MODIFY> ) 
+        {tokenAlterTypeString = tokenAlterType.toString().equals("ADD") ?
+                                "(+)" : "(m)"; 
+        }
+        (
+	      // Move typeMethidMatching above attribure matvhing becausse FUNCTION is a valid attribute name 
+             ( 
+		 (typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) ) 
+		  //( "," ( typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString) ) )*
+             )
+            |
+            (
+                  <ATTRIBUTE>
+		   ( "("  )*
+		    (attributeDeclaration(typeVersion, tokenAlterTypeString ) ) 
+		    ( "," ( attributeDeclaration(typeVersion, tokenAlterTypeString) ) )*
+		   ( ")"  )*
+            )
+            |
+            (<LIMIT> tokenCollectionSize = numericLiteral() )
+            |
+            ( <ELEMENT> <TYPE> baseType = datatype() )
+        )+
+       )
+       |
+       (
+         [","] 
+        (tokenAlterType = <DROP>) {tokenAlterTypeString = "(-)" ; }
+        (
+            (
+                  <ATTRIBUTE>
+		   ( "("  )*
+		    (attribute(typeVersion, tokenAlterTypeString) ) 
+		    ( "," ( attribute(typeVersion, tokenAlterTypeString) ) )*
+		   ( ")"  )*
+            )
+            |
+             ( 
+		 (typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) ) 
+		  //( "," ( typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString) ) )*
+             )
+        )+
+       )
+       )*
+/*
+          
+          )
+          {
+		System.err.println("Alter Type is " + tokenAlterType.toString());
+          }
+          | 
+          (<DROP> ( 
+		 (typeMethod(isPackageLevel) ) 
+		  ( "," ( typeMethod(isPackageLevel) ) )*
+                 )
+                 |
+                 (
+                  <ATTRIBUTE>
+		   [ "("  ]
+		    (qualifiedName() ) 
+		    ( "," ( qualifiedName() ) )*
+		   [ ")"  ]
+                 )
+          
+          )
+          |
+          //alter_collection_clause 
+	  (        
+          <MODIFY> 
+            (<LIMIT> tokenCollectionSize = numericLiteral() )
+            |
+            ( <ELEMENT> <TYPE> baseType = datatype() )
+	  )        
+        |
+*/
+        [
+                <REPLACE>
+                {tokenAlterTypeString = "(r)" ; 
+                }
+                [
+		LOOKAHEAD(2) tokenIsAsUnder=<AUTHID> (<CURRENT_USER> | <DEFINER>)
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                ]
+
+                [
+		LOOKAHEAD(3) (tokenIsAsUnder= <ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  ("," qualifiedName() )*  ")" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                ]
+
+                
+		( 
+		  (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OBJECT>  // OBJECT TYPE
+		) 
+		{
+                    //System.err.println("alterTypeSpec: Matched Type");
+			//Output the SuperType if it has been identified 
+			if (m_out != null && nameSuperType != null)
+			{
+				String schemaSuperTypeString = nameSuperType.toString();
+				if (schemaSuperType != null) {
+					schemaSuperTypeString = schemaSuperType.toString()
+                                                                 + "."
+					                         + nameSuperType.toString();
+				}
+				// Add link to SuperType
+				//m_out.startElement("VARIABLE"); //OBJECT_TYPE";
+				//m_out.pushAttribute("TYPE", schemaSuperTypeString);
+				//m_out.endElement("VARIABLE"); //OBJECT_TYPE";
+				m_out.pushAttribute("NAME", purifyIdentifier(schemaSuperTypeString) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE";
+					m_out.startElement("RETURN"); //OBJECT_TYPE";
+					m_out.pushAttribute("TYPE", purifyIdentifier(schemaSuperTypeString) );
+					m_out.endElement("RETURN"); //OBJECT_TYPE";
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE";
+			}
+			// Output the Collection SuperType if it has been identified
+                        if (m_out != null && collectionType != null)
+			{
+				String schemaSuperTypeString = "";
+				// Add link to Collection SuperType
+				m_out.pushAttribute("NAME", purifyIdentifier(baseType) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE";
+				        m_out.pushAttribute("TYPE", purifyIdentifier(collectionType + " OF " + baseType) );
+					m_out.pushAttribute("NAME", "COLLECTION" );
+					m_out.pushAttribute("COLLECTIONTYPE", purifyIdentifier(collectionType) );
+					m_out.pushAttribute("SUPERTYPE", purifyIdentifier(baseType) );
+				m_out.startElement("RETURN"); //OBJECT_TYPE";
+						m_out.startElement("COMMENT");
+						m_out.cdata("Collection Type : " + collectionType + " OF " + baseType );
+						m_out.endElement("COMMENT"); //OBJECT_TYPE";
+				m_out.endElement("RETURN"); //OBJECT_TYPE";
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE";
+			}
+
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+			if (null!= tokenSpecificationForm)
+			{
+			   processPackageComment(tokenSpecificationForm);
+			}
+		}
+
+		(tokenIsAsUnder= "(" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+
+		(LOOKAHEAD(2) typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) | attributeDeclaration(typeVersion, tokenAlterTypeString) ) 
+		( "," ( LOOKAHEAD(2) typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) | attributeDeclaration(typeVersion, tokenAlterTypeString) ) )*
+
+		")" 
+	]        
+        
+/* */
+	
+	( [ <NOT> ] 
+	  (
+	    <FINAL>   /*OBJECTS TYPES ONLY */ 
+          | <INSTANTIABLE>   //OBJECT TYPES ONLY 
+	  | <NULL>   //COLLECTION TYPES ONLY 
+	  )
+	)*
+
+        //DEPENDENT HANDLING CLAUSE
+	[
+            (
+              <INVALIDATE>
+            )
+            |
+            (
+              <CASCADE>
+              (
+               (
+                 [ <NOT> ] <INCLUDING><TABLE><DATA>
+               )
+               |
+               (
+                 <CONVERT><TO><SUBSTITUTABLE>
+               )
+              )*
+            
+              [
+                [ <FORCE> ]
+                <EXCEPTIONS> <INTO> exceptionsName = qualifiedName()
+              ]
+            )
+        ] 
+
+}
+
+
+
+/*
+void typeBody() throws SAXException :
+{ Token name=null; }
+{
+	[<CREATE> [<OR> <REPLACE>]]
+
+	<TYPE> <BODY> (LOOKAHEAD(2) ID()".")? name=ID()
+	{
+		System.err.println("TYPE BODY FOUND");
+		if (m_out != null)
+		{
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.startElement("PACKAGE_BODY"); //OBJECT_TYPE_BODY
+		}
+	}
+
+	(
+	  (
+	    wrappedObject() 
+	  )
+	  |
+	  (
+	    (<IS> | <AS>)
+
+		    declarativeSection(true) //SRT 20110524 Allow PLDOc in Type Bodies 
+
+	    [ <BEGIN> (statement())* (exceptionHandler())? ] <END> [ID()] ";" 
+	  )
+	)
+	{
+		if (m_out != null) m_out.endElement("PACKAGE_BODY"); //OBJECT_TYPE_BODY
+		System.err.println("TYPE BODY LEFT");
+	}
+}
+*/
+
+
+/**
+  * Method 
+**/
+void attributeDeclaration(int typeVersion, String alterTypeAction) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	Hashtable attributes = null;
+	String elementName = "VARIABLE";
+}
+{
+	name=ID()  type=datatype()
+	{
+		if (m_out != null )
+		{
+			attributes = new Hashtable();
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			if (null!=alterTypeAction) attributes.put("ACTION",alterTypeAction);
+			tags = processMemberComment(name, elementName, name.toString(), attributes);
+			m_out.pushAttribute("TYPE", purifyIdentifier(type));
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+
+
+void attribute(int typeVersion, String alterTypeAction) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	String elementName = "VARIABLE";
+	Hashtable attributes = null;
+}
+{
+	name=ID()  
+	{
+		if (m_out != null )
+		{
+			attributes = new Hashtable();
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			if (null!=alterTypeAction) attributes.put("ACTION",alterTypeAction);
+			tags = processMemberComment(name, elementName, name.toString(), attributes);
+			m_out.pushAttribute("TYPE", "(dropped)");
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+
+/*
+ This was quick cut from PRAGMA
+*/
+void pragma_clause() throws org.xml.sax.SAXException :
+{ Token start,name,functionName,exceptionName,errorNumber; Hashtable tags = null; }
+{
+	start=<PRAGMA>
+	(
+		name=<SERIALLY_REUSABLE>
+		|
+		name=<AUTONOMOUS_TRANSACTION>
+		|
+		name=<RESTRICT_REFERENCES> "(" (functionName=ID() /*| <_DEFAULT>*/)
+		("," (ID() | StringLiteral() /* 20110526 <STRING_LITERAL> */) )+	")"
+		|
+		name=<EXCEPTION_INIT> "(" exceptionName=<IDENTIFIER> "," ["+"|"-"] errorNumber=numericLiteral() ")"
+		|
+		name=<INTERFACE> "(" <IDENTIFIER> "," <IDENTIFIER> "," numericLiteral() ")"
+	)
+}
+
+/** 
+ * Trigger
+ * Triggers are always outside of a package.
+ *
+ *  2006-05-17 - Matthias Hendler - added 
+ */
+
+/*
+  11g Trigger Syntax 
+
+ create_trigger : 
+ CREATE [OR REPLACE] TRIGGER [schema.]trigger 
+( simple_dml_trigger | compound_dml_trigger | non_dml_trigger )
+[ FOLLOWS ( [schema.]trigger) ( , [schema.]trigger)*  ]
+[ ENABLE  | DISABLE ]
+( WHEN ( trigger_condition ) 
+trigger_body
+
+
+simple_dml_trigger :
+(BEFORE |AFTER | INSTEAD OF)
+dml_event_clause 
+[ referencing_clause ]
+[ FOR EACH ROW ]
+
+
+
+compound_dml_trigger :
+FOR dml_event_clause 
+[ referencing_clause ]
+
+
+non_dml_trigger :
+(BEFORE> |<AFTER> ) 
+(ddl_event | database_event) ( OR (ddl_event | database_event))*
+ON
+(DATABASE | [schema.]SCHEMA
+
+
+
+trigger_body :
+(plsql_block | compound_trigger_block | CALL routine_clause)
+
+
+
+dml_event_clause:
+( DELETE | INSERT | UPDATE [ OF column (, column ) ] )
+ON ( (schema.table | NESTED TABLE nested_table_column OF [schema.]view )
+
+referencing_clause:
+REFERENCING 
+(OLD AS old_alias | NEW AS new_alias | PARENT AS parent_alias )+ 
+
+
+compound_trigger_block :
+COMPOUND TRIGGER 
+declare_section 
+(timing_point_section)+  
+END [trigger_name] ;
+
+timing_point_section:
+(
+BEFORE STATEMENT IS tps_body END BEFORE STATEMENT 
+|BEFORE EACH ROW IS tps_body END BEFORE EACH ROW 
+|AFTER STATEMENT IS tps_body END AFTER STATEMENT 
+|AFTER EACH ROW IS tps_body END AFTER EACH ROW 
+)
+
+
+tps_body:
+(statement)+
+(EXCEPTION exception_handler )*
+
+*/
+void triggerUnit() throws SAXException :
+{
+	Token start = null;
+	Token node = null;
+	Token schema = null;
+	Token name = null;
+	Token table = null;
+	Token dec_start = null;
+	Token dec_end = null;
+	Token nested_table_column = null;
+	StringBuffer declaration = new StringBuffer();
+	Hashtable tags = new Hashtable();
+	String triggerType = "SIMPLE"; // 11g Triggers may be SIMPLE DML, COMPOUND DML or non-DML 
+	String triggerLevel = "TABLE"; // 11g Triggers may be simple TABLE, DDL or Event triggers AT SCHEMA or DATABASE level
+	String triggerName = null; 
+	String tableName = null; 
+
+}
+{
+	[start=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	
+	(node=<TRIGGER>) (LOOKAHEAD(2) schema =ID()".")? name=ID()
+
+	// simple_dml_trigger | compound_dml_trigger | non_dml_trigger 
+	// simple_dml_trigger : 
+	(dec_start=<BEFORE> |dec_start=<AFTER> | dec_start=<INSTEADOF> | dec_start = <FOR> {triggerType = "COMPOUND" ; } // Incorporate 11G Compound DML Trigger
+	)
+
+	//dml_event_clause 
+	( ((<DELETE> | <INSERT> | <UPDATE>) [LOOKAHEAD(6)<OF> ID() ("," ID() )*] ) | non_dml_event() {triggerType = "NONDML" ; }  ) 
+	
+	( <OR> ( ((<DELETE> | <INSERT> | <UPDATE>) [LOOKAHEAD(6)<OF> ID() ("," ID() )* ] ) | non_dml_event() )  )*
+	
+	dec_end=<ON> 
+	(
+	schema=<DATABASE> //11G non_dml_trigger
+	|LOOKAHEAD(2) <NESTED> <TABLE>  nested_table_column = ID() <OF>  [LOOKAHEAD(2) schema = ID()"."] table=ID()
+	|[LOOKAHEAD(2) schema = ID()"."] table=ID() //includes 11g schema.<SCHEMA> table ===<SCHEMA>
+	)
+	{
+		// Read the declaration part of the trigger
+		Token runner = dec_start;
+		while(runner != dec_end) {
+			declaration.append(runner.image);
+			declaration.append(" ");
+			runner = runner.next;
+		}
+
+		if (m_out != null) {
+			String packageString = globalPackageName; // Default Global Package Name 
+			String schemaString = schemaName; // Default Schema 
+			final String fullname ;
+
+			if 
+			 ( //If Non-DML trigger 
+			  (null != schema && schema.image.toUpperCase().equals("DATABASE"))
+			 ) 
+			 { //Trigger has been declared on the Database or on an explicit schema
+			  fullname = purifyIdentifier(schema.toString()+"."+name.toString() );
+			  triggerLevel = "DATABASE" ;
+			  triggerName = name.toString()  ;
+			 }
+			else if 
+			 ( //If Non-DML trigger 
+			  (null != table && table.image.toUpperCase().equals("SCHEMA"))
+			 ) 
+			 { //Trigger has been declared on the Database or on an explicit schema
+			  fullname = purifyIdentifier(schema.toString()+"."+name.toString() );
+			  triggerLevel = "SCHEMA" ;
+			  triggerName = name.toString()  ;
+			 }
+			 else
+			 {
+			  fullname = purifyIdentifier( table.toString()+"."+name.toString() );
+			  triggerLevel = "TABLE" ;
+			  triggerName = name.toString()  ;
+			  tableName = table.toString()  ;
+			 }
+
+			if (null != schema )
+			{
+			  schemaString = schema.toString();
+			  packageString = ("_" + schemaString ) ; //Base global package name on Schema
+			}
+
+			/*
+			Previously triggers were wrapped in the _GLOBAL package,
+			which alsoe help all ScHema-level functions and procedures 
+			This was changed so that there was one global package per Schema.
+
+			In order to get these triggers in the correct schema triggers are no longer processed
+			as global productions.
+
+			In order to minimise the downstream changes the code wraps the trigger element
+			in the best possible Global Package Name 
+
+			*/
+			m_out.pushAttribute("NAME", purifyIdentifier(packageString)); 
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString)); // 11g Flag Schema if possible 
+			m_out.startElement("PACKAGE");
+
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString)); // 11g Flag Schema if possible 
+			m_out.pushAttribute("TYPE", purifyKeyword(triggerType)); // 11g Flag Different Trigger Types
+			m_out.pushAttribute("LEVEL", purifyKeyword(triggerLevel)); // 11g Flag Different Trigger Levels
+			if (null != tableName)
+			{
+			  m_out.pushAttribute("TABLE_NAME", purifyKeyword(tableName)); 
+			}
+			tags = processMemberComment(start, purifyKeyword(node.toString()), triggerName); //PLSCOPE fullname); 
+			//SRT 20110512 - Look for member comment in all possible locations before the trigger 
+			tags.putAll(processMemberComment(node, null, null)); 
+			tags.putAll(processMemberComment(name, null, null)); 
+			tags.putAll(processMemberComment(dec_start, null, null)); 
+			
+			// print the parsed declaration
+			m_out.pushAttribute("TEXT", declaration.toString() );
+			m_out.startElement("DECLARATION");
+			m_out.endElement("DECLARATION");
+	
+			// print custom tags		
+			printCustomTags(tags);
+
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+	
+	 
+	// referencing_clause 
+	[<REFERENCING> ((<OLD> | <NEW> | <PARENT>) <AS> ID())* /*Oddly, there is a minimum of ZERO subclauses, not ONE */  ]
+	
+	[<FOREACHROW>]
+	// end of simple_dml_trigger (incorporating  compound_dml_trigger )
+	
+	
+	[ [<FORWARD> | <REVERSE>] <CROSSEDITION>  ] // 11G Syntax to specify CrossEdition trigger  if not specified direction is FORWARD 
+	[ (<FOLLOWS> | <PRECEDES>) ( [LOOKAHEAD(2) ID() "."] ID() )  ( ","  ( [ LOOKAHEAD(2) ID() "."] ID() ) )* ] // 11G Syntax to specify trigger firing order 
+	[ <ENABLE> | <DISABLE> ] // 11G Syntax can create the trigger enabled or disabled explcitly 
+	[ <WHEN> "(" ConditionalOrExpression() ")" ]
+
+	//Trigger Body follows :
+	//plsql_block  | compound_trigger_block | <CALL> routine 
+	(
+	 <CALL> PrimaryExpression() ";"
+	 //compound_trigger_block 
+	| compound_trigger_block(name)
+
+	|//plsql_block  
+	  (
+	    [
+	    <DECLARE>
+		    declarativeSection(false,name)
+	    ]
+	    
+	    <BEGIN> (statement())* (exceptionHandler())? <END> [ID()] ";"
+	  )
+	//| //<CALL> routine 
+	)
+	
+	
+	{ printSummary("Trigger", name.beginLine, name, token); }
+	{
+		if (m_out != null)
+		{
+			m_out.endElement(purifyKeyword(node.toString())); //SRT 20110420 m_out.endElement(purifyIdentifier(node.toString().toUpperCase()));
+			m_out.endElement(purifyKeyword("PACKAGE")); //Wrap the trigger element in a fake package
+		}
+	}
+	
+}
+
+
+void timing_point_section() throws SAXException :
+{
+	Token start = null;
+	Token start_scope = null;
+	Token begin = null;
+	Token end = null;
+	Token end_scope = null;
+	Hashtable tags = new Hashtable();
+	StringBuffer tpsType = new StringBuffer();
+	String tpsAttributeName = "TIMINGPOINTSECTION";
+}
+{
+ (
+ ( start = <BEFORE> | start = <AFTER> | start = <INSTEADOF> ) { tpsType.append(start.image); } 
+ (   start_scope = <STATEMENT> { tpsType.append(" STATEMENT" ); } 
+   | start_scope = <EACH> <ROW> { tpsType.append(" EACH ROW" ); } 
+ )  
+ <IS> 
+ begin = <BEGIN>
+ (statement())+ 
+ <END>  ( end = <BEFORE> | end = <AFTER> | end = <INSTEADOF> ) ( end_scope = <STATEMENT> | end_scope = <EACH> <ROW>) ";"
+ )
+ {
+  //Add a TRIGGER ENTRY for each timing point section 
+  if (m_out != null)
+  {
+	m_out.pushAttribute("TYPE", purifyKeyword(tpsType.toString()) ); // 11G Flag Different Timing Point Sections 
+	tags = processMemberComment(start, purifyKeyword(tpsAttributeName ), purifyKeyword(tpsType.toString()) );
+	tags.putAll(processMemberComment(start_scope, null, null)); 
+	tags.putAll(processMemberComment(begin, null, null)); 
+
+	m_out.endElement(purifyKeyword(tpsAttributeName)); 
+  }
+ }
+}
+
+
+
+void compound_trigger_block(Token objectStart) throws SAXException :
+{
+	Token start = null;
+	Token node = null;
+	Token schema = null;
+	Token name = null;
+	Token table = null;
+	Token dec_start = null;
+	Token dec_end = null;
+	StringBuffer declaration = new StringBuffer();
+	Hashtable tags = new Hashtable();
+}
+{
+  start = <COMPOUND> <TRIGGER> 
+
+  (
+    //Problems making the declaration optional
+    //declarativeSection(true)
+    //(timing_point_section())+
+    	(
+               timing_point_section()|
+		pragma(true) |
+		LOOKAHEAD(2)
+		exceptionDeclaration(true) |
+		LOOKAHEAD(2)
+		subtype_definition(true) |
+		LOOKAHEAD(4)
+		variableOrConstantDeclaration(true) |
+		LOOKAHEAD(2)
+		cursorSpec(true) |
+		cursorBody(true) |
+		collectionDeclaration(true) |
+		programUnit(true,objectStart) 
+	)*
+
+
+  )
+
+  <END> [ID()] ";"
+}
+
+
+/*
+non_dml_trigger :
+(BEFORE> |<AFTER> ) 
+(ddl_event | database_event) ( OR (ddl_event | database_event))*
+ON
+(DATABASE | [schema.]SCHEMA
+*/
+void non_dml_trigger() throws SAXException :
+{
+	Token start = null;
+	Token schema = null;
+	Token trigger_scope = null;
+}
+{
+ ( start = <BEFORE> | start = <AFTER> ) 
+ ( ddl_event() | database_event() )
+ ( <OR> ( ddl_event() | database_event() ) )*
+ <ON> 
+ (trigger_scope = <DATABASE> | [LOOKAHEAD(2) schema = ID()"."] trigger_scope= <SCHEMA>)
+}
+
+
+Token ddl_event(): {}
+{
+  ( <ALTER> 
+  | <ANALYZE> 
+  | <ASSOCIATE> <STATISTICS> 
+  | <AUDIT>
+  | <COMMENT>
+  | <CREATE>
+  | <DISASSOCIATE> <STATISTICS>
+  | <DROP>
+  | <GRANT>
+  | <NOAUDIT>
+  | <RENAME>
+  | <REVOKE>
+  | <TRUNCATE>
+  | <DDL>
+  )
+  { return token; }
+}
+
+
+Token database_event(): {}
+{
+  ( <STARTUP>
+  | <SHUTDOWN> 
+  | <LOGON> 
+  | <LOGOFF> 
+  | <SERVERERROR> 
+  | <SUSPEND> 
+  )
+  { return token; }
+}
+
+Token non_dml_event(): {}
+{
+  (ddl_event() | database_event()) 
+  { return token; }
+}
+
+/*
+When DBMS_METADATA.GET_DDL returns a trigger, it can come in 2 DDL statements.
+The first is the CREATE OR REPLACE TRIGER statement; the second is an ALTER TRIGGER statement,
+enabling or disabling the trigger.
+
+Unlike the ALTER TYPE, it does not seem to alter the structure of the object.
+*/
+void alterTrigger() throws SAXException :
+{}
+{
+	<ALTER> <TRIGGER>
+	skip2NextTerminator(null,";") 
+	";"
+	{
+		return;
+	}
+}
+
+// Copyright (C) 2002 Albert Tumanov
+
+/* WHITE SPACE */
+
+SKIP :
+{
+        //Tracker Issue 1433480 - skip2 and skipPast need to be able to check for EOL - so the characters 
+	//cannot be SKIPped
+	//" " | "\t" | "\n" | "\r" | "\f"
+	" " | "\t" | "\f"
+}
+
+/* COMMENTS */
+
+MORE :
+{
+	<"/**" ~["/"]> : IN_FORMAL_COMMENT
+|
+	"/*" : IN_MULTI_LINE_COMMENT
+}
+
+SPECIAL_TOKEN :
+{
+	<SINGLE_LINE_COMMENT: "--"(~["\n","\r"])* ("\n"|"\r"|"\r\n")?>
+}
+
+//Tracker Issue 1433480 - skip2 and skipPast need to be able to check for EOL - so it cannot be SKIPped
+SPECIAL_TOKEN :
+{
+	<EOL: ("\n"|"\r"|"\r\n") >
+}
+
+<IN_FORMAL_COMMENT>
+SPECIAL_TOKEN :
+{
+	<FORMAL_COMMENT: "*/" > : DEFAULT
+}
+
+<IN_MULTI_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+	<MULTI_LINE_COMMENT: "*/" > : DEFAULT
+}
+
+/*
+<IN_SQL_STATEMENT_ENDED_SEMICOLON>
+SKIP :
+{
+	<SQL_STATEMENT: ";" > : DEFAULT
+}
+*/
+
+<IN_FORMAL_COMMENT, IN_MULTI_LINE_COMMENT,
+ IN_SQL_STATEMENT_ENDED_SEMICOLON>
+MORE :
+{
+	< ~[] >
+}
+
+/* PSEUDO-RESERVED WORDS */
+
+TOKEN [IGNORE_CASE]:
+{
+<REPLACE: "REPLACE"> |
+<DEFINER: "DEFINER"> |
+<CURRENT_USER: "CURRENT_USER"> |
+<SERIALLY_REUSABLE: "SERIALLY_REUSABLE"> |
+<RESTRICT_REFERENCES: "RESTRICT_REFERENCES"> |
+<EXCEPTION_INIT: "EXCEPTION_INIT"> |
+<AUTONOMOUS_TRANSACTION: "AUTONOMOUS_TRANSACTION"> |
+<LANGUAGE: "LANGUAGE">
+}
+
+/* PL/SQL RESERVED WORDS */
+/**
+ * 2006-05-20 - Matthias Hendler - Removed: <COLUMN: "COLUMN">
+ *                                 Added: <MERGE: "MERGE">, <AFTER: "AFTER">, <BEFORE: "BEFORE">,
+ *                                 <INSTEADOF: "INSTEAD OF">, <FOREACHROW: "FOR EACH ROW">, <REFERENCING: "REFERENCING">,
+ *                                 <OLD: "OLD">, <PARENT: "PARENT">
+ */
+
+TOKEN [IGNORE_CASE]:
+{
+<ADD: "ADD"> |
+<AGGREGATE: "AGGREGATE"> |
+<ALL: "ALL"> |
+<ALTER: "ALTER"> |
+<AND: "AND"> |
+<ANY: "ANY"> |
+<ARRAY: "ARRAY"> |
+<AS: "AS"> |
+<ASC: "ASC"> |
+<AT: "AT"> |
+<ATTRIBUTE: "ATTRIBUTE"> |
+<AUTHID: "AUTHID"> |
+<AVG: "AVG"> |
+<BEGIN: "BEGIN"> |
+<BETWEEN: "BETWEEN"> |
+<BINARY_INTEGER: "BINARY_INTEGER"> |
+<BODY: "BODY"> |
+<BOOLEAN: "BOOLEAN"> |
+<BULK: "BULK"> |
+<BY: "BY"> |
+<BYTE: "BYTE"> |
+<CASCADE: "CASCADE"> |
+<CASE: "CASE"> |
+<CHAR: "CHAR"> |
+<CHAR_BASE: "CHAR_BASE"> |
+<CHECK: "CHECK"> |
+<CLOSE: "CLOSE"> |
+<CLUSTER: "CLUSTER"> |
+<COALESCE: "COALESCE"> |
+<COLLECT: "COLLECT"> |
+<COLUMN: "COLUMN"> |
+<COMMENT: "COMMENT"> |
+<COMMIT: "COMMIT"> |
+<COMPRESS: "COMPRESS"> |
+<CONNECT: "CONNECT"> |
+<CONSTANT: "CONSTANT"> |
+<CONSTRUCTOR: "CONSTRUCTOR"> |
+<CONTINUE: "CONTINUE"> |
+<CONVERT: "CONVERT"> |
+<CREATE: "CREATE"> |
+<CURRENT: "CURRENT"> |
+<CURRVAL: "CURRVAL"> |
+<CURSOR: "CURSOR"> |
+<DATA: "DATA"> |
+<DATE: "DATE"> |
+<DAY: "DAY"> |
+<DECLARE: "DECLARE"> |
+<DECIMAL: "DECIMAL"> |
+<_DEFAULT: "DEFAULT"> |
+<DELETE: "DELETE"> |
+<DESC: "DESC"> |
+<DETERMINISTIC: "DETERMINISTIC"> |
+<DISABLE: "DISABLE"> | // Needed for 11G Trigger Syntax 
+<DISTINCT: "DISTINCT"> |
+<DO: "DO"> |
+<DROP: "DROP"> |
+<EDITIONABLE: "EDITIONABLE"> |
+<ELEMENT: "ELEMENT"> |
+<ELSE: "ELSE"> |
+<ELSIF: "ELSIF"> |
+<ENABLE: "ENABLE"> | // Needed for 11G Trigger Syntax 
+<END: "END"> |
+<ESCAPE: "ESCAPE"> |
+<EXCEPT: "EXCEPT"> |
+<EXCEPTION: "EXCEPTION"> |
+<EXCEPTIONS: "EXCEPTIONS"> |
+<EXCLUSIVE: "EXCLUSIVE"> |
+<EXECUTE: "EXECUTE"> |
+<EXISTS: "EXISTS"> |
+<EXIT: "EXIT"> |
+<EXTERNAL: "EXTERNAL"> |
+//<EXTERNAL_NAME: "EXTERNAL NAME"> |
+<EXTENDS: "EXTENDS"> |
+<EXTRACT: "EXTRACT"> |
+<FALSE: "FALSE"> |
+<FETCH: "FETCH"> |
+<FINAL: "FINAL"> |
+<FLOAT: "FLOAT"> |
+<FOR: "FOR"> |
+<FORALL: "FORALL"> |
+<FORCE: "FORCE"> |
+<FROM: "FROM"> |
+<FUNCTION: "FUNCTION"> |
+<GLOBAL: "GLOBAL"> |
+<GOTO: "GOTO"> |
+<GROUP: "GROUP"> |
+<GRANT: "GRANT"> | //SRT 2011-04-17
+<HASH: "HASH"> |
+<HAVING: "HAVING"> |
+<HEAP: "HEAP"> |
+<HOUR: "HOUR"> |
+<IDENTIFIED: "IDENTIFIED"> | //SRT 2011-04-17
+<IF: "IF"> |
+<IMMEDIATE: "IMMEDIATE"> |
+<IN: "IN"> |
+<INDEX: "INDEX"> |
+<INDICES: "INDICES"> |
+<INCLUDING: "INCLUDING"> |
+<INDEXTYPE: "INDEXTYPE"> |
+<INDICATOR: "INDICATOR"> |
+<INSERT: "INSERT"> |
+<INSTANTIABLE: "INSTANTIABLE"> |
+<INTEGER: "INTEGER"> |
+<INTERFACE: "INTERFACE"> |
+<INTERSECT: "INTERSECT"> |
+<INTERVAL: "INTERVAL"> |
+<INTO: "INTO"> |
+<INVALIDATE: "INVALIDATE"> |
+<IS: "IS"> |
+<ISOLATION: "ISOLATION"> |
+<JAVA: "JAVA"> |
+//<LANGUAGE: "LANGUAGE"> |
+<LEVEL: "LEVEL"> |
+<LIKE: "LIKE"> |
+<LIMIT: "LIMIT"> | 
+<LIMITED: "LIMITED"> |
+<LOCK: "LOCK"> |
+<LONG: "LONG"> |
+<LOOP: "LOOP"> |
+<MAP: "MAP"> |
+<MAX: "MAX"> |
+<MEMBER: "MEMBER"> | 
+<MERGE: "MERGE"> | 
+<MIN: "MIN"> |
+<MINUS: "MINUS"> |
+<MINUTE: "MINUTE"> |
+<MLSLABEL: "MLSLABEL"> |
+<MODIFY: "MODIFY"> |
+<MOD: "MOD"> |
+<MODE: "MODE"> |
+<MONTH: "MONTH"> |
+<NATURAL: "NATURAL"> |
+<NATURALN: "NATURALN"> |
+<NEW: "NEW"> |
+<NEW_DOT: "NEW."> |
+<NEXTVAL: "NEXTVAL"> |
+<NO: "NO"> |
+<NOCOMPRESS: "NOCOMPRESS"> | //SRT 2011-04-17
+<NOCOPY: "NOCOPY"> |
+<NONEDITIONABLE: "NONEDITIONABLE"> |
+<NOT: "NOT"> |
+<NOWAIT: "NOWAIT"> |
+<NULL: "NULL"> |
+<NULLIF: "NULLIF"> |
+<NUMBER: "NUMBER"> |
+<BFILE_BASE: "BFILE_BASE"> |
+<BLOB_BASE: "BLOB_BASE"> |
+//<CHAR_BASE: "CHAR_BASE"> |
+<CLOB_BASE: "CLOB_BASE"> |
+<DATE_BASE: "DATE_BASE"> |
+<NUMBER_BASE: "NUMBER_BASE"> |
+<OBJECT: "OBJECT"> |
+<OCIROWID: "OCIROWID"> |
+<OF: "OF"> |
+<OID: "OID"> |
+<ON: "ON"> |
+<OPAQUE: "OPAQUE"> |
+<OPEN: "OPEN"> |
+<OPERATOR: "OPERATOR"> |
+<OPTION: "OPTION"> |
+<OR: "OR"> |
+<ORDER: "ORDER"> |
+<ORGANIZATION: "ORGANIZATION"> |
+<OTHERS: "OTHERS"> |
+<OUT: "OUT"> |
+<OVERRIDING: "OVERRIDING"> |
+<PACKAGE: "PACKAGE"> |
+<PARALLEL_ENABLE: "PARALLEL_ENABLE"> |
+<PARTITION: "PARTITION"> |
+<PCTFREE: "PCTFREE"> |
+<PIPE: "PIPE"> |
+<PIPELINED: "PIPELINED"> |
+<PLS_INTEGER: "PLS_INTEGER"> |
+<POSITIVE: "POSITIVE"> |
+<POSITIVEN: "POSITIVEN"> |
+<PRAGMA: "PRAGMA"> |
+<PRESERVE: "PRESERVE"> |
+<PRIOR: "PRIOR"> |
+<PROMPT: "PROMPT"> |
+<PRIVATE: "PRIVATE"> |
+<PROCEDURE: "PROCEDURE"> |
+<PUBLIC: "PUBLIC"> |
+//<QQUOTE_START: "Q'">  |  // Mark the start of a Q-quoted string, e.g. Q'[ This string contains a single-quote(') ]'
+<RAISE: "RAISE"> |
+<RANGE: "RANGE"> |
+<RAW: "RAW"> |
+<REAL: "REAL"> |
+<RECORD: "RECORD"> |
+<REF: "REF"> |
+<RELEASE: "RELEASE"> |
+<RELIES_ON: "RELIES_ON"> | 
+<RENAME: "RENAME"> | //SRT 2011-04-17
+<RESOURCE: "RESOURCE"> | //SRT 2011-04-17
+<RESULT: "RESULT"> |
+<RESULT_CACHE: "RESULT_CACHE"> |
+<RETURN: "RETURN"> |
+<RETURNING: "RETURNING"> |
+<REVERSE: "REVERSE"> |
+<REVOKE: "REVOKE"> | //SRT 2011-04-17
+<ROLLBACK: "ROLLBACK"> |
+<ROW: "ROW"> |
+<ROWS: "ROWS"> |
+<ROWID: "ROWID"> |
+<ROWNUM: "ROWNUM"> |
+<ROWTYPE: "ROWTYPE"> |
+<SAVE: "SAVE"> |
+<SAVEPOINT: "SAVEPOINT"> |
+<SECOND: "SECOND"> |
+<SELECT: "SELECT"> |
+<SELF: "SELF"> |
+<SEPARATE: "SEPARATE"> |
+<SET: "SET"> |
+<SIZE: "SIZE"> | //SRT 2011-04-17
+<SHARE: "SHARE"> |
+<SMALLINT: "SMALLINT"> |
+<SPACE: "SPACE"> |
+<SQL: "SQL"> |
+<SQLCODE: "SQLCODE"> |
+<SQLERRM: "SQLERRM"> |
+<START: "START"> |
+<STATIC: "STATIC"> |
+<STDDEV: "STDDEV"> |
+<SUBTYPE: "SUBTYPE"> |
+<SUBSTITUTABLE: "SUBSTITUTABLE"> |
+<SUCCESSFUL: "SUCCESSFUL"> |
+<SUM: "SUM"> |
+<SYNONYM: "SYNONYM"> |
+<SYSDATE: "SYSDATE"> |
+<SYS_REFCURSOR: "SYS_REFCURSOR"> |
+<TABLE: "TABLE"> |
+<TEMPORARY: "TEMPORARY"> |
+<THEN: "THEN"> |
+<TIME: "TIME"> |
+<TIMESTAMP: "TIMESTAMP"> |
+<TIMEZONE_REGION: "TIMEZONE_REGION"> |
+<TIMEZONE_ABBR: "TIMEZONE_ABBR"> |
+<TIMEZONE_MINUTE: "TIMEZONE_MINUTE"> |
+<TIMEZONE_HOUR: "TIMEZONE_HOUR"> |
+<TO: "TO"> |
+<TRANSACTION: "TRANSACTION"> |
+<TRIGGER: "TRIGGER"> |
+<TRUE: "TRUE"> |
+<TYPE: "TYPE"> |
+<UI: "UI"> |
+<UNDER: "UNDER"> |
+<UNIQUE: "UNIQUE"> | //SRT 2011-04-17
+<USING: "USING"> |
+<VALUES: "VALUES"> | //SRT 2011-04-17
+<WHEN: "WHEN"> |
+<WHERE: "WHERE"> | //SRT 2011-04-17
+<WHILE: "WHILE"> |
+<YES: "YES"> | //SRT 2011-04-17
+
+
+<SHOW: "SHOW"> |
+<SPOOL: "SPOOL"> |
+
+// are they reserved or not ?
+// most are not reserved, but cannot use just "WHERE" etc instead - resolves as identifier !
+//<WHERE: "WHERE"> |
+//<WHILE: "WHILE"> |
+//<NAME: "NAME"> |
+<A: "A"> |
+<UPDATE: "UPDATE"> |
+<VARCHAR: "VARCHAR"> |
+<VARCHAR2: "VARCHAR2"> |
+<DOUBLE: "DOUBLE"> |
+<DEC: "DEC"> |
+<PRECISION: "PRECISION"> |
+<INT: "INT"> |
+<NUMERIC: "NUMERIC"> |
+<SIGNTYPE: "SIGNTYPE"> |
+<NCHAR: "NCHAR"> |
+<NVARCHAR2: "NVARCHAR2"> |
+<STRING: "STRING"> |
+<UROWID: "UROWID"> |
+<VARRAY: "VARRAY"> |
+<VARYING: "VARYING"> |
+<BFILE: "BFILE"> |
+<BLOB: "BLOB"> |
+<CLOB: "CLOB"> |
+<NCLOB: "NCLOB"> |
+<YEAR: "YEAR"> |
+<LOCAL: "LOCAL"> |
+<WITH: "WITH"> |
+<ZONE: "ZONE"> |
+<CHARACTER: "CHARACTER"> | 
+<AFTER: "AFTER"> |   
+<BEFORE: "BEFORE"> |   
+<INSTEADOF: "INSTEAD OF"> |   
+<FOREACHROW: "FOR EACH ROW"> |  
+<REFERENCING: "REFERENCING"> | 
+<OLD: "OLD"> |  
+<PARENT: "PARENT"> |  
+<VIEW: "VIEW"> |
+<UNION: "UNION">
+| <CC_IF: "$IF"> 
+| <CC_THEN: "$THEN"> 
+| <CC_ELSE: "$ELSE"> 
+| <CC_ELSIF: "$ELSIF"> 
+| <CC_END: "$END"> 
+| <CC_ERROR: "$ERROR"> 
+| <CC_PLSQL_LINE: "$PLSQL_LINE"> 
+| <CC_PLSQL_UNIT: "$PLSQL_UNIT"> 
+| <PLSQL_CCFLAGS: "$PLSQL_CCFLAGS">
+| <PLSQL_DEBUG: "$PLSQL_DEBUG">
+| <PLSQL_OPTIMIZE_LEVEL: "$PLSQL_OPTIMIZE_LEVEL">
+| <PLSQL_CODE_TYPE: "$PLSQL_CODE_TYPE">
+| <PLSQL_WARNINGS: "$PLSQL_WARNINGS">
+| <NLS_LENGTH_SEMANTICS: "$NLS_LENGTH_SEMANTICS">
+| <ANALYZE: "ANALYZE">  //11G Trigger Syntax
+| <ASSOCIATE: "ASSOCIATE">  //11G Trigger Syntax
+| <AUDIT: "AUDIT">  //11G Trigger Syntax
+| <COMPOUND: "COMPOUND">  //11G Trigger Syntax
+| <DATABASE: "DATABASE">  //11G Trigger Syntax
+| <CALL: "CALL"> //11G Trigger Syntax
+| <DDL: "DDL">  //11G Trigger Syntax
+| <DISASSOCIATE: "DISASSOCIATE">  //11G Trigger Syntax
+| <EACH: "EACH">  //11G Trigger Syntax
+| <FOLLOWS: "FOLLOWS">  //11G Trigger Syntax
+| <LOGOFF: "LOGOFF">  //11G Trigger Syntax
+| <LOGON: "LOGON">  //11G Trigger Syntax
+| <NESTED: "NESTED">  //11G Trigger Syntax
+| <NOAUDIT: "NOAUDIT">  //11G Trigger Syntax
+| <SCHEMA: "SCHEMA">  //11G Trigger Syntax
+| <SERVERERROR: "SERVERERROR">  //11G Trigger Syntax
+| <SHUTDOWN: "SHUTDOWN">  //11G Trigger Syntax
+| <STARTUP: "STARTUP">  //11G Trigger Syntax
+| <STATEMENT: "STATEMENT">  //11G Trigger Syntax
+| <STATISTICS: "STATISTICS">  //11G Trigger Syntax
+| <SUSPEND: "SUSPEND">  //11G Trigger Syntax
+| <TRUNCATE: "TRUNCATE">  //11G Trigger Syntax
+| <WRAPPED: "WRAPPED"> //XE testing 
+| <LIBRARY: "LIBRARY"> //XE testing 
+| <NAME: "NAME"> //XE testing  non-PLSQL functions 
+| <STRUCT: "STRUCT"> //XE testing non-PLSQL functions 
+| <CONTEXT: "CONTEXT"> //XE testing non-PLSQL functions 
+| <PARAMETERS: "PARAMETERS"> //XE testing non-PLSQL functions 
+| <LENGTH: "LENGTH"> //XE testing non-PLSQL functions 
+| <TDO: "TDO"> //XE testing non-PLSQL functions 
+| <MAXLEN: "MAXLEN"> //XE testing non-PLSQL functions 
+| <CHARSETID: "CHARSETID"> //XE testing non-PLSQL functions 
+| <CHARSETFORM: "CHARSETFORM"> //XE testing non-PLSQL functions 
+//SQLPlus Commands
+| <ACCEPT : "ACCEPT">
+| <ACCESSIBLE : "ACCESSIBLE">
+| <COPY : "COPY">
+| <DEFINE : "DEFINE">
+| <DISCONNECT : "DISCONNECT">
+| <HOST : "HOST">
+| <PRINT : "PRINT">
+| <QUIT : "QUIT">
+| <REMARK : "REMARK">
+| <UNDEFINE : "UNDEFINE">
+| <VARIABLE : "VARIABLE">
+| <WHENEVER : "WHENEVER">
+| <ATTACH : "ATTACH">
+| <CAST : "CAST">
+| <TREAT : "TREAT">
+| <TRIM : "TRIM">
+| <LEFT : "LEFT">
+| <RIGHT : "RIGHT">
+| <BOTH : "BOTH">
+| <EMPTY : "EMPTY">
+| <MULTISET : "MULTISET">
+| <SUBMULTISET : "SUBMULTISET">
+| <LEADING : "LEADING">
+| <TRAILING : "TRAILING">
+| <CHAR_CS : "CHAR_CS">
+| <NCHAR_CS : "NCHAR_CS">
+| <PRECEDES : "PRECEDES">
+| <FORWARD : "FORWARD">
+| <CROSSEDITION : "CROSSEDITION">
+| <DBTIMEZONE : "DBTIMEZONE">
+| <SESSIONTIMEZONE : "SESSIONTIMEZONE">
+| <AUTHENTICATED : "AUTHENTICATED">
+| <LINK : "LINK">
+| <SHARED : "SHARED">
+| <DIRECTORY : "DIRECTORY">
+| <USER : "USER">
+//Support JAVA SOURCE
+|<COMPILE: "COMPILE"> 
+|<RESOLVE: "RESOLVE"> 
+|<RESOLVER: "RESOLVER"> 
+|<NAMED: "NAMED"> 
+|<SOURCE: "SOURCE"> 
+|<CLASS: "CLASS"> 
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - Added #GERMAN_SPECIAL_CHARACTERS and #SPECIAL_CHARACTERS.
+ *                                 Added ":" to <IDENTIFIER>
+ */
+TOKEN :
+{
+< #EXTENDED_LATIN_CHARACTERS:  [ "\u0192", "\u0160", "\u0152", "\u017D", "\u0161", "\u0153", "\u017E", "\u0178", "\u00AA", "\u00BA", "\u00B2","\u00B3", "\u00B9", "\u00C0" - "\u00CF" ,"\u00D0" - "\u00D6" ,"\u00D8" - "\u00DF" ,"\u00E0" - "\u00EF" ,"\u00F0" - "\u00F6" ,"\u00F8" - "\u00FF" ,"\u0100" - "\u017F" ,"\u0180" - "\u024F" ]  >
+|
+< #EXTENDED_WINDOWS_CHARACTERS:  [ "\u20AC", "\u201A", "\u201E", "\u2026", "\u2020", "\u02C6", "\u2030", "\u2039", "\u2018", "\u2019", "\u201C", "\u201D", "\u2022", "\u2013", "\u2014", "\u20DC", "\u2122", "\u203A", "\u00A0" - "\u00A9", "\u00AB" - "\u00AF", "\u00B0", "\u00B1", "\u00B4" - "\u00B8", "\u00BB" - "\u00BF", "\u00D7", "\u00F7" ]  >
+|
+< #GERMAN_SPECIAL_CHARACTERS: "Ä" | "Ö" | "Ü" | "ä" | "ü" | "ö" | "ß" >
+|
+< #LETTER: ["A"-"Z"] | ["a"-"z"] | <EXTENDED_LATIN_CHARACTERS> >
+|
+< #DIGIT: ["0"-"9"]>
+|
+< #_CHARACTER: <_CHARACTER_WO_ASTERISK> | "'" >
+|
+< #_CHARACTER_WO_ASTERISK: <LETTER> | <DIGIT> | "(" | ")" | "+" | "-" | "*" | "/" | "<" | ">"
+ | "=" | "!" | "~" | "^" | ";" | ":" | "." | "@" | "%" | "," | "\"" | "#"
+ | "$" | "&" | "_" | "|" | "{" | "}" | "?" | "[" | "]"
+ | " " | "\t" >
+|
+< #SPECIAL_CHARACTERS: "á" | "" | "" | "" | "" | "" | "ý" | "²" | "" | "³" | "µ">
+|
+< #DELIMITER: "+" | "%" | "'" | "\"" | "." | "/" | "(" | ")" | ":" | "," | "*" | "=" | "<" | ">" | "@" | ";" | "-">
+|
+< IDENTIFIER:
+	( ("$" | ":" | <LETTER>) ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* ) // 2006-05-17 - Matthias Hendler - Bind variablen werden nun als Identifier akzeptiert.
+	//SRT Does NOT seem to like identifiers 2 or fewer characters( <LETTER> ( <LETTER> )  )
+	//( <LETTER> ( <DIGIT>  ) )
+	//( <LETTER> ( "$" ) )
+	//( <LETTER> ( "_" ) )
+	//( <LETTER> ( "#" ) )
+	|
+	( (<LETTER> | "$" ) ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* )
+	|
+//SRT	( "\"" (<_CHARACTER_WO_ASTERISK>)* "\"" )
+	( "\""  <LETTER> ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* "\"" )
+>
+|
+< UNSIGNED_NUMERIC_LITERAL: <FLOAT_LITERAL> ( ["e","E"] (["-","+"])? <FLOAT_LITERAL> )? (["f","F","d","D"])? >
+|
+< #FLOAT_LITERAL: <INTEGER_LITERAL> ( "." <INTEGER_LITERAL> )? | "." <INTEGER_LITERAL> >
+|
+< #INTEGER_LITERAL: ( <DIGIT> )+ >
+|
+
+< #_WHATEVER_CHARACTER_WO_ASTERISK: (~["'"]) >
+|
+< CHARACTER_LITERAL: "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> )? "'" >
+//|< STRING_LITERAL: 
+//  (["q","Q"])* "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | "''")* "'" 
+//> //Cope with Q-quoted stringswithout single quotes in them 
+|< STRING_LITERAL: 
+// Hard-code the most likely q-quote strings 
+             "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" 
+|(["n","N"]) "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" //National Character Set String 
+|(["q","Q"]) "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" // Bug 160632
+|(["q","Q"]) "'[" (~["[","]"])* "]'" 
+|(["q","Q"]) "'{" (~["{","}"])* "}'" 
+|(["q","Q"]) "'<" (~["<",">"])* ">'" 
+|(["q","Q"]) "'(" (~["(",")"])* ")'" 
+|(["q","Q"]) "'/" (~["/"])* "/'" 
+|(["q","Q"]) "'!" (~["!"])* "!'" 
+|(["q","Q"]) "'#" (~["#"])* "#'" 
+> //Cope with Q-quoted stringswithout single quotes in them 
+|
+< #_WHATEVER_CHARACTER_WO_QUOTE: (~["\""]) >
+|
+< QUOTED_LITERAL: "\"" (<_WHATEVER_CHARACTER_WO_QUOTE> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "\\\"")* "\"" >
+| 
+< SQLDATA_CLASS: "SQLData" >
+| 
+< CUSTOMDATUM_CLASS: "CustomDatum" >
+| 
+< ORADATA_CLASS:  "OraData"  >
+| 
+< JAVA_INTERFACE_CLASS: ( "SQLData" | "CustomDatum" | "OraData" ) >
+//|
+//< #BOOLEAN_LITERAL: "TRUE" | "FALSE" >
+| 
+<SQLPLUS_TERMINATOR: ( ";" | "/" ) >
+}
+
+//SRT 2011-04-17 - START 
+Token KEYWORD_RESERVED (): {}
+{
+// PL/SQL RESERVED WORDS - V$RESERVED.RESERVED='Y' 
+( <ALL>
+| <ALTER>
+| <AND>
+| <ANY>
+| <AS>
+| <ASC>
+| <BETWEEN>
+| <BY>
+| <CHAR>
+| <CHECK>
+| <CLUSTER>
+| <COMPRESS>
+| <CONNECT>
+| <CREATE>
+| <DATE>
+| <DECIMAL>
+| <_DEFAULT>
+| <DELETE>
+| <DESC>
+| <DISTINCT>
+| <DROP>
+| <ELSE>
+| <EXCLUSIVE>
+| <EXISTS>
+| <FLOAT>
+| <FOR>
+| <FROM>
+| <GRANT>
+| <GROUP>
+| <HAVING>
+| <IDENTIFIED>
+| <IN>
+| <INDEX>
+| <INSERT>
+| <INTEGER>
+| <INTERSECT>
+| <INTO>
+| <IS>
+| <LIKE>
+| <LOCK>
+| <LONG>
+| <MINUS>
+| <MODE>
+| <NOCOMPRESS>
+| <NOT>
+| <NOWAIT>
+| <NULL>
+| <NUMBER>
+| <OF>
+| <ON>
+| <OPTION>
+| <OR>
+| <ORDER>
+| <PCTFREE>
+| <PRIOR>
+| <PUBLIC>
+| <RAW>
+//| <RENAME> // Bug-91 Although RENAME is a reserved word, it may be used in PLSQL as a name 
+| <RESOURCE>
+| <REVOKE>
+| <SELECT>
+| <SET>
+| <SHARE>
+| <SIZE>
+| <SMALLINT>
+| <START>
+| <SYNONYM>
+| <TABLE>
+| <THEN>
+| <TO>
+| <TRIGGER>
+| <UNION>
+| <UNIQUE>
+| <UPDATE>
+| <VALUES>
+| <VARCHAR>
+| <VARCHAR2>
+| <VIEW>
+| <WHERE>
+| <WITH>
+)
+ {return token;}
+}
+
+Token KEYWORD_UNRESERVED (): {}
+{
+// PL/SQL UNRESERVED KEYWORDS - V$RESERVED.RESERVED='N' 
+(<FALSE>
+ | <TRUE>
+ | <A>
+//| <ABORT>
+| <ACCEPT>
+//| <ACCESS>
+//| <ACCESSED>test_unreserved_keyword.pks
+//| <ACCOUNT>
+//| <ACTIVATE>
+| <ADD>
+//| <ADMIN>test_unreserved_keyword.pks
+//| <ADMINISTER>
+//| <ADMINISTRATOR>
+//| <ADVISE>
+//| <ADVISOR>
+| <AFTER>
+| <AGGREGATE>
+//| <ALIAS>
+//| <ALL_ROWS>
+//| <ALLOCATE>
+//| <ALLOW>
+//| <ALWAYS>
+| <ANALYZE>
+//| <ANCILLARY>
+//| <AND_EQUAL>
+//| <ANTIJOIN>
+//| <APPEND>
+//| <APPLY>
+//| <ARCHIVE>
+//| <ARCHIVELOG>
+//| <ARRAY>test_unreserved_keyword.pks
+| <ASSOCIATE>
+| <AT>
+| <ATTACH>
+| <ATTRIBUTE> //PLDoc Bug 3512149  test_unreserved_keyword.pks
+//| <ATTRIBUTES>
+| <AUDIT>
+| <AUTHENTICATED>
+//| <AUTHENTICATION>
+| <AUTHID>
+//| <AUTHORIZATION>
+//| <AUTO>
+//| <AUTOALLOCATE>
+//| <AUTOEXTEND>
+//| <AUTOMATIC>
+//| <AVAILABILITY>
+//| <BACKUP>
+//| <BATCH>
+//| <BECOME>
+| <BEFORE>
+//| <BEGIN>
+//| <BEGIN_OUTLINE_DATA>test_unreserved_keyword.pks
+//| <BEHALF>
+| <BFILE> //-test_unreserved_keyword.pks
+//| <BIGFILE>
+//| <BINARY_DOUBLE>
+//| <BINARY_DOUBLE_INFINITY>
+//| <BINARY_DOUBLE_NAN>
+//| <BINARY_FLOAT>
+//| <BINARY_FLOAT_INFINITY>
+//| <BINARY_FLOAT_NAN>
+//| <BINDING>
+//| <BITMAP>
+//| <BITMAP_TREE>
+//| <BITMAPS>
+//| <BITS>
+| <BLOB>
+//| <BLOCK>
+//| <BLOCK_RANGE>
+//| <BLOCKS>
+//| <BLOCKSIZE>
+//| <BODY>
+| <BOTH>
+//| <BOUND>
+//| <BROADCAST>
+//| <BUFFER>
+//| <BUFFER_CACHE>test_unreserved_keyword.pks
+//| <BUFFER_POOL>
+//| <BUILD>
+| <BULK>
+//| <BYPASS_RECURSIVE_CHECK>
+//| <BYPASS_UJVC>
+//| <BY> // RESERVED WORD !!!
+| <BYTE>//test_unreserved_keyword.pks
+//| <CACHE>
+//| <CACHE_CB>
+//| <CACHE_INSTANCES>
+//| <CACHE_TEMP_TABLE>
+| <CALL>
+//| <CANCEL>
+//| <CARDINALITY>
+| <CASCADE>
+//| <CASE>
+| <CAST>
+//| <CATEGORY>
+//| <CERTIFICATE>
+//| <CFILE>
+//| <CHAINED>
+//| <CHANGE>
+| <CHAR_CS>
+| <CHARACTER>
+| <CHARSETFORM>
+| <CHARSETID>
+//| <CHECKPOINT>
+//| <CHILD>
+//| <CHOOSE>
+//| <CHUNK>
+//| <CIV_GB>
+| <CLASS>
+//| <CLEAR>
+| <CLOB>
+//| <CLONE>
+| <CLOSE>
+//| <CLOSE_CACHED_OPEN_CURSORS>
+//| <CLUSTERING_FACTOR>
+| <COALESCE>
+//| <COARSE>
+| <COLLECT>
+| <COLUMN>
+//| <COLUMN_STATS>
+//| <COLUMN_VALUE>
+//| <COLUMNS>
+| <COMMENT>
+| <COMMIT>
+//| <COMMITTED>
+//| <COMPACT>
+//| <COMPATIBILITY>
+| <COMPILE>
+//| <COMPLETE>
+//| <COMPOSITE_LIMIT>
+| <COMPOUND>
+//| <COMPUTE>
+//| <CONFORMING>
+//| <CONNECT_BY_COST_BASED>
+//| <CONNECT_BY_FILTERING>
+//| <CONNECT_BY_ISCYCLE>
+//| <CONNECT_BY_ISLEAF>
+//| <CONNECT_BY_ROOT>
+//| <CONNECT_TIME>
+//| <CONSIDER>
+//| <CONSISTENT>
+//| <CONSTRAINT>
+//| <CONSTRAINTS>
+| <CONSTRUCTOR> 
+//| <CONTAINER>
+//| <CONTENT>
+//| <CONTENTS>
+| <CONTEXT>
+| <CONTINUE>
+//| <CONTROLFILE>
+| <CONVERT>
+| <COPY>
+//| <CORRUPTION>
+//| <COST>
+//| <CPU_COSTING>
+//| <CPU_PER_CALL>
+//| <CPU_PER_SESSION>
+//| <CREATE_STORED_OUTLINES>
+//| <CROSS>
+//| <CUBE>
+//| <CUBE_GB>
+| <CURRENT>
+//| <CURRENT_DATE>
+//| <CURRENT_SCHEMA>
+//| <CURRENT_TIME>
+//| <CURRENT_TIMESTAMP>
+| <CURRENT_USER>
+| <CURSOR>
+//| <CURSOR_SHARING_EXACT>
+//| <CURSOR_SPECIFIC_SEGMENT>
+//| <CYCLE>
+//| <DANGLING>
+| <DATA>
+| <DATABASE>
+//| <DATAFILE>
+//| <DATAFILES>
+//| <DATAOBJNO>
+//| <DATE_MODE>
+| <DAY>
+//| <DB_ROLE_CHANGE>
+//| <DBA>
+//| <DBA_RECYCLEBIN>
+//| <DBMS_STATS>
+| <DBTIMEZONE>
+| <DDL>
+//| <DEALLOCATE>
+//| <DEBUG>
+| <DEC>
+//| <DECLARE>
+//| <DECREMENT>
+//| <DECRYPT>
+//| <DEFERRABLE>
+//| <DEFERRED>
+//| <DEFINED>
+| <DEFINE>
+| <DEFINER>
+//| <DEGREE>
+//| <DELAY>
+//| <DEMAND>
+//| <DENSE_RANK>
+//| <DEQUEUE>
+//| <DEREF>
+//| <DEREF_NO_REWRITE>
+//| <DETACHED>
+//| <DETERMINES>
+//| <DICTIONARY>
+//| <DIMENSION>
+| <DIRECTORY>
+| <DISABLE>
+//| <DISABLE_RPKE>
+| <DISASSOCIATE>
+| <DISCONNECT>
+//| <DISK>
+//| <DISKGROUP>
+//| <DISKS>
+//| <DISMOUNT>
+//| <DISTINGUISHED>
+//| <DISTRIBUTED>
+//| <DML>
+//| <DML_UPDATE>
+//| <DOCUMENT>
+//| <DOMAIN_INDEX_NO_SORT>
+//| <DOMAIN_INDEX_SORT>
+| <DOUBLE>
+//| <DOWNGRADE>
+//| <DRIVING_SITE>
+//| <DUMP>
+//| <DYNAMIC>
+//| <DYNAMIC_SAMPLING>
+//| <DYNAMIC_SAMPLING_EST_CDN>
+//| <E>
+| <EACH>
+| <ELEMENT>
+//| <ELIMINATE_JOIN>
+//| <ELIMINATE_OBY>
+//| <ELIMINATE_OUTER_JOIN>
+| <EMPTY>
+| <ENABLE>
+//| <ENCRYPT>
+//| <ENCRYPTION>
+//| <END>
+//| <END_OUTLINE_DATA>
+//| <ENFORCE>
+//| <ENFORCED>
+//| <ENQUEUE>
+//| <ENTERPRISE>
+//| <ENTRY>
+//| <ERROR>
+//| <ERROR_ON_OVERLAP_TIME>
+//| <ERRORS>
+| <ESCAPE>
+//| <ESTIMATE>
+//| <EVALNAME>
+//| <EVALUATION>
+//| <EVENTS>
+| <EXCEPT>
+| <EXCEPTIONS>
+//| <EXCHANGE>
+//| <EXCLUDING>
+//| <EXECUTE>
+//| <EXEMPT>
+//| <EXPAND_GSET_TO_UNION>
+//| <EXPIRE>
+//| <EXPLAIN>
+//| <EXPLOSION>
+//| <EXPORT>
+//| <EXPR_CORR_CHECK>
+| <EXTENDS>
+//| <EXTENT>
+//| <EXTENTS>
+| <EXTERNAL>
+//| <EXTERNALLY>
+| <EXTRACT>
+//| <FACT>
+//| <FAILED>
+//| <FAILED_LOGIN_ATTEMPTS>
+//| <FAILGROUP>
+//| <FAST>
+//| <FBTSCAN>
+//| <FIC_CIV>
+//| <FIC_PIV>
+//| <FILE>
+//| <FILTER>
+| <FINAL>
+//| <FINE>
+//| <FINISH>
+//| <FIRST>
+//| <FIRST_ROWS>
+//| <FLAGGER>
+//| <FLASHBACK>
+//| <FLOB>
+//| <FLUSH>
+//| <FOLLOWING>
+| <FOLLOWS>
+| <FORCE>
+//| <FORCE_XML_QUERY_REWRITE>
+//| <FOREIGN>
+//| <FREELIST>
+//| <FREELISTS>
+//| <FREEPOOLS>
+//| <FRESH>
+//| <FULL>
+| <FUNCTION>
+//| <FUNCTIONS>
+//| <G>
+//| <GATHER_PLAN_STATISTICS>
+//| <GBY_CONC_ROLLUP>
+//| <GENERATED>
+| <GLOBAL>
+//| <GLOBAL_NAME>
+//| <GLOBAL_TOPIC_ENABLED>
+//| <GLOBALLY>
+//| <GROUP_BY>
+//| <GROUPING>
+//| <GROUPS>
+//| <GUARANTEE>
+//| <GUARANTEED>
+//| <GUARD>
+| <HASH>
+//| <HASH_AJ>
+//| <HASH_SJ>
+//| <HASHKEYS>
+//| <HEADER>
+| <HEAP>
+//| <HIERARCHY>
+//| <HIGH>
+//| <HINTSET_BEGIN>
+//| <HINTSET_END>
+| <HOST>
+| <HOUR>
+//| <HWM_BROKERED>
+//| <ID>
+//| <IDENTIFIER>
+//| <IDENTITY>
+//| <IDGENERATORS>
+//| <IDLE_TIME>
+//| <IF>
+//| <IGNORE>
+//| <IGNORE_OPTIM_EMBEDDED_HINTS>
+//| <IGNORE_WHERE_CLAUSE>
+| <IMMEDIATE>
+//| <IMPORT>
+//| <IN_MEMORY_METADATA>
+//| <INCLUDE_VERSION>
+//| <INCLUDING>
+//| <INCREMENT>
+//| <INCREMENTAL>
+//| <INDEX_ASC>
+//| <INDEX_COMBINE>
+//| <INDEX_DESC>
+//| <INDEX_FFS>
+//| <INDEX_FILTER>
+//| <INDEX_JOIN>
+//| <INDEX_ROWS>
+//| <INDEX_RRS>
+//| <INDEX_RS>
+//| <INDEX_RS_ASC>
+//| <INDEX_RS_DESC>
+//| <INDEX_SCAN>
+//| <INDEX_SKIP_SCAN>
+//| <INDEX_SS>
+//| <INDEX_SS_ASC>
+//| <INDEX_SS_DESC>
+//| <INDEX_STATS>
+//| <INDEXED>
+//| <INDEXES>
+| <INDEXTYPE>
+//| <INDEXTYPES>
+| <INDICATOR>
+| <INDICES> // FORALL i I INDICES OF collection - SPARSE COLLECTIONS 
+//| <INFINITE>
+//| <INFORMATIONAL>
+//| <INITIAL>
+//| <INITIALIZED>
+//| <INITIALLY>
+//| <INITRANS>
+//| <INLINE>
+//| <INLINE_XMLTYPE_NT>
+//| <INNER>
+//| <INSTANCE>
+//| <INSTANCES>
+| <INSTANTIABLE>
+//| <INSTANTLY>
+//| <INSTEAD>
+//| <INT>
+//| <INTERMEDIATE>
+//| <INTERNAL_CONVERT>
+//| <INTERNAL_USE>
+//| <INTERPRETED>
+| <INTERVAL>
+| <INVALIDATE>
+| <ISOLATION>
+//| <ISOLATION_LEVEL>
+//| <ITERATE>
+//| <ITERATION_NUMBER>
+| <JAVA>
+//| <JOB>
+//| <JOIN>
+//| <K>
+//| <KEEP>
+//| <KERBEROS>
+//| <KEY>
+//| <KEY_LENGTH>
+//| <KEYS>
+//| <KEYSIZE>
+//| <KILL>
+| <LANGUAGE>
+//| <LAST>
+//| <LATERAL>
+//| <LAYER>
+//| <LDAP_REG_SYNC_INTERVAL>
+//| <LDAP_REGISTRATION>
+//| <LDAP_REGISTRATION_ENABLED>
+| <LEADING>
+| <LEFT>
+| <LENGTH>
+//| <LESS>
+| <LEVEL>
+//| <LEVELS>
+| <LIBRARY>
+//| <LIKE_EXPAND>
+//| <LIKE2>
+//| <LIKE4>
+//| <LIKEC>
+| <LIMIT>
+| <LINK>
+//| <LIST>
+//| <LOB>
+| <LOCAL>
+//| <LOCAL_INDEXES>
+//| <LOCALTIME>
+//| <LOCALTIMESTAMP>
+//| <LOCATION>
+//| <LOCATOR>
+//| <LOCKED>
+//| <LOG>
+//| <LOGFILE>
+//| <LOGGING>
+//| <LOGICAL>
+//| <LOGICAL_READS_PER_CALL>
+//| <LOGICAL_READS_PER_SESSION>
+| <LOGOFF>
+| <LOGON>
+//| <M>
+//| <MAIN>
+//| <MANAGE>
+//| <MANAGED>
+//| <MANAGEMENT>
+//| <MANUAL>
+| <MAP> // Bug 3512150
+//| <MAPPING>
+//| <MASTER>
+//| <MATCHED>
+//| <MATERIALIZE>
+//| <MATERIALIZED>
+| <MAX>
+//| <MAXARCHLOGS>
+//| <MAXDATAFILES>
+//| <MAXEXTENTS>
+//| <MAXIMIZE>
+//| <MAXINSTANCES>
+| <MAXLEN>
+//| <MAXLOGFILES>
+//| <MAXLOGHISTORY>
+//| <MAXLOGMEMBERS>
+//| <MAXSIZE>
+//| <MAXTRANS>
+//| <MAXVALUE>
+//| <MEASURES>
+| <MEMBER>
+//| <MEMORY>
+| <MERGE>
+//| <MERGE_AJ>
+//| <MERGE_CONST_ON>
+//| <MERGE_SJ>
+//| <METHOD>
+//| <MIGRATE>
+| <MIN>
+//| <MINEXTENTS>
+//| <MINIMIZE>
+//| <MINIMUM>
+//| <MINUS_NULL>
+| <MINUTE>
+//| <MINVALUE>
+//| <MIRROR>
+| <MLSLABEL>
+//| <MODEL>
+//| <MODEL_COMPILE_SUBQUERY>
+//| <MODEL_DONTVERIFY_UNIQUENESS>
+//| <MODEL_DYNAMIC_SUBQUERY>
+//| <MODEL_MIN_ANALYSIS>
+//| <MODEL_NO_ANALYSIS>
+//| <MODEL_PBY>
+//| <MODEL_PUSH_REF>
+| <MODIFY>
+//| <MONITORING>
+| <MONTH>
+//| <MOUNT>
+//| <MOVE>
+//| <MOVEMENT>
+| <MULTISET>
+//| <MV_MERGE>
+| <NAME>
+| <NAMED>
+//| <NAN>
+//| <NATIONAL>
+//| <NATIVE>
+//| <NATIVE_FULL_OUTER_JOIN>
+| <NATURAL>
+//| <NAV>
+| <NCHAR>
+| <NCHAR_CS>
+| <NCLOB>
+//| <NEEDED>
+| <NESTED>
+//| <NESTED_TABLE_FAST_INSERT>
+//| <NESTED_TABLE_GET_REFS>
+//| <NESTED_TABLE_ID>
+//| <NESTED_TABLE_SET_REFS>
+//| <NESTED_TABLE_SET_SETID>
+//| <NETWORK>
+//| <NEVER>
+| <NEW>
+//| <NEXT>
+//| <NL_AJ>
+//| <NL_SJ>
+//| <NLS_CALENDAR>
+//| <NLS_CHARACTERSET>
+//| <NLS_COMP>
+//| <NLS_CURRENCY>
+//| <NLS_DATE_FORMAT>
+//| <NLS_DATE_LANGUAGE>
+//| <NLS_ISO_CURRENCY>
+//| <NLS_LANG>
+//| <NLS_LANGUAGE>
+//| <NLS_LENGTH_SEMANTICS>
+//| <NLS_NCHAR_CONV_EXCP>
+//| <NLS_NUMERIC_CHARACTERS>
+//| <NLS_SORT>
+//| <NLS_SPECIAL_CHARS>
+//| <NLS_TERRITORY>
+| <NO>
+//| <NO_ACCESS>
+//| <NO_BASETABLE_MULTIMV_REWRITE>
+//| <NO_BUFFER>
+//| <NO_CARTESIAN>
+//| <NO_CONNECT_BY_COST_BASED>
+//| <NO_CONNECT_BY_FILTERING>
+//| <NO_CPU_COSTING>
+//| <NO_ELIMINATE_JOIN>
+//| <NO_ELIMINATE_OBY>
+//| <NO_ELIMINATE_OUTER_JOIN>
+//| <NO_EXPAND>
+//| <NO_EXPAND_GSET_TO_UNION>
+//| <NO_FACT>
+//| <NO_FILTERING>
+//| <NO_INDEX>
+//| <NO_INDEX_FFS>
+//| <NO_INDEX_RS>
+//| <NO_INDEX_SS>
+//| <NO_MERGE>
+//| <NO_MODEL_PUSH_REF>
+//| <NO_MONITORING>
+//| <NO_MULTIMV_REWRITE>
+//| <NO_NATIVE_FULL_OUTER_JOIN>
+//| <NO_ORDER_ROLLUPS>
+//| <NO_PARALLEL>
+//| <NO_PARALLEL_INDEX>
+//| <NO_PARTIAL_COMMIT>
+//| <NO_PRUNE_GSETS>
+//| <NO_PULL_PRED>
+//| <NO_PUSH_PRED>
+//| <NO_PUSH_SUBQ>
+//| <NO_PX_JOIN_FILTER>
+//| <NO_QKN_BUFF>
+//| <NO_QUERY_TRANSFORMATION>
+//| <NO_REF_CASCADE>
+//| <NO_REWRITE>
+//| <NO_SEMIJOIN>
+//| <NO_SET_TO_JOIN>
+//| <NO_SQL_TUNE>
+//| <NO_STAR_TRANSFORMATION>
+//| <NO_STATS_GSETS>
+//| <NO_SWAP_JOIN_INPUTS>
+//| <NO_TEMP_TABLE>
+//| <NO_UNNEST>
+//| <NO_USE_HASH>
+//| <NO_USE_HASH_AGGREGATION>
+//| <NO_USE_MERGE>
+//| <NO_USE_NL>
+//| <NO_XML_DML_REWRITE>
+//| <NO_XML_QUERY_REWRITE>
+//| <NOAPPEND>
+//| <NOARCHIVELOG>
+| <NOAUDIT>
+//| <NOCACHE>
+//| <NOCPU_COSTING>
+//| <NOCYCLE>
+//| <NODELAY>
+//| <NOFORCE>
+//| <NOGUARANTEE>
+//| <NOLOGGING>
+//| <NOMAPPING>
+//| <NOMAXVALUE>
+//| <NOMINIMIZE>
+//| <NOMINVALUE>
+//| <NOMONITORING>
+//| <NONE>
+//| <NOORDER>
+//| <NOOVERRIDE>
+//| <NOPARALLEL>
+//| <NOPARALLEL_INDEX>
+//| <NORELY>
+//| <NOREPAIR>
+//| <NORESETLOGS>
+//| <NOREVERSE>
+//| <NOREWRITE>
+//| <NORMAL>
+//| <NOROWDEPENDENCIES>
+//| <NOSEGMENT>
+//| <NOSORT>
+//| <NOSTRICT>
+//| <NOSWITCH>
+//| <NOTHING>
+//| <NOTIFICATION>
+//| <NOVALIDATE>
+//| <NULLS>
+//| <NUM_INDEX_KEYS>
+| <NUMERIC>
+| <NVARCHAR2>
+| <OBJECT>
+//| <OBJNO>
+//| <OBJNO_REUSE>
+//| <OFF>
+//| <OFFLINE>
+| <OID>
+//| <OIDINDEX>
+| <OLD>
+//| <OLD_PUSH_PRED>
+//| <ONLINE>
+//| <ONLY>
+| <OPAQUE>
+//| <OPAQUE_TRANSFORM>
+//| <OPAQUE_XCANONICAL>
+//| <OPCODE>
+| <OPEN>
+//| <OPERATOR>
+//| <OPT_ESTIMATE>
+//| <OPT_PARAM>
+//| <OPTIMAL>
+//| <OPTIMIZER_FEATURES_ENABLE>
+//| <OPTIMIZER_GOAL>
+//| <OR_EXPAND>
+//| <ORA_ROWSCN>
+//| <ORDERED>
+//| <ORDERED_PREDICATES>
+//| <ORDINALITY>
+| <ORGANIZATION>
+| <OTHERS>
+//| <OUT_OF_LINE>
+//| <OUTER>
+//| <OUTLINE>
+//| <OUTLINE_LEAF>
+//| <OVER>
+//| <OVERFLOW>
+//| <OVERFLOW_NOMOVE>
+//| <OVERLAPS>
+| <OVERRIDING>
+//| <OWN>
+//| <P>
+| <PACKAGE>
+//| <PACKAGES>
+//| <PARALLEL>
+//| <PARALLEL_INDEX>
+| <PARAMETERS>
+| <PARENT>
+//| <PARITY>
+//| <PARTIALLY>
+| <PARTITION>
+//| <PARTITION_HASH>
+//| <PARTITION_LIST>
+//| <PARTITION_RANGE>
+//| <PARTITIONS>
+//| <PASSING>
+//| <PASSWORD>
+//| <PASSWORD_GRACE_TIME>
+//| <PASSWORD_LIFE_TIME>
+//| <PASSWORD_LOCK_TIME>
+//| <PASSWORD_REUSE_MAX>
+//| <PASSWORD_REUSE_TIME>
+//| <PASSWORD_VERIFY_FUNCTION>
+//| <PATH>
+//| <PATHS>
+//| <PCTINCREASE>
+//| <PCTTHRESHOLD>
+//| <PCTUSED>
+//| <PCTVERSION>
+//| <PERCENT>
+//| <PERFORMANCE>
+//| <PERMANENT>
+//| <PFILE>
+//| <PHYSICAL>
+//| <PIV_GB>
+//| <PIV_SSF>
+//| <PLAN>
+//| <PLSQL_CCFLAGS>
+//| <PLSQL_CODE_TYPE>
+//| <PLSQL_DEBUG>
+//| <PLSQL_OPTIMIZE_LEVEL>
+//| <PLSQL_WARNINGS>
+//| <POINT>
+//| <POLICY>
+//| <POST_TRANSACTION>
+//| <POWER>
+//| <PQ_DISTRIBUTE>
+//| <PQ_MAP>
+//| <PQ_NOMAP>
+//| <PREBUILT>
+//| <PRECEDING>
+| <PRECISION>
+//| <PRECOMPUTE_SUBQUERY>
+//| <PREPARE>
+//| <PRESENT>
+| <PRESERVE>
+//| <PRESERVE_OID>
+//| <PRIMARY>
+| <PRINT>
+//| <PRIVATE>
+//| <PRIVATE_SGA>
+//| <PRIVILEGE>
+//| <PRIVILEGES>
+| <PROCEDURE>
+//| <PROFILE>
+//| <PROGRAM>
+//| <PROJECT>
+//| <PROTECTED>
+//| <PROTECTION>
+//| <PULL_PRED>
+//| <PURGE>
+//| <PUSH_PRED>
+//| <PUSH_SUBQ>
+//| <PX_GRANULE>
+//| <PX_JOIN_FILTER>
+//| <QB_NAME>
+//| <QUERY>
+//| <QUERY_BLOCK>
+//| <QUEUE>
+//| <QUEUE_CURR>
+//| <QUEUE_ROWP>
+| <QUIT>
+//| <QUIESCE>
+//| <QUOTA>
+//| <RANDOM>
+| <RANGE>
+//| <RAPIDLY>
+//| <RBA>
+//| <RBO_OUTLINE>
+//| <READ>
+//| <READS>
+| <REAL>
+//| <REBALANCE>
+//| <REBUILD>
+| <RECORD>
+//| <RECORDS_PER_BLOCK>
+//| <RECOVER>
+//| <RECOVERABLE>
+//| <RECOVERY>
+//| <RECYCLE>
+//| <RECYCLEBIN>
+//| <REDUCED>
+//| <REDUNDANCY>
+| <REF>
+//| <REF_CASCADE_CURSOR>
+//| <REFERENCE>
+//| <REFERENCED>
+//| <REFERENCES>
+//| <REFERENCING>
+//| <REFRESH>
+//| <REGEXP_LIKE>
+//| <REGISTER>
+//| <REJECT>
+//| <REKEY>
+//| <RELATIONAL>
+//| <RELY>
+| <RELIES_ON>
+| <REMARK>
+//| <REMOTE_MAPPED>
+//| <REPAIR>
+//| <REPLACE>
+//| <REQUIRED>
+//| <RESET>
+//| <RESETLOGS>
+//| <RESIZE>
+| <RESOLVE>
+| <RESOLVER>
+//| <RESTORE>
+//| <RESTORE_AS_INTERVALS>
+//| <RESTRICT>
+//| <RESTRICT_ALL_REF_CONS>
+//| <RESTRICTED>
+//| <RESUMABLE>
+| <RESULT>
+| <RESULT_CACHE> 
+//| <RESUME>
+//| <RETENTION>
+| <RETURN>
+| <RETURNING>
+//| <REUSE>
+| <REVERSE>
+//| <REWRITE>
+//| <REWRITE_OR_ERROR>
+| <RIGHT>
+//| <ROLE>
+//| <ROLES>
+| <ROLLBACK>
+//| <ROLLING>
+//| <ROLLUP>
+| <ROW>
+//| <ROW_LENGTH>
+//| <ROWDEPENDENCIES>
+| <ROWID>
+| <ROWNUM>
+| <ROWS>
+//| <RULE>
+//| <RULES>
+//| <SALT>
+//| <SAMPLE>
+| <SAVE>
+//| <SAVE_AS_INTERVALS>
+| <SAVEPOINT>
+//| <SB4>
+//| <SCALE>
+//| <SCALE_ROWS>
+//| <SCAN>
+//| <SCAN_INSTANCES>
+//| <SCHEDULER>
+| <SCHEMA>
+//| <SCN>
+//| <SCN_ASCENDING>
+//| <SCOPE>
+//| <SD_ALL>
+//| <SD_INHIBIT>
+//| <SD_SHOW>
+| <SECOND>
+//| <SECURITY>
+//| <SEED>
+//| <SEG_BLOCK>
+//| <SEG_FILE>
+//| <SEGMENT>
+//| <SELECTIVITY>
+| <SELF> //20110524
+//| <SEMIJOIN>
+//| <SEMIJOIN_DRIVER>
+//| <SEQUENCE>
+//| <SEQUENCED>
+//| <SEQUENTIAL>
+//| <SERIALIZABLE>
+| <SERVERERROR>
+//| <SESSION>
+//| <SESSION_CACHED_CURSORS>
+//| <SESSIONS_PER_USER>
+| <SESSIONTIMEZONE>
+//| <SESSIONTZNAME>
+| <SET> //SET is defined as a reserved word but is used in "SYS"."DBMS_RESULT_CACHE_API" as a function name and as a pragma parameter
+//| <SET_TO_JOIN>
+//| <SETS>
+//| <SETTINGS>
+//| <SEVERE>
+| <SHARED>
+//| <SHARED_POOL>
+//| <SHRINK>
+| <SHUTDOWN>
+//| <SIBLINGS>
+//| <SID>
+//| <SIMPLE>
+//| <SINGLE>
+//| <SINGLETASK>
+//| <K_SKIP>
+//| <SKIP_EXT_OPTIMIZER>
+//| <SKIP_UNQ_UNUSABLE_IDX>
+//| <SKIP_UNUSABLE_INDEXES>
+//| <SMALLFILE>
+//| <SNAPSHOT>
+//| <SOME>
+//| <SORT>
+| <SOURCE>
+| <SPACE>
+//| <SPECIFICATION>
+//| <SPFILE>
+//| <SPLIT>
+//| <SPREADSHEET>
+//| <SQL>
+//| <SQL_TRACE>
+//| <SQLLDR>
+//| <STANDALONE>
+//| <STANDBY>
+//| <STAR>
+//| <STAR_TRANSFORMATION>
+| <STARTUP>
+| <STATEMENT>
+//| <STATEMENT_ID>
+| <STATIC>
+| <STATISTICS>
+//| <STOP>
+//| <STORAGE>
+//| <STORE>
+//| <STREAMS>
+//| <STRICT>
+//| <STRING>
+//| <STRIP>
+| <STRUCT>
+//| <STRUCTURE>
+| <SUBMULTISET>
+//| <SUBPARTITION>
+//| <SUBPARTITION_REL>
+//| <SUBPARTITIONS>
+//| <SUBQUERIES>
+| <SUBSTITUTABLE>
+| <SUBTYPE> // XDBPM_ANALYZE_XMLSCHEMA 
+| <SUCCESSFUL>
+//| <SUMMARY>
+//| <SUPPLEMENTAL>
+| <SUSPEND>
+//| <SWAP_JOIN_INPUTS>
+//| <SWITCH>
+//| <SWITCHOVER>
+//| <SYS_DL_CURSOR>
+//| <SYS_FBT_INSDEL>
+//| <SYS_OP_BITVEC>
+//| <SYS_OP_CAST>
+//| <SYS_OP_ENFORCE_NOT_NULL$>
+//| <SYS_OP_EXTRACT>
+//| <SYS_OP_NOEXPAND>
+//| <SYS_OP_NTCIMG$>
+//| <SYS_PARALLEL_TXN>
+//| <SYS_RID_ORDER>
+//| <SYSAUX>
+//| <SYSDATE>
+//| <SYSDBA>
+//| <SYSOPER>
+//| <SYSTEM>
+//| <SYSTIMESTAMP>
+//| <T>
+//| <TABLE_STATS>
+//| <TABLES>
+//| <TABLESPACE>
+//| <TABLESPACE_NO>
+//| <TABNO>
+| <TDO>
+//| <TEMP_TABLE>
+//| <TEMPFILE>
+//| <TEMPLATE>
+| <TEMPORARY>
+//| <TEST>
+//| <THAN>
+//| <THE>
+//| <THREAD>
+//| <THROUGH>
+| <TIME>
+//| <TIME_ZONE>
+//| <TIMEOUT>
+| <TIMESTAMP>
+| <TIMEZONE_ABBR>
+| <TIMEZONE_HOUR>
+| <TIMEZONE_MINUTE>
+//| <TIMEZONE_OFFSET>
+| <TIMEZONE_REGION>
+//| <TIV_GB>
+//| <TIV_SSF>
+//| <TO_CHAR>
+//| <TOPLEVEL>
+//| <TRACE>
+//| <TRACING>
+//| <TRACKING>
+| <TRAILING>
+| <TRANSACTION>
+//| <TRANSITIONAL>
+| <TREAT>
+//| <TRIGGERS>
+| <TRIM>
+| <TRUNCATE>
+//| <TRUSTED>
+//| <TUNING>
+//| <TX>
+//| <TYPE>
+//| <TYPES>
+//| <TZ_OFFSET>
+//| <U>
+//| <UB2>
+//| <UBA>
+//| <UID>
+//| <UNARCHIVED>
+//| <UNBOUND>
+//| <UNBOUNDED>
+| <UNDEFINE>
+| <UNDER>
+//| <UNDO>
+//| <UNDROP>
+//| <UNIFORM>
+//| <UNLIMITED>
+//| <UNLOCK>
+//| <UNNEST>
+//| <UNPACKED>
+//| <UNPROTECTED>
+//| <UNQUIESCE>
+//| <UNRECOVERABLE>
+//| <UNTIL>
+//| <UNUSABLE>
+//| <UNUSED>
+//| <UPD_INDEXES>
+//| <UPD_JOININDEX>
+//| <UPDATABLE>
+//| <UPDATED>
+//| <UPGRADE>
+//| <UPSERT>
+| <UROWID>
+//| <USAGE>
+//| <USE>
+//| <USE_ANTI>
+//| <USE_CONCAT>
+//| <USE_HASH>
+//| <USE_HASH_AGGREGATION>
+//| <USE_MERGE>
+//| <USE_NL>
+//| <USE_NL_WITH_INDEX>
+//| <USE_PRIVATE_OUTLINES>
+//| <USE_SEMI>
+//| <USE_STORED_OUTLINES>
+//| <USE_TTT_FOR_GSETS>
+//| <USE_WEAK_NAME_RESL>
+| <USER>
+//| <USER_DEFINED>
+//| <USER_RECYCLEBIN>
+//| <USERS>
+| <USING>
+//| <VALIDATE>
+//| <VALIDATION>
+//| <VALUE>
+| <VARRAY>
+| <VARIABLE>
+| <VARYING>
+//| <VECTOR_READ>
+//| <VECTOR_READ_TRACE>
+//| <VERSION>
+//| <VERSIONS>
+//| <WAIT>
+//| <WALLET>
+//| <WELLFORMED>
+//| <WHEN>
+| <WHENEVER>
+//| <WHITESPACE>
+//| <WITHIN>
+//| <WITHOUT>
+//| <WORK>
+//| <WRAPPED>
+//| <WRITE>
+//| <X_DYN_PRUNE>
+//| <XID>
+//| <XML_DML_RWT_STMT>
+//| <XMLATTRIBUTES>
+//| <XMLCOLATTVAL>
+//| <XMLELEMENT>
+//| <XMLFOREST>
+//| <XMLNAMESPACES>
+//| <XMLPARSE>
+//| <XMLPI>
+//| <XMLQUERY>
+//| <XMLROOT>
+//| <XMLSCHEMA>
+//| <XMLSERIALIZE>
+//| <XMLTABLE>
+//| <XMLTYPE>
+| <YEAR>
+| <YES>
+| <ZONE>
+| <SHOW>  // APEX_0400000.WWW_CALCUATOR.SHOW  
+| <WRAPPED>  // APEX_0400000.WWW_CALCUATOR.SHOW  
+| <SYS_REFCURSOR> //Not a keyword - just a type defined in standard 
+| <EDITIONABLE> 
+| <NONEDITIONABLE> 
+| <ACCESSIBLE> 
+| <NULLIF> 
+| <RENAME>
+| <RELEASE>  // RELEASE - 
+)
+
+{ return token; }
+}
+
+//SRT 2011-04-17 - END  */
+/**
+ * 2006-05-20 - Matthias Hendler - added <OLD> and <PARENT>  
+ */
+Token ID(): {}
+{
+	(<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		/*KEYWORDS_UNRESERVED 
+		|<EXTRACT> | <FALSE> | <TRUE>  | <SECOND> | <MINUTE> | <HOUR> | <DAY> | <MONTH> | <YEAR> 
+		 | <NO> |<ROW>  | <COMMENT> | <CURSOR> 
+		*/
+		| <REPLACE> //SYNTAX  
+		//20120501 | <DEFINER> 
+		| <SERIALLY_REUSABLE> | <RESTRICT_REFERENCES> 
+		| <EXCEPTION_INIT> | <AUTONOMOUS_TRANSACTION> // | <LANGUAGE>
+		| <ALL>  //RESERVED WORD 
+		| <ALTER>  //SYNTAX  //RESERVED WORD 
+		| <AND>  //SYNTAX  //RESERVED WORD 
+		| <ANY>  //RESERVED WORD 
+		| <ARRAY> 
+		| <AS>  //SYNTAX  //RESERVED WORD 
+		| <ASC>  //RESERVED WORD 
+		//20120429 | <AT> | <AUTHID> 
+		| <AVG> 
+		//	<BEGIN> |
+		| <BETWEEN>  //RESERVED WORD
+		| <BINARY_INTEGER> 
+		| <BODY> //SYNTAX 
+		| <BOOLEAN> 
+		//201020430 | <BULK> 
+		| <BY> //RESERVED WORD 
+		//201020430 | <BYTE> 
+		| <CASE> //SYNTAX 
+		| <CHAR>  //RESERVED WPRDS 
+		| <CHAR_BASE> 
+		| <CHECK>  //RESERVED WPRDS 
+		//20120501 | <CLOSE> //SYNTAX 
+		| <CLUSTER> //-<COALESCE> |
+		//20120501 | <COLLECT> 
+		| <COMPRESS>  //RESERVED WPRDS 
+		| <CONNECT> //SYNTAX //RESERVED WORD 
+		| <CONSTANT> 
+		| <CREATE> //SYNTAX //RESERVED WORD 
+		//20120501 | <CURRENT> 
+		| <CURRVAL> 
+		| <DATE> //RESERVED WORD 
+		| <DECLARE> //SYNTAX 
+		| <DECIMAL> //RESERVED WORD  
+		| <_DEFAULT> //RESERVED WORD 
+		| <DELETE>  //RESERVED WORD 
+		| <DESC>  //RESERVED WORD 
+		| <DISTINCT>  //RESERVED WORD 
+		| <DO> 
+		| <DROP>  //RESERVED WORD 
+		| <ELSE> //SYNTAX //RESERVED WORD 
+		| <ELSIF> //SYNTAX 
+		
+		//| <END> |<CURRENT_USER> 
+		| <EXCEPTION> //SYNTAX 
+		| <EXCLUSIVE> //SYNTAX //RESERVED WORD 
+		| <EXECUTE> //SYNTAX 
+		| <EXISTS> //SYNTAX //RESERVED WORD 
+		| <EXIT> //SYNTAX 
+		//20120501 | <EXTENDS> 
+		| <FETCH> //SYNTAX 
+		| <FLOAT> //SYNTAX //RESERVED WORD 
+		| <FOR>  //RESERVED WORD 
+		| <FORALL> //SYNTAX 
+		| <FROM>  //RESERVED WORD 
+		
+		// <COMMIT> | <FUNCTION> |	// this causes bug 643043 Procedure w/o params appears as variable
+		| <GOTO> //SYNTAX 
+		| <GROUP>  //RESERVED WORD 
+		| <HAVING>  //RESERVED WORD 
+		//20120501 | <HEAP> 
+		| <IF> //SYNTAX 
+		//20120501 | <IMMEDIATE> 
+		| <IN> //RESERVED WORD 
+		| <INDEX> //RESERVED WORD  
+		//20120501 | <INDICATOR> 
+		| <INSERT> //SYNTAX  //RESERVED WORD  
+		| <INTEGER>  //RESERVED WORD  
+		| <INTERFACE> 
+		| <INTERSECT>  //RESERVED WORD  
+		//20120501 | <INTERVAL> 
+		| <INTO>  //RESERVED WORD  
+		| <IS> //SYNTAX
+		//20120501 | <ISOLATION> | <JAVA> | <LEVEL> 
+		| <LIKE>  //RESERVED WORD  
+		| <LIMITED> 
+		| <LOCK> //SYNTAX  //RESERVED WORD  
+		| <LONG>  //RESERVED WORD  
+		| <LOOP> //SYNTAX 
+		//20120501 | <MAX> | <MIN> 
+		| <MINUS>  //RESERVED WORD  
+		//20120501 | <MLSLABEL> 
+		| <MOD> 
+		| <MODE> //RESERVED WORD   
+		//20120501 | <NATURAL> 
+		| <NATURALN> | <NEXTVAL> | <NOCOPY> 
+		| <NOT> //SYNTAX  //RESERVED WORD  
+		| <NOWAIT>  //RESERVED WORD  
+		| <NULL>  //RESERVED WORD  
+		//| <NULLIF> 
+		| <NUMBER>  //RESERVED WORD  
+		| <NUMBER_BASE> 
+		| <OCIROWID> 
+		| <OF>  //RESERVED WORD  
+		| <ON>  //RESERVED WORD  
+		//20120501 | <OPAQUE> 
+		| <BFILE_BASE> 
+		| <BLOB_BASE> |
+		//<CHAR_BASE> |
+		<CLOB_BASE> |
+		<DATE_BASE> 
+		//20120501 | <OPEN> 
+		| <OPERATOR> | <OPTION> 
+		| <OR> //SYNTAX  //RESERVED WORD  
+		| <ORDER>  //RESERVED WORD  
+		//20120501 | <ORGANIZATION> //| <OTHERS> 
+		| <OUT> 
+		//20120501 | <PACKAGE> //SYNTAX 
+		| <PCTFREE>  //RESERVED WORD  
+		| <PLS_INTEGER> | <POSITIVE> | <POSITIVEN> 
+		// <PRAGMA> |<PARTITION> | <RANGE> | <NEW> | <OLD> | 
+		| <PRIOR>  //RESERVED WORD  
+		| <PRIVATE> 
+		| <PROMPT> //SYNTAX 
+		
+		//	<PROCEDURE> | // this causes bug 643043 Procedure w/o params appears as variable
+		| <PUBLIC>  //RESERVED WORD  
+		| <RAISE> //SYNTAX 
+		| <RAW>  //RESERVED WORD  
+		//20120501 | <REAL> 
+		//<RECORD> | <RETURN> |  <SET> |<REF> | 
+		//20131021| <RELEASE> 
+		//20120501 | <REVERSE> 
+		//20120501 | <ROLLBACK> //SYNTAX 
+		//20120501 | <ROWID> 
+		//20120501 | <ROWNUM> 
+		| <ROWTYPE> 
+		//20120501 | <SAVEPOINT> //SYNTAX 
+		| <SELECT>  //SYNTAX  //RESERVED WORD  
+		| <SEPARATE> 
+		| <SHARE>  //RESERVED WORD  
+		| <SMALLINT>  //RESERVED WORD  
+		| <SQL>  
+		| <SQLCODE> | <SQLERRM> 
+		| <START>  //RESERVED WORD  
+		| <STDDEV> // <SUBTYPE> |
+		//20120501 | <SUCCESSFUL> 
+		| <SUM> 
+		| <SYNONYM>  //RESERVED WORD  
+		| <SYSDATE> 
+		| <TABLE>  //RESERVED WORD  
+		| <THEN> //SYNTAX  //RESERVED WORD  
+		//<SPACE> | <TIME> | <TIMESTAMP> | <TIMEZONE_REGION> | <TIMEZONE_ABBR> | <TIMEZONE_MINUTE> | <TIMEZONE_HOUR> | 
+		| <TO>  //RESERVED WORD  
+		| <TRIGGER>  //RESERVED WORD  
+		| <TYPE> 
+		| <UI> 
+		| <UPDATE> //SYNTAX 
+		| <VARCHAR>  //RESERVED WORD  
+		| <VARCHAR2>  //RESERVED WORD  
+		//20120501 | <DOUBLE> 
+		//20120501 | <DEC> 
+		//20120501 | <PRECISION> 
+		| <INT> 
+		//20120501 | <NUMERIC> 
+		| <SIGNTYPE> 
+		//20120429 | <NCHAR> | <NVARCHAR2> 
+		| <STRING> 
+		//| <UROWID> | <VARRAY> | <VARYING> 
+		//20120429 | <BFILE> | <BLOB> | <CLOB> | <NCLOB> 
+		| <WITH>  //RESERVED WORD  
+		| <WHILE> //SYNTAX 
+		// | <LOCAL> | <ZONE> | <CHARACTER>
+		//| <PARENT>  | <MEMBER> 
+		//20120429 | <CONSTRUCTOR> | <OBJECT> 
+		//PLDoc Bug 3512150  | <STATIC> 
+		//20120427 | <UNDER> | <RESULT> 
+		//20120428 | <FINAL> | <INSTANTIABLE> 
+	        // PlDoc Bug 3512150 | <MAP>
+	        //20120427 | <OVERRIDING>
+	        //20120427 | <OID> 
+		//20120428 | <AGGREGATE>
+		//| <SYS_REFCURSOR>
+		| <JAVA_INTERFACE_CLASS> | <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+		//20120427 | <EXTERNAL>
+                //SRT 20090608 ALTER TYPE key words 
+		//| <ADD>
+		//PLDoc Bug 3512149  | <ATTRIBUTE>
+		//| <ELEMENT>
+		//| <LIMIT>
+		//20120427 | <MODIFY>
+		//SRT 20110524 | <SELF> 
+	)
+	{ return token; }
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - added <OLD>, <NEW>, <LOOP>, <INT>
+ */
+Token unqualifiedID(): {}
+{
+	(
+		<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		| <BODY>
+		//20120501 | <INTERVAL>
+		| <MOD>
+		| <OPERATOR>
+		| <PRIVATE>
+		| <RAW>
+		| <REPLACE>
+		| <STRING>
+		| <SQL>
+		| <SQLCODE>
+		| <SQLERRM>
+		| <SYSDATE>
+		| <TYPE>
+		//| <OLD>  		
+		//| <NEW>			
+		| <LOOP> 
+		| <INT>
+		| <ARRAY>
+		//| <RESULT>
+	        //| KEYWORD_UNRESERVED()  //SRT 2011-04-17
+	)
+	{ return token; }
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - added <LIMIT>
+ */
+Token qualifiedID(): {}
+{
+	(
+		<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		/*
+		| <EXTRACT> --Unreserved Key Word 
+		| <FALSE> --Unreserved Key Word 
+		| <TRUE> --Unreserved Key Word 
+		| <SECOND>
+		| <MINUTE>
+		| <HOUR>
+		| <DAY>
+		| <MONTH>
+		| <YEAR> --Unreserved Key Word 
+		| <NO> //SRT 
+		*/
+		| <REPLACE>
+		//20120501 | <DEFINER>
+		//| <CURRENT_USER>
+		| <SERIALLY_REUSABLE>
+		| <RESTRICT_REFERENCES>
+		| <EXCEPTION_INIT>
+		| <AUTONOMOUS_TRANSACTION>
+		// | <LANGUAGE>
+		//<ALL>
+		//<ALTER>
+		//<AND>
+		//<ANY>
+		| <ARRAY>
+		//<AS>
+		//<ASC>
+		//<AT>
+		//20120429 | <AUTHID>
+		| <AVG>
+		//<BEGIN>
+		//<BETWEEN>
+		| <BINARY_INTEGER>
+		| <BODY>
+		| <BOOLEAN>
+		//201020430 | <BULK>
+		//<BY>
+		//201020430 <BYTE>
+		//<CASE>
+		| <CHAR>
+		| <CHAR_BASE>
+		//<CHECK>
+		//20120501 | <CLOSE>
+		//<CLUSTER>
+		//| <COALESCE>
+		//20120501 | <COLLECT>
+		//| <COMMENT>
+		//| <COMMIT>
+		//<COMPRESS>
+		//<CONNECT>
+		| <CONSTANT>
+		//<CREATE>
+		//<CURRENT>
+		| <CURRVAL>
+		//| <CURSOR>
+		| <DATE>
+		//<DECLARE>
+		| <DECIMAL>
+		//<DEFAULT>
+		| <DELETE>
+		//<DESC>
+		//<DISTINCT>
+		| <DO>
+		//<DROP>
+		//<ELSE>
+		| <ELSIF>
+		//<END>
+		//<EXCEPTION>
+		//<EXCLUSIVE>
+		| <EXECUTE>
+		| <EXISTS>
+		| <EXIT>
+		//20120501 | <EXTENDS>
+		//<FETCH>
+		| <FLOAT>
+		//<FOR>
+		| <FORALL>
+		//<FROM>
+		//| <FUNCTION>
+		//<GOTO>
+		//<GROUP>
+		//<HAVING>
+		//20120501 | <HEAP>
+		//<IF>
+		//20120501 | <IMMEDIATE>
+		//<IN>
+		//<INDEX>
+		//20120501 | <INDICATOR>
+		//<INSERT>
+		| <INTEGER>
+		| <INTERFACE>
+		//<INTERSECT>
+		//20120501 | <INTERVAL>
+		//<INTO>
+		//<IS>
+		//20120501 | <ISOLATION>
+		//20120501 | <JAVA>
+		//20120501 | <LEVEL>
+		//<LIKE>
+		//| <LIMITED>
+		//<LOCK>
+		| <LONG>
+		| <LOOP>
+		//20120501 | <MAX>
+		//20120501 | <MIN>
+		//<MINUS>
+		//20120501 | <MLSLABEL>
+		| <MOD>
+		//<MODE>
+		//20120501 | <NATURAL>
+		| <NATURALN>
+		//| <NEW>
+		| <NEXTVAL>
+		| <NOCOPY>
+		//<NOT>
+		//<NOWAIT>
+		//<NULL>
+		//| <NULLIF>
+		| <NUMBER>
+		| <BFILE_BASE> 
+		| <BLOB_BASE> 
+		//| <CHAR_BASE>
+		| <CLOB_BASE> 
+		| <DATE_BASE> 
+		| <NUMBER_BASE>
+		| <OCIROWID>
+		//<OF>
+		//<ON>
+		//20120501 | <OPAQUE>
+		//20120501 | <OPEN>
+		| <OPERATOR>
+		//<OPTION>
+		//<OR>
+		//<ORDER>
+		//20120501 | <ORGANIZATION>
+		//| <OTHERS>
+		| <OUT>
+		//20120501 | <PACKAGE>
+		//| <PARTITION>
+		//<PCTFREE>
+		| <PLS_INTEGER>
+		| <POSITIVE>
+		| <POSITIVEN>
+		| <PRAGMA>
+		| <PRIOR>
+		| <PRIVATE>
+		| <PROMPT>
+		//<PROCEDURE>
+		//<PUBLIC>
+		| <RAISE>
+		//| <RANGE>
+		| <RAW>
+		//20120501 | <REAL>
+		//| <RECORD>
+		//| <REF>
+		//20131021| <RELEASE>
+		//| <RETURN>
+		//20120501 | <REVERSE>
+		//20120501 | <ROLLBACK>
+		//| <ROW>
+		//20120501 | <ROWID>
+		//20120501 | <ROWNUM>
+		| <ROWTYPE>
+		//20120501 | <SAVEPOINT>
+		//<SELECT>
+		| <SEPARATE>
+		//<SET>
+		//<SHARE>
+		| <SMALLINT>
+		//| <SPACE>
+		//<SQL>
+		| <SQLCODE>
+		| <SQLERRM>
+		//<START>
+		| <STDDEV>
+		//| <SUBTYPE>
+		//20120501 | <SUCCESSFUL>
+		| <SUM>
+		| <SYNONYM>
+		| <SYSDATE>
+		//<TABLE>
+		//<THEN>
+		//| <TIME>
+		//| <TIMESTAMP>
+		//| <TIMEZONE_REGION>
+		//| <TIMEZONE_ABBR>
+		//| <TIMEZONE_MINUTE>
+		//| <TIMEZONE_HOUR>
+		//<TO>
+		| <TRIGGER>
+		| <TYPE>
+		| <UI>
+		//<UPDATE>
+		| <VARCHAR>
+		| <VARCHAR2>
+		//20120501 | <DOUBLE>
+		//20120501 | <DEC>
+		//20120501 | <PRECISION>
+		| <INT>
+		//20120501 | <NUMERIC>
+		| <SIGNTYPE>
+		//20120429 | <NCHAR>
+		//20120429 | <NVARCHAR2>
+		| <STRING>
+		//| <UROWID>
+		//| <VARRAY>
+		//| <VARYING>
+		//20120429 | <BFILE>
+		//20120429 | <BLOB>
+		//20120429 | <CLOB>
+		//20120429 | <NCLOB>
+		//| <LOCAL>
+		//<WITH>
+		| <WHILE>
+		// | <ZONE>
+		//| <CHARACTER>
+		//| <LIMIT>		 
+	        //| KEYWORD_UNRESERVED()  //SRT 2011-04-17
+	)
+	{ return token; }
+}
+
+Token typeKeyword(): {}
+{
+	(
+	<BFILE_BASE> |
+	<BLOB_BASE> |
+	//<CHAR_BASE> |
+	<CLOB_BASE> |
+	<DATE_BASE> |
+	<NUMBER_BASE> | 
+	<BOOLEAN> | <DATE> | <NUMBER> | <FLOAT> | <REAL> | <INTEGER> | <INT> | <SMALLINT>
+	| <DECIMAL> | <NUMERIC> | <DEC> | <BINARY_INTEGER> | <NATURAL> | <NATURALN>
+	| <POSITIVE> | <POSITIVEN> | <SIGNTYPE> | <VARCHAR2> | <VARCHAR> | <STRING> |
+	<LONG> | <RAW> | <ROWID> | <CHAR> | <CHARACTER> | <MLSLABEL> | <BLOB> | <CLOB> | <BFILE> |
+	<NCHAR> | <NVARCHAR2> | <NCLOB> | <PLS_INTEGER> | <TIME> | <TIMESTAMP> | <UROWID> |
+//
+	<ARRAY> | <AUTHID> | <ACCESSIBLE>
+	<CHAR_BASE> |
+	<CURRVAL> |
+	<HOUR> |
+	<INTERVAL> |
+	<MONTH> |
+	<OCIROWID> |
+	<RECORD> | <REF> |
+	<ROW> |
+	<ROWNUM> |
+	<ROWTYPE> | <SECOND> | <SET> |
+	<TABLE> |
+	<TIMEZONE_REGION> | <TIMEZONE_ABBR> | <TIMEZONE_MINUTE> | <TIMEZONE_HOUR> |	 <DOUBLE> | <PRECISION> |
+	<VARRAY> |
+	<YEAR> | <LOCAL> | <WITH> | <ZONE>
+	| <JAVA_INTERFACE_CLASS> | <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+        )
+	{ return token; }
+}
+
+Token javaInterfaceClass(): {}
+{
+	(
+          <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+        )
+	{ return token; }
+}
+
+
+
+
+/**
+ * Tests, if the new Token if type ID is identical to the old Token of type ID.
+ * 
+ * 2006-05-18 - Matthias Hendler - added: Just for understanding javacc and not used,
+ *                                        cause to many closing ENDs (IDENTIFIER) were mistyped.
+ */
+Token equalsOldIDNewID(Token pOldID) :
+{
+	Token newID;
+}
+{
+	newID = ID()
+	{
+		if (pOldID.image.equals(newID.image)) {
+			return newID;
+		} else {
+			throw new ParseException("PLSQL syntax error on line "+newID.beginLine+" at column "+newID.beginColumn+"!\n"
+				+ "Found \""+newID.image+"\" but expected \""+pOldID.image+"\".");
+		}
+	}
+
+}
+

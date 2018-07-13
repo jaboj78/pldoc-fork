@@ -1,0 +1,61 @@
+/* PLDoc style sheet. */
+/* $Header: /cvsroot/pldoc/sources/src/resources/defaultstylesheet.css,v 1.1 2003/10/19 16:30:30 altumano Exp $ */
+
+/* Background color */
+body { background-color: #FFFFFF }
+
+/* Table colors */
+.TableHeadingColor     { background: #CCCCFF }
+.TableSubHeadingColor  { background: #EEEEFF }
+.TableRowColor         { background: #FFFFFF }
+
+/* Contents frame font */
+.FrameTitleFont   { font-size: normal; font-family: normal }
+.FrameHeadingFont { font-size: normal; font-family: normal }
+.FrameItemFont    { font-size: normal; font-family: normal }
+
+/* Navigation bar */
+.NavBarRow1    	   { background-color:#EEEEFF;}
+.NavBarRow1Chosen  { background-color:#00008B;}
+.NavBarFont1       { font-family: Arial, Helvetica, sans-serif; color:#000000;}
+.NavBarFont1Chosen { font-family: Arial, Helvetica, sans-serif; color:#FFFFFF;}
+
+.NavBarRow2    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF;}
+.NavBarRow3    { font-family: Arial, Helvetica, sans-serif; background-color:#FFFFFF;}
+
+/* Tag Heading */
+DT {font-weight: bold;} 
+
+/* Source Code  - from http://thomasf.github.io/solarized-css/solarized-light.css */
+
+pre { background-color: #fdf6e3; color: #657b83; border: 1pt solid #93a1a1; padding: 1em; box-shadow: 5pt 5pt 8pt #eee8d5; }
+pre code { background-color: #fdf6e3; }
+
+.tag { background-color: #eee8d5; color: #d33682; padding: 0 0.2em; }
+.tag { -webkit-border-radius: 0.35em; -moz-border-radius: 0.35em; border-radius: 0.35em; }
+
+.callOut { -webkit-border-radius: 0.2em; -moz-border-radius: 0.2em; border-radius: 0.2em; background-color: #268bd2; }
+
+
+/* CPD Specific */
+.SummaryTitle  { font-family: Arial, Helvetica, sans-serif; color:indigo; }
+.SummaryNumber { background-color: #EEEEFF; text-align: center; }
+.ItemNumber    { background-color: #CCCCFF; }
+.CodeFragment  { background-color: #fdf6e3; display:none; font:normal normal normal 9pt Courier; }
+.ExpandButton  { -webkit-border-radius: 0.35em; -moz-border-radius: 0.35em;  background-color: #EEEFFF; font-size: 8pt; width: 20px; height: 20px; margin:0px; 
+
+    text-align: center;
+
+   /*Step 4: Fancy CSS3 Styles*/
+    -webkit-border-radius: 0.35em;
+    -khtml-border-radius: 0.35em;
+    -moz-border-radius: 0.35em;
+    border-radius: 0.35em;
+     
+    -webkit-box-shadow: 0 4px 0 #CCCCFF ;
+    -moz-box-shadow: 0 4px 0 #CCCCFF ;
+    box-shadow: 0 4px 0 #CCCCFF ;
+     
+    text-shadow: 0 2px 2px rgba(255, 255, 255, 0.2);
+}
+

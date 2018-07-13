@@ -1,0 +1,21 @@
+--------------------------------------------------------------------------------
+separate reserved words by type (datatype, statement, etc)
+--------------------------------------------------------------------------------
+Review places where <IDENTIFIER> is used and replace with ID() if needed.
+Differentiate reserved words from SYS.STANDARD ?
+--------------------------------------------------------------------------------
+Handle package spec constructs: 
+    (Done)record_type_definition
+    (Done)recordDeclaration
+--------------------------------------------------------------------------------
+Handle package body constructs: 
+  (Done)collection_type_definition
+  (Done)objectDeclaration
+--------------------------------------------------------------------------------
+reuse CommentParser object ?
+--------------------------------------------------------------------------------
+reduce usage of Strings in CommentParser ?
+--------------------------------------------------------------------------------
+try compilation of xsl ?
+--------------------------------------------------------------------------------
+

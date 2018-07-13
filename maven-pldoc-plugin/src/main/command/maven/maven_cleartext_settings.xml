@@ -1,0 +1,58 @@
+<settings xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    
+    <servers>
+	<!-- Database Passwords-->
+        <server>
+	  <id>192.168.0.12:1521/orcl</id>
+          <username>system</username>
+          <password>full_no_protocol</password>
+        </server>
+        <server>
+	  <id>192.168.0.12:1521</id>
+          <username>system</username>
+          <password>host_port_no_protocol</password>
+        </server>
+        <server>
+	  <id>192.168.0.12</id>
+          <username>system</username>
+          <password>host_no_protocol</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12:1521/orcl</id>
+          <username>system</username>
+          <password>full_jdbc_protocol</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12:1521</id>
+          <username>system</username>
+          <password>host_port_jdbc_protocol</password>
+        </server>
+        <server>
+	  <id>jdbc:192.168.0.12</id>
+          <username>system</username>
+          <password>host_jdbc_protocol</password>
+        </server>
+    </servers>
+
+    <!-- 
+        Put ths profile information into ~/.m2/settings.xml 
+    -->
+    <profiles>
+        <profile>
+	  <id>cleartext</id>
+	  <properties>
+	    <maven.pldoc.dbUser>system</maven.pldoc.dbUser>
+	    <maven.pldoc.dbPassword>oracle</maven.pldoc.dbPassword>
+	    <maven.pldoc.dbUrl>jdbc:oracle:thin:@//192.168.0.12:1521/orcl</maven.pldoc.dbUrl>
+	  </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+      <activeProfile>cleartext</activeProfile>
+    </activeProfiles>
+
+</settings>

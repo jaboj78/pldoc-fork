@@ -1,0 +1,31 @@
+Hi, I've worked now on integrating the PLSQL grammar into the build script.
+My branch is here: https://github.com/adangel/pmd/commits/plsql
+You can integrate into yours like this:
+
+create a new branch
+
+git checkout -b adangel-master master
+
+merge plsql branch and test
+
+git pull https://github.com/adangel/pmd.git plsql
+
+if everything is ok, merge back to master
+
+git checkout master
+git merge adangel-master
+git push origin master
+
+The changes I made are:
+
+merge from master and resolve the merge conflict so that build hive should at least be able to start the build again.
+regenerating the AST classes and the parser on every clean build, as it is done for the other languages. Please note, that I modified the "CHOICE_AMBIGUITY_CHECK" to be 2 (the default value). And that's the recommended setting of this value. See also the ticket http://java.net/jira/browse/JAVACC-253. Increasing this ambiguity check value helps when you develop the grammar to detect early if two production rules are ambiguous and could be improved using more lookahead tokens.
+I deleted most of the AST classes and also the parser. So there is no possibility anymore to "fix" the parser directly - you always have to fix the grammar (the source).
+For the new Java classes, I added the license header to be PMD's BSD-license.
+And as last step I added a sample unit test for the NPathComplexity rule:
+The test class is this one: https://github.com/adangel/pmd/blob/plsql/pmd/src/test/java/net/sourceforge/pmd/lang/plsql/rule/codesize/CodesizeRulesTest.java
+The test data for this test is here: https://github.com/adangel/pmd/blob/plsql/pmd/src/test/resources/net/sourceforge/pmd/lang/plsql/rule/codesize/xml/NPathComplexity.xml
+I want to encourage you to write for every rule unit tests, as otherwise we don't know at all whether it is working. And just to be exact - mine is only an example. It is not even close to be complete. I'm testing only one case...
+My general observations I made so far (nothing to do with your work - it's general PMD):
+
+

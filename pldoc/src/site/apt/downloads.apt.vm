@@ -1,0 +1,78 @@
+Latest Downloads
+
+ PLDoc is available as JAR files and as ready to use bundles of JAR files and scripts.
+
+JAR files 
+
+ These files may be used to refresh an existing PLDoc installation: pre-0.9.1 installations should use the first JAR file.
+
+*---------------------------------------------------------------------------------+
+|{{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}.jar}Latest PLDoc JAR}} |
+|{{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-jar-with-dependencies.jar}Latest PLDoc JAR (including referenced classes)}} |
+*---------------------------------------------------------------------------------+
+JAR files 
+
+
+Bundles
+
+ The bundles are the easiest way of installing and running PLDoc. All bundles contain scripts for Windows and Unix/Linux: with Oracle JDBC drivers you have immediate access to PLDoc.
+
+*---------------------------------------------------------------------------------+
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.zip}ZIP bundle}}|
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.tar.gz}TGZ bundle}}|
+| {{{${velocityDownloadRoot}/${velocityProjectVersion}/${velocityBuildFinalName}-distribution.tar.bz2}TBZ bundle}}|
+*---------------------------------------------------------------------------------+
+Bundles
+
+Installation
+
+ Download a PLDoc bundle and unzip/untar the bundle. All bundles contain scripts for Windows and Unix/Linux.
+
+
+ If you do not already have Oracle access via JDBC, download {{{http://www.oracle.com/technetwork/database/features/jdbc/index-091264.html}Oracle JDBC drivers}} suitable for your Java version (Java 6 is recommended). 
+
+ Set the ORACLE_HOME environment variable to the location of the directory containing the JDBC JAR files: the scripts assume that the JDBC JAR files are located under $\{ORACLE_HOME}/jdbc/lib (Normal Oracle installation) or ${ORACLE_HOME} (Oracle Instant Client installation).
+
+ * Windows
+
++--
+ SET ORACLE_HOME=<Folder Path>
++--
+ e.g.
+
++--
+ SET ORACLE_HOME=C:\Applications\Oracle\JDBC
++--
+
+ * Unix/Linux
+
++--
+ ORACLE_HOME=<Folder Path> ; export ORACLE_HOME
++--
+ e.g.
+
++--
+ ORACLE_HOME=/var/app/oracle/product/JDBC ; export ORACLE_HOME
++--
+
+ Alternatively, download {{{http://www.oracle.com/technetwork/database/features/instant-client/index-097480.html}Oracle Instant Client}} and follow the {{{http://www.oracle.com/technetwork/database/features/instant-client/index-100365.html}Installation instructions}}. Set the ORACLE_HOME environment variable to the location of the expanded Instant Client files.
+
+
+ Check that installation has been successful:
+
+ * Windows
+
++--
+ pldoc -d InstallCheck Samples/*.sql 
++--
+
+ * Unix/Linux
+
++--
+ pldoc.sh -d InstallCheck Samples/*.sql 
++--
+
+
+
+
+

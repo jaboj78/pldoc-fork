@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="${project.name}">
+    <skin>
+        <groupId>org.apache.maven.skins</groupId>
+        <artifactId>maven-stylus-skin</artifactId>
+        <version>1.1</version>
+    </skin>
+   <bannerLeft>
+        <name>PLDoc CPD </name>
+        <src>images/pldoc-banner.png</src>
+        <href>http://pldoc.sourceforge.net</href>
+    </bannerLeft>
+    <body>
+        <links>
+            <item name="PLDoc" href="http://pldoc.sourceforge.net"/>
+        </links>
+
+        <menu name="Main Menu">
+            <item name="Introduction" href="index.html"/>
+            <item name="Download" href="downloads.html"/>
+            <item name="SourceForge Project" href="http://sourceforge.net/projects/pldoc/"/>
+            <item name="User Documentation" href="docs/Users_Guide/index.html"/>
+            <item name="Notes for Developers" href="developer-notes.html"/>
+            <item name="Release Notes" href="readme.txt"/>
+            <item name="Change Log" href="changes-report.html"/>
+            <item name="Maven 3 Plugin" href="maven-cpd-plugin/index.html"/>
+        </menu>
+
+        <!-- Run mvn compile site:site to generate the reports for the project. -->
+        <menu ref="reports" />
+    </body>
+</project>

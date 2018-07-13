@@ -1,0 +1,32 @@
+3042925	Object - oriented code dies	
+2210106	Defaults - for parameters are not shown	
+2210084	Typo - in the template for deprecated list	
+2210063	Mixed - or uppercase named parameters are shown in lowercase	
+2105272	Encoding - for package HTML files	
+1997846	Invalid - uppercase HREFs in index-list.xsl	
+1927841	Blanks - in path and filename will be replaced by %20	
+1901322	type - with name array break parser	
+1636638	dos - line endings in pldoc.sh stop it working	
+1606392	ParseException - with new 10g Q function.	
+1606375	ParseException - with exponentiation operator (**")	
+1561459	Parser - fails with show errors package ..."	
+1524546	DBLink - Problem	
+1501660	Parsing - problem - LIBRARY	
+1483563	Bug - with wildcards in -sql	
+1433480	SET - Causes an error	
+1228763	NVL - in order by not accepted	
+1211416	Stand-alone - procedures cannot be parsed	
+1181091	Problem - parsing multiple levels of redirect in declarations	
+1146263	create - or replace trigger not parsed	
+1146253	Expression - is null" not recognized	
+1146250	Alter - table statements not parsed	
+1122930	parsing - assignment in loop .. end loop	
+1120183	Bypass - Package Body	
+1077882	INTO - token not recognized	
+985800	view - parsing problems	
+973773	Table - parsing : missing 'BYTE' token	
+934869	error - parsing cursor declaration	
+856988	don't - parse lines starting with PROMPT	
+809871	show - DEFAULT value for parameters	
+768434	problems - with funny-named destination directories	
+645219	Handle - (multiple) &quot;--&quot; comments	

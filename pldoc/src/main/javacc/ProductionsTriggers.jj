@@ -1,0 +1,406 @@
+/** 
+ * Trigger
+ * Triggers are always outside of a package.
+ *
+ *  2006-05-17 - Matthias Hendler - added 
+ */
+
+/*
+  11g Trigger Syntax 
+
+ create_trigger : 
+ CREATE [OR REPLACE] TRIGGER [schema.]trigger 
+( simple_dml_trigger | compound_dml_trigger | non_dml_trigger )
+[ FOLLOWS ( [schema.]trigger) ( , [schema.]trigger)*  ]
+[ ENABLE  | DISABLE ]
+( WHEN ( trigger_condition ) 
+trigger_body
+
+
+simple_dml_trigger :
+(BEFORE |AFTER | INSTEAD OF)
+dml_event_clause 
+[ referencing_clause ]
+[ FOR EACH ROW ]
+
+
+
+compound_dml_trigger :
+FOR dml_event_clause 
+[ referencing_clause ]
+
+
+non_dml_trigger :
+(BEFORE> |<AFTER> ) 
+(ddl_event | database_event) ( OR (ddl_event | database_event))*
+ON
+(DATABASE | [schema.]SCHEMA
+
+
+
+trigger_body :
+(plsql_block | compound_trigger_block | CALL routine_clause)
+
+
+
+dml_event_clause:
+( DELETE | INSERT | UPDATE [ OF column (, column ) ] )
+ON ( (schema.table | NESTED TABLE nested_table_column OF [schema.]view )
+
+referencing_clause:
+REFERENCING 
+(OLD AS old_alias | NEW AS new_alias | PARENT AS parent_alias )+ 
+
+
+compound_trigger_block :
+COMPOUND TRIGGER 
+declare_section 
+(timing_point_section)+  
+END [trigger_name] ;
+
+timing_point_section:
+(
+BEFORE STATEMENT IS tps_body END BEFORE STATEMENT 
+|BEFORE EACH ROW IS tps_body END BEFORE EACH ROW 
+|AFTER STATEMENT IS tps_body END AFTER STATEMENT 
+|AFTER EACH ROW IS tps_body END AFTER EACH ROW 
+)
+
+
+tps_body:
+(statement)+
+(EXCEPTION exception_handler )*
+
+*/
+void triggerUnit() throws SAXException :
+{
+	Token start = null;
+	Token node = null;
+	Token schema = null;
+	Token name = null;
+	Token table = null;
+	Token dec_start = null;
+	Token dec_end = null;
+	Token nested_table_column = null;
+	StringBuffer declaration = new StringBuffer();
+	Hashtable tags = new Hashtable();
+	String triggerType = "SIMPLE"; // 11g Triggers may be SIMPLE DML, COMPOUND DML or non-DML 
+	String triggerLevel = "TABLE"; // 11g Triggers may be simple TABLE, DDL or Event triggers AT SCHEMA or DATABASE level
+	String triggerName = null; 
+	String tableName = null; 
+
+}
+{
+	[start=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	
+	(node=<TRIGGER>) (LOOKAHEAD(2) schema =ID()".")? name=ID()
+
+	// simple_dml_trigger | compound_dml_trigger | non_dml_trigger 
+	// simple_dml_trigger : 
+	(dec_start=<BEFORE> |dec_start=<AFTER> | dec_start=<INSTEADOF> | dec_start = <FOR> {triggerType = "COMPOUND" ; } // Incorporate 11G Compound DML Trigger
+	)
+
+	//dml_event_clause 
+	( ((<DELETE> | <INSERT> | <UPDATE>) [LOOKAHEAD(6)<OF> ID() ("," ID() )*] ) | non_dml_event() {triggerType = "NONDML" ; }  ) 
+	
+	( <OR> ( ((<DELETE> | <INSERT> | <UPDATE>) [LOOKAHEAD(6)<OF> ID() ("," ID() )* ] ) | non_dml_event() )  )*
+	
+	dec_end=<ON> 
+	(
+	schema=<DATABASE> //11G non_dml_trigger
+	|LOOKAHEAD(2) <NESTED> <TABLE>  nested_table_column = ID() <OF>  [LOOKAHEAD(2) schema = ID()"."] table=ID()
+	|[LOOKAHEAD(2) schema = ID()"."] table=ID() //includes 11g schema.<SCHEMA> table ===<SCHEMA>
+	)
+	{
+		// Read the declaration part of the trigger
+		Token runner = dec_start;
+		while(runner != dec_end) {
+			declaration.append(runner.image);
+			declaration.append(" ");
+			runner = runner.next;
+		}
+
+		if (m_out != null) {
+			String packageString = globalPackageName; // Default Global Package Name 
+			String schemaString = schemaName; // Default Schema 
+			final String fullname ;
+
+			if 
+			 ( //If Non-DML trigger 
+			  (null != schema && schema.image.toUpperCase().equals("DATABASE"))
+			 ) 
+			 { //Trigger has been declared on the Database or on an explicit schema
+			  fullname = purifyIdentifier(schema.toString()+"."+name.toString() );
+			  triggerLevel = "DATABASE" ;
+			  triggerName = name.toString()  ;
+			 }
+			else if 
+			 ( //If Non-DML trigger 
+			  (null != table && table.image.toUpperCase().equals("SCHEMA"))
+			 ) 
+			 { //Trigger has been declared on the Database or on an explicit schema
+			  fullname = purifyIdentifier(schema.toString()+"."+name.toString() );
+			  triggerLevel = "SCHEMA" ;
+			  triggerName = name.toString()  ;
+			 }
+			 else
+			 {
+			  fullname = purifyIdentifier( table.toString()+"."+name.toString() );
+			  triggerLevel = "TABLE" ;
+			  triggerName = name.toString()  ;
+			  tableName = table.toString()  ;
+			 }
+
+			if (null != schema )
+			{
+			  schemaString = schema.toString();
+			  packageString = ("_" + schemaString ) ; //Base global package name on Schema
+			}
+
+			/*
+			Previously triggers were wrapped in the _GLOBAL package,
+			which alsoe help all ScHema-level functions and procedures 
+			This was changed so that there was one global package per Schema.
+
+			In order to get these triggers in the correct schema triggers are no longer processed
+			as global productions.
+
+			In order to minimise the downstream changes the code wraps the trigger element
+			in the best possible Global Package Name 
+
+			*/
+			m_out.pushAttribute("NAME", purifyIdentifier(packageString)); 
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString)); // 11g Flag Schema if possible 
+			m_out.startElement("PACKAGE");
+
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString)); // 11g Flag Schema if possible 
+			m_out.pushAttribute("TYPE", purifyKeyword(triggerType)); // 11g Flag Different Trigger Types
+			m_out.pushAttribute("LEVEL", purifyKeyword(triggerLevel)); // 11g Flag Different Trigger Levels
+			if (null != tableName)
+			{
+			  m_out.pushAttribute("TABLE_NAME", purifyKeyword(tableName)); 
+			}
+			tags = processMemberComment(start, purifyKeyword(node.toString()), triggerName); //PLSCOPE fullname); 
+			//SRT 20110512 - Look for member comment in all possible locations before the trigger 
+			tags.putAll(processMemberComment(node, null, null)); 
+			tags.putAll(processMemberComment(name, null, null)); 
+			tags.putAll(processMemberComment(dec_start, null, null)); 
+			
+			// print the parsed declaration
+			m_out.pushAttribute("TEXT", declaration.toString() );
+			m_out.startElement("DECLARATION");
+			m_out.endElement("DECLARATION");
+	
+			// print custom tags		
+			printCustomTags(tags);
+
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+	
+	 
+	// referencing_clause 
+	[<REFERENCING> ((<OLD> | <NEW> | <PARENT>) <AS> ID())* /*Oddly, there is a minimum of ZERO subclauses, not ONE */  ]
+	
+	[<FOREACHROW>]
+	// end of simple_dml_trigger (incorporating  compound_dml_trigger )
+	
+	
+	[ [<FORWARD> | <REVERSE>] <CROSSEDITION>  ] // 11G Syntax to specify CrossEdition trigger  if not specified direction is FORWARD 
+	[ (<FOLLOWS> | <PRECEDES>) ( [LOOKAHEAD(2) ID() "."] ID() )  ( ","  ( [ LOOKAHEAD(2) ID() "."] ID() ) )* ] // 11G Syntax to specify trigger firing order 
+	[ <ENABLE> | <DISABLE> ] // 11G Syntax can create the trigger enabled or disabled explcitly 
+	[ <WHEN> "(" ConditionalOrExpression() ")" ]
+
+	//Trigger Body follows :
+	//plsql_block  | compound_trigger_block | <CALL> routine 
+	(
+	 <CALL> PrimaryExpression() ";"
+	 //compound_trigger_block 
+	| compound_trigger_block(name)
+
+	|//plsql_block  
+	  (
+	    [
+	    <DECLARE>
+		    declarativeSection(false,name)
+	    ]
+	    
+	    <BEGIN> (statement())* (exceptionHandler())? <END> [ID()] ";"
+	  )
+	//| //<CALL> routine 
+	)
+	
+	
+	{ printSummary("Trigger", name.beginLine, name, token); }
+	{
+		if (m_out != null)
+		{
+			m_out.endElement(purifyKeyword(node.toString())); //SRT 20110420 m_out.endElement(purifyIdentifier(node.toString().toUpperCase()));
+			m_out.endElement(purifyKeyword("PACKAGE")); //Wrap the trigger element in a fake package
+		}
+	}
+	
+}
+
+
+void timing_point_section() throws SAXException :
+{
+	Token start = null;
+	Token start_scope = null;
+	Token begin = null;
+	Token end = null;
+	Token end_scope = null;
+	Hashtable tags = new Hashtable();
+	StringBuffer tpsType = new StringBuffer();
+	String tpsAttributeName = "TIMINGPOINTSECTION";
+}
+{
+ (
+ ( start = <BEFORE> | start = <AFTER> | start = <INSTEADOF> ) { tpsType.append(start.image); } 
+ (   start_scope = <STATEMENT> { tpsType.append(" STATEMENT" ); } 
+   | start_scope = <EACH> <ROW> { tpsType.append(" EACH ROW" ); } 
+ )  
+ <IS> 
+ begin = <BEGIN>
+ (statement())+ 
+ <END>  ( end = <BEFORE> | end = <AFTER> | end = <INSTEADOF> ) ( end_scope = <STATEMENT> | end_scope = <EACH> <ROW>) ";"
+ )
+ {
+  //Add a TRIGGER ENTRY for each timing point section 
+  if (m_out != null)
+  {
+	m_out.pushAttribute("TYPE", purifyKeyword(tpsType.toString()) ); // 11G Flag Different Timing Point Sections 
+	tags = processMemberComment(start, purifyKeyword(tpsAttributeName ), purifyKeyword(tpsType.toString()) );
+	tags.putAll(processMemberComment(start_scope, null, null)); 
+	tags.putAll(processMemberComment(begin, null, null)); 
+
+	m_out.endElement(purifyKeyword(tpsAttributeName)); 
+  }
+ }
+}
+
+
+
+void compound_trigger_block(Token objectStart) throws SAXException :
+{
+	Token start = null;
+	Token node = null;
+	Token schema = null;
+	Token name = null;
+	Token table = null;
+	Token dec_start = null;
+	Token dec_end = null;
+	StringBuffer declaration = new StringBuffer();
+	Hashtable tags = new Hashtable();
+}
+{
+  start = <COMPOUND> <TRIGGER> 
+
+  (
+    //Problems making the declaration optional
+    //declarativeSection(true)
+    //(timing_point_section())+
+    	(
+               timing_point_section()|
+		pragma(true) |
+		LOOKAHEAD(2)
+		exceptionDeclaration(true) |
+		LOOKAHEAD(2)
+		subtype_definition(true) |
+		LOOKAHEAD(4)
+		variableOrConstantDeclaration(true) |
+		LOOKAHEAD(2)
+		cursorSpec(true) |
+		cursorBody(true) |
+		collectionDeclaration(true) |
+		programUnit(true,objectStart) 
+	)*
+
+
+  )
+
+  <END> [ID()] ";"
+}
+
+
+/*
+non_dml_trigger :
+(BEFORE> |<AFTER> ) 
+(ddl_event | database_event) ( OR (ddl_event | database_event))*
+ON
+(DATABASE | [schema.]SCHEMA
+*/
+void non_dml_trigger() throws SAXException :
+{
+	Token start = null;
+	Token schema = null;
+	Token trigger_scope = null;
+}
+{
+ ( start = <BEFORE> | start = <AFTER> ) 
+ ( ddl_event() | database_event() )
+ ( <OR> ( ddl_event() | database_event() ) )*
+ <ON> 
+ (trigger_scope = <DATABASE> | [LOOKAHEAD(2) schema = ID()"."] trigger_scope= <SCHEMA>)
+}
+
+
+Token ddl_event(): {}
+{
+  ( <ALTER> 
+  | <ANALYZE> 
+  | <ASSOCIATE> <STATISTICS> 
+  | <AUDIT>
+  | <COMMENT>
+  | <CREATE>
+  | <DISASSOCIATE> <STATISTICS>
+  | <DROP>
+  | <GRANT>
+  | <NOAUDIT>
+  | <RENAME>
+  | <REVOKE>
+  | <TRUNCATE>
+  | <DDL>
+  )
+  { return token; }
+}
+
+
+Token database_event(): {}
+{
+  ( <STARTUP>
+  | <SHUTDOWN> 
+  | <LOGON> 
+  | <LOGOFF> 
+  | <SERVERERROR> 
+  | <SUSPEND> 
+  )
+  { return token; }
+}
+
+Token non_dml_event(): {}
+{
+  (ddl_event() | database_event()) 
+  { return token; }
+}
+
+/*
+When DBMS_METADATA.GET_DDL returns a trigger, it can come in 2 DDL statements.
+The first is the CREATE OR REPLACE TRIGER statement; the second is an ALTER TRIGGER statement,
+enabling or disabling the trigger.
+
+Unlike the ALTER TYPE, it does not seem to alter the structure of the object.
+*/
+void alterTrigger() throws SAXException :
+{}
+{
+	<ALTER> <TRIGGER>
+	skip2NextTerminator(null,";") 
+	";"
+	{
+		return;
+	}
+}
+

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="samples" default="plsql-doc" basedir=".">
+  <description>
+    Example of using pldoc Ant task to document an entire database.
+    Run it using a command like this:
+
+      ant -f ant_enterprise example.xml
+
+    NB: if you are using Java 1.4 or later, you'll need to override the embedded XML classes.
+    iN Java 1.4, the simplest way to do this is to define environment variable ANT_OPTS before running Ant:
+
+      export ANT_OPTS=-Djava.endorsed.dirs=$PLDOC_HOME/target
+
+    or on Windows:
+
+      set ANT_OPTS=-Djava.endorsed.dirs=%PLDOC_HOME%\target
+
+    where PLDOC_HOME is the directory where pldoc is installed.
+
+    pldoc-1.5.22-SNAPSHOT-jar-with-dependencies.jar contains all runtime Xalan and Xerces classes
+    to run PLDoc successfully.
+
+    <!-- fileset dir="test" includes="**//*.sql"/> <!- - here should be included any other masks for PL/SQL files -->
+    <!--sysproperty key="java.library.path" value="${JDBC_HOME}"/ -->
+  </description>
+
+  <taskdef name="pldoc" classname="net.sourceforge.pldoc.ant.PLDocTask">
+    <classpath>
+      <pathelement location="${pldoc.home}/target/pldoc-1.5.22-SNAPSHOT-jar-with-dependencies.jar"/>
+      <pathelement location="${JDBC_HOME}/ttjdbc6.jar"/>
+      <pathelement location="${JDBC_HOME}/ttjdbc5.jar"/>
+    </classpath>
+  </taskdef>
+
+  <target name="plsql-doc" description="PL/SQL documentation generator">
+    <echo message="java.library.path            = C:\\java\\jdk1.7.0_51\\bin;C:\\WINDOWS\\Sun\\Java\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\tools\\maven\\apache-maven-3.5.0\\bin;C:\\java\\jdk1.7.0_51\\bin;C:\\Program Files\\Docker\\Docker\\Resources\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;C:\\Program Files (x86)\\Intel\\iCLS Client\\;C:\\Program Files\\Intel\\iCLS Client\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\ATI Technologies\\ATI.ACE\\Core-Static;C:\\Program Files (x86)\\Intel\\Intel(R) Management Engine Components\\DAL;C:\\Program Files\\Intel\\Intel(R) Management Engine Components\\DAL;C:\\Program Files (x86)\\Intel\\Intel(R) Management Engine Components\\IPT;C:\\Program Files\\Intel\\Intel(R) Management Engine Components\\IPT;C:\\Program Files\\WIDCOMM\\Bluetooth Software\\;C:\\Program Files\\WIDCOMM\\Bluetooth Software\\syswow64;C:\\Program Files\\TortoiseSVN\\bin;C:\\tools\\GnuWin32\\bin;C:\\tools\\Git\\cmd;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;C:\\app\\nodejs\\;C:\\Users\\bojej\\AppData\\Local\\Microsoft\\WindowsApps;C:\\tools\\Git\\cmd;C:\\Users\\bojej\\AppData\\Local\\atom\\bin;C:\\tools\\Docker Toolbox;C:\\tools\\Mercurial;C:\\Users\\bojej\\AppData\\Roaming\\npm;." /> 
+    <pldoc
+          verbose="yes"
+          destdir="EnterpriseDoc-Ant-TimesTen"
+          doctitle="DB2 Enterprise Ant TimesTen Application"
+	  showskippedpackages="true"
+          dburl="${pldoc.db.url}"
+          dbuser="${pldoc.db.user}"
+          dbpassword="${pldoc.db.password}"
+          inputtypes="${pldoc.db.inputTypes}"
+          inputobjects="${pldoc.db.inputObjects}"
+          drivername="${pldoc.db.driverName}"
+          getMetadataStatement="${pldoc.db.getMetadataStatement}"
+          returntype="${pldoc.db.getMetadataStatementReturnType}"
+	  >
+    </pldoc>
+  </target>
+</project>

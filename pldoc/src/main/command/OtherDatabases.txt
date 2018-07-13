@@ -1,0 +1,25 @@
+Other Databases
+
+The ANT and Maven examples rely on:-
+  the appropriate environment shell scripts being run;
+  the appropriate JVM (matching any database native libraries); 
+  dependent JAR files loaded into any reposiitories.
+
+
+These examples were tested with:-
+TimesTen 11.2.2.*: 
+	export TT_HOME=~/TimesTen/tt1122
+	.  ${TT_HOME}/bin/ttenv.sh
+
+
+[
+Using TimesTen with ANT requires a 32-bit JVM, because TimesTen libraries are 32-bit only
+Otherwise, ANT complains about "problems with loading native library/missing methods: no [ttJdbcCS|ttJdbc] in java.library.path"
+]
+ 
+
+DB2 Express-C 9.7.5
+	export DB2_HOME=~db2inst1
+	. ${DB2_HOME}/sqllib/db2profile
+
+

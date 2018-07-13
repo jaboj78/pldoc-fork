@@ -1,0 +1,805 @@
+
+void typeMethod(boolean isPackageLevel,int typeVersion, String alterTypeAction, Token objectStart) throws SAXException :
+{
+	Token schemaName = null;
+	Token scope, start,  name;
+	Token tokenIsAs = null;
+	Token mapOrderMethod = null;
+	Token inheritanceClause = null;
+	Token startToken = null;
+	Token returnToken = null;
+	String methodName = null;
+	String methodType = null;
+	String methodScope = null;
+	String methodOrdering = "";
+	String methodInheritance = "";
+	String methodPrefix = "";
+	String type = null;
+	String returnComment = null;
+	Hashtable tags;
+	Hashtable attributes = new Hashtable();
+}
+{
+
+        //inheritance CLAUSE
+        { 
+        startToken = getToken(1); 
+        //System.err.println("typeMethod: Result of getToken(1) is \"" + startToken.toString() + "\"" );
+        } //SRT added to check Token List walking 
+        ( [ <NOT> ] ( <OVERRIDING> | <INSTANTIABLE> | <FINAL> )  )*
+
+        //[ MAP | ORDER ] 
+        //[ [<NOT>] <FINAL> ] [ [<NOT>] <INSTANTIABLE>  ] 
+        [ mapOrderMethod = <MAP> | mapOrderMethod = <ORDER> ]
+        
+        
+	(scope=<CONSTRUCTOR> | scope = <MEMBER> | scope = <STATIC> ) ( start= <FUNCTION> | start= <PROCEDURE> ) (LOOKAHEAD(2) schemaName = ID()".")? name=ID()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			attributes = new Hashtable(); //SRT 20110427
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			//SRT 20110420 if (null!=alterTypeAction) m_out.pushAttribute("ACTION",alterTypeAction);
+		         //SRT Walk lists
+		        Token p = startToken ;
+		        if (null != mapOrderMethod )
+		        {
+				for( ; p != mapOrderMethod ; p = p.next ) 
+				{
+				    methodInheritance += " " + p.image ; 
+
+				} 		     
+				methodOrdering = mapOrderMethod.toString();
+			}
+			else
+			{
+				for( ; p != scope ; p = p.next ) 
+				{
+				    methodInheritance += " " + p.image ; 
+
+				} 		     
+
+			}
+			
+
+			methodScope = scope.toString();
+
+			//SRT 20110419 
+			if (null!=methodInheritance && !"".equals(methodInheritance)) attributes.put("INHERITANCE",purifyKeyword(methodInheritance));
+			if (null!=methodOrdering && !"".equals(methodOrdering))  attributes.put("ORDERING",purifyKeyword(methodOrdering));
+			if (null!=methodScope && !"".equals(methodScope))  attributes.put("SCOPE",purifyKeyword(methodScope));
+
+			methodType = purifyKeyword(start.toString()); //SRT 20110420
+
+			/*
+			System.err.print( "\nEnd of List Walk (Inheritance,Mapping,Scope,Type)=" 
+			                  + "(" + methodInheritance
+			                  + "," + methodOrdering
+			                  + "," + methodScope
+			                  + "," + methodType
+			                  + ")\n" 
+			                  ) ; 
+		        */ 
+			
+			methodName = purifyKeyword(start.toString());
+			//SRT 20081003 startToken = (mapOrderMethod == null) ? scope : mapOrderMethod;
+			tags = processMemberComment(startToken, methodName, name.toString(),attributes);
+
+			//Construct the pseudo-return type, incorporating any inheritance, mapping and scope clauses
+			methodPrefix = (purifyKeyword(methodInheritance
+					       + " " + methodOrdering
+					       + " " + methodScope)
+					       + " " + purifyIdentifier(methodType)
+					       + " " 
+				       ).replaceAll("  ", " ")
+				       ;
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+		       
+	( "(" parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+//	[<RETURN> ( <SELF> <AS> <RESULT> | type=datatype() )
+	[<RETURN> ( type=datatype() ) //datatype changed to include <SELF> <AS> <RESULT> 
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) 
+		{
+			// @return
+			//SRT String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null) 
+			{
+				for(Iterator it = tagValues.iterator(); it.hasNext(); )
+					returnComment = (String) it.next();
+			}
+			//SRT m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			methodPrefix += purifyIdentifier(type.toString());
+			
+			/* SRT
+			An object procedure method with non-default inheritance, mapping and scope
+			will have a pseudo return value despite not returning a value
+			This this means that we should move the output outside this block 
+			m_out.pushAttribute("TYPE",methodPrefix);
+
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		        */
+		}
+	}
+	]
+
+	
+	{
+
+		//Output the pseudo return value even if not real value is returned
+		if (null != methodPrefix )
+		{
+			m_out.pushAttribute("TYPE",methodPrefix.trim());
+
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			// @throws
+			String throwsComment = null;
+			String exceptionName = null;
+			Collection tagValues = (Collection) tags.get("@throws");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while(it.hasNext()) {
+					throwsComment = (String) it.next();
+					// extract when first word - it's the exception name
+					StringTokenizer st = new StringTokenizer(throwsComment);
+					if (st.hasMoreTokens())
+						 exceptionName = st.nextToken();
+					if (exceptionName != null)
+					{
+						m_out.pushAttribute("NAME", purifyIdentifier(exceptionName));
+						m_out.startElement("THROWS");
+						if (throwsComment != null)
+						{
+							m_out.startElement("COMMENT");
+							m_out.cdata(throwsComment.substring(exceptionName.length()));
+							m_out.endElement("COMMENT");
+						}
+						m_out.endElement("THROWS");
+					}
+				}
+			}
+		}
+		
+		// now print all custom tags
+		if (m_out != null && isPackageLevel)
+		{
+			printCustomTags(tags);
+		}
+	}
+
+	/* Bug-109 */
+	( (<AUTHID> ( <CURRENT_USER> | <DEFINER> ) ) 
+	    | (<ACCESSIBLE> <BY>  "(" 
+                                    [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                   ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                  ")" 
+              )
+
+            | <DETERMINISTIC> 
+	    | <PARALLEL_ENABLE>  [ parallel_clause() ] [ <USING> ID() ["." ID()] ] 
+	   | <PIPELINED> [ ( <USING> ID() ["." ID()] ) 
+	                   |  
+			   (( <ORDER> | <CLUSTER> ) [ID()] <BY> "(" ID() ( "," ID() )*  ")" ) 
+			 ] //  drvparx.IndexMapDocuments
+	   | <RESULT_CACHE> [ <RELIES_ON> "(" ID() ["." ID()] ( "," ID() ["." ID()])*  ")" ]
+           | CompilationExpression() // Allow Conditional PRAGMA
+	) *
+	
+
+	// Java or C function wrapped with PL/SQL wrapper declaration 
+	[
+	        
+		(tokenIsAs=<IS> | tokenIsAs=<AS>)
+		{
+			if (m_out != null && isPackageLevel)
+			{
+				processPackageComment(tokenIsAs);
+			}	
+		}
+		(
+		  callSpecTail(true)
+ 		  [ ";" ] // This only exists in the type body
+		  | // SRT 20110524 Not really a Declaration any more ...  
+		  (
+			declarativeSection(false,objectStart)
+			 <BEGIN> (statement())* (exceptionHandler())?  <END> [ID()] 
+			 ";" // This only exists in the type body
+		  )
+		)
+	]
+        { printSummary("Object Type Method", objectStart.beginLine, name, token); }
+
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			m_out.endElement(purifyKeyword(start.toString())); //SRT
+		}
+	}
+}
+
+
+void typeSpec() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenType = null
+        , schemaSuperType = null, nameSuperType = null, tokenSuperType = null
+        ,tokenIsAsUnder = null, tokenSpecificationForm = null
+        ,tokenTypeTerminator= null
+        ; 
+        boolean isPackageLevel = true;
+        String collectionType = null ;
+        String baseType = "" ;
+        int typeVersion = 1; // The version of this type
+}
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	tokenType=<TYPE> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110503 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.startElement("OBJECT_TYPE"); //OBJECT_TYPE
+		}
+		// possibly, package comment is here
+		processPackageComment(tokenCreate);
+		processPackageComment(tokenType);
+	}
+
+	//ID 3599012
+	[
+		tokenIsAsUnder=<FORCE> 
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+
+        // incomplete_type_spec (empty) 
+        // object_type_spec
+        // varray_type_spec
+        // nested_table_type 
+	
+	[
+		LOOKAHEAD(2) tokenIsAsUnder=<OID> <STRING_LITERAL> 
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+        
+        [
+		LOOKAHEAD(2) tokenIsAsUnder=<AUTHID> (<CURRENT_USER> | <DEFINER>)
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+	]
+
+        [
+	        LOOKAHEAD(3) (tokenIsAsUnder= <ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  ("," qualifiedName() )*  ")" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+        ]
+
+	//(tokenIsAsUnder=<IS> | tokenIsAs=<AS> )
+	//{
+	//	// possibly, package comment is here
+	//	processPackageComment(tokenIsAsUnder);
+	//}
+
+        [
+		( 
+		    tokenIsAsUnder=<UNDER> (LOOKAHEAD(2) schemaSuperType=ID()".")? nameSuperType=ID()  //SUBTYPE
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OBJECT>  // OBJECT TYPE
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OPAQUE> <VARYING> "(*)" // OPAQUE TYPE
+		                                                                <USING> <LIBRARY>  (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )
+			                                                                             [ "." (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() ) ]
+		  | LOOKAHEAD(2) (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> ) collectionType = collection_type_name() <OF> baseType = datatype() 
+
+		) 
+		{
+                    //System.err.println("typeSpec: Matched Type");
+			//Output the SuperType if it has been identified 
+			if (m_out != null && nameSuperType != null)
+			{
+			  processPackageComment(tokenIsAsUnder);   
+				String schemaSuperTypeString = nameSuperType.toString();
+				if (schemaSuperType != null) {
+					schemaSuperTypeString = schemaSuperType.toString()
+                                                                 + "."
+					                         + nameSuperType.toString();
+				}
+				// Add link to SuperType
+				//m_out.startElement("VARIABLE"); //OBJECT_TYPE");
+				//m_out.pushAttribute("TYPE", schemaSuperTypeString);
+				//m_out.endElement("VARIABLE"); //OBJECT_TYPE");
+				m_out.pushAttribute("NAME", purifyIdentifier(schemaSuperTypeString) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE");
+						m_out.pushAttribute("TYPE", purifyIdentifier(schemaSuperTypeString) );
+						m_out.startElement("RETURN"); //OBJECT_TYPE");
+						m_out.endElement("RETURN"); //OBJECT_TYPE");
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE");
+			}
+			// Output the Collection SuperType if it has been identified
+                        if (m_out != null && collectionType != null)
+			{
+				String schemaSuperTypeString = "";
+				m_out.pushAttribute("NAME", purifyIdentifier(collectionType) );
+				m_out.startElement("COLLECTIONTYPE"); 
+				m_out.endElement("COLLECTIONTYPE"); 
+				// Add link to Collection SuperType
+				m_out.pushAttribute("NAME", purifyIdentifier(baseType) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE");
+					m_out.pushAttribute("TYPE", purifyIdentifier(collectionType + " OF " + baseType) );
+					m_out.pushAttribute("NAME", "COLLECTION" );
+					m_out.pushAttribute("COLLECTIONTYPE", purifyIdentifier(collectionType) );
+					m_out.pushAttribute("SUPERTYPE", purifyIdentifier(baseType) );
+					m_out.startElement("RETURN"); //OBJECT_TYPE");
+							m_out.startElement("COMMENT");
+							m_out.cdata("Collection Type : " + collectionType + " OF " + baseType );
+							m_out.endElement("COMMENT"); //OBJECT_TYPE");
+					m_out.endElement("RETURN"); //OBJECT_TYPE");
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE");
+			}
+/*
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+*/
+
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+			if (null!= tokenSpecificationForm)
+			{
+			   processPackageComment(tokenSpecificationForm);
+			}
+		}
+	]
+	
+	//
+	[ 
+	 LOOKAHEAD(8)   
+	//tokenIsAsUnder=
+	//<EXTERNAL> "NAME" <IDENTIFIER> <LANGUAGE> <JAVA> <USING> <IDENTIFIER> //javaInterfaceClass() //(<SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS> ) 
+	tokenIsAsUnder=
+	<EXTERNAL> <IDENTIFIER> <IDENTIFIER> <LANGUAGE> <JAVA> <USING> <IDENTIFIER> //javaInterfaceClass() //(<SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS> ) 
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAsUnder);
+	}
+	] 
+
+	[
+	  wrappedObject()
+	]
+
+        // //incomplete OBJECT TYPE and COLLECTION TYPEs will not have this 
+        [
+		(tokenIsAsUnder= "(" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                //Try matching against keywords first to allow FINCTION and procedure as a fallback
+		(LOOKAHEAD(2)  typeMethod(isPackageLevel,typeVersion,null,name) | attributeDeclaration(typeVersion,null) 
+		 | pragma_clause()
+		)* //SRT 20111125 This part may be completely empty if is a subtype which is effectively an alias for the supertype 
+		( "," (  typeMethod(isPackageLevel,typeVersion,null,name) | LOOKAHEAD(2) attributeDeclaration(typeVersion,null) 
+		      | pragma_clause()
+		      ) 
+		)*
+
+		")" 
+	]        
+        
+	( [ <NOT> ] 
+	  (
+	    <FINAL>   /*OBJECTS TYPES ONLY */ 
+          | <INSTANTIABLE>   //OBJECT TYPES ONLY 
+	  | <NULL>   //COLLECTION TYPES ONLY 
+	  )
+	)*
+
+        //Original Type Specification may be followed by a series of modifications
+        ( alterTypeSpec(++typeVersion,name) ) *
+
+
+        [
+	(tokenTypeTerminator = ";" | tokenTypeTerminator =  "/" )
+	{ 
+		//System.err.println("ObjectType Specification ("+ name.toString() +  "): Terminator="+ tokenTypeTerminator.toString() );
+		// possibly, package comment is here
+		processPackageComment(tokenTypeTerminator);
+	}
+        ( alterTypeSpec(++typeVersion,name) ( "/" | ";" ) )* //SRT 20110529 There may be more after the first terminator 
+        ]
+	 { printSummary("Object Type Specification", name.beginLine, name, token); }
+	{
+		if (m_out != null) m_out.endElement("OBJECT_TYPE"); //OBJECT_TYPE
+	}
+}
+
+
+void alterTypeSpec(int typeVersion, Token objectStart) throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenType = null
+        , schemaSuperType = null, nameSuperType = null, tokenSuperType = null
+        ,tokenIsAsUnder = null, tokenSpecificationForm = null
+        ,tokenAlterType= null
+        ,tokenCollectionSize= null
+        ; 
+        boolean isPackageLevel = true;
+        String typeName = "" ;
+        String collectionType = null ;
+        String collectionSize = "" ;
+        String baseType = "" ;
+        String exceptionsName = "" ;
+        String tokenAlterTypeString = null ;
+}
+{
+	tokenCreate=<ALTER> 
+	tokenType=<TYPE> typeName = qualifiedName() 
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenCreate);
+		processPackageComment(tokenType);
+	}
+
+        // REPLACE invoker_rights_clause AS OBJECT 
+        //alter_method_spec 
+        //(tokenAlterType = <ADD>|tokenAlterType = <MODIFY> |tokenAlterType = <DROP> |tokenAlterType = <REPLACE>)
+            
+         //SRT 20110529 Each ALTER TYPE statement may contaon 0 or more ADD or DROP clause 
+         //When more than one clause exists, each clause is separated by comma ","  
+       (
+       (
+         [","] 
+        (tokenAlterType = <ADD> | tokenAlterType = <MODIFY> ) 
+        {tokenAlterTypeString = tokenAlterType.toString().equals("ADD") ?
+                                "(+)" : "(m)"; 
+        }
+        (
+	      // Move typeMethidMatching above attribure matvhing becausse FUNCTION is a valid attribute name 
+             ( 
+		 (typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) ) 
+		  //( "," ( typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString) ) )*
+             )
+            |
+            (
+                  <ATTRIBUTE>
+		   ( "("  )*
+		    (attributeDeclaration(typeVersion, tokenAlterTypeString ) ) 
+		    ( "," ( attributeDeclaration(typeVersion, tokenAlterTypeString) ) )*
+		   ( ")"  )*
+            )
+            |
+            (<LIMIT> tokenCollectionSize = numericLiteral() )
+            |
+            ( <ELEMENT> <TYPE> baseType = datatype() )
+        )+
+       )
+       |
+       (
+         [","] 
+        (tokenAlterType = <DROP>) {tokenAlterTypeString = "(-)" ; }
+        (
+            (
+                  <ATTRIBUTE>
+		   ( "("  )*
+		    (attribute(typeVersion, tokenAlterTypeString) ) 
+		    ( "," ( attribute(typeVersion, tokenAlterTypeString) ) )*
+		   ( ")"  )*
+            )
+            |
+             ( 
+		 (typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) ) 
+		  //( "," ( typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString) ) )*
+             )
+        )+
+       )
+       )*
+/*
+          
+          )
+          {
+		System.err.println("Alter Type is " + tokenAlterType.toString());
+          }
+          | 
+          (<DROP> ( 
+		 (typeMethod(isPackageLevel) ) 
+		  ( "," ( typeMethod(isPackageLevel) ) )*
+                 )
+                 |
+                 (
+                  <ATTRIBUTE>
+		   [ "("  ]
+		    (qualifiedName() ) 
+		    ( "," ( qualifiedName() ) )*
+		   [ ")"  ]
+                 )
+          
+          )
+          |
+          //alter_collection_clause 
+	  (        
+          <MODIFY> 
+            (<LIMIT> tokenCollectionSize = numericLiteral() )
+            |
+            ( <ELEMENT> <TYPE> baseType = datatype() )
+	  )        
+        |
+*/
+        [
+                <REPLACE>
+                {tokenAlterTypeString = "(r)" ; 
+                }
+                [
+		LOOKAHEAD(2) tokenIsAsUnder=<AUTHID> (<CURRENT_USER> | <DEFINER>)
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                ]
+
+                [
+		LOOKAHEAD(3) (tokenIsAsUnder= <ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  ("," qualifiedName() )*  ")" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+                ]
+
+                
+		( 
+		  (tokenIsAsUnder=<IS> | tokenIsAsUnder=<AS> )   tokenSpecificationForm= <OBJECT>  // OBJECT TYPE
+		) 
+		{
+                    //System.err.println("alterTypeSpec: Matched Type");
+			//Output the SuperType if it has been identified 
+			if (m_out != null && nameSuperType != null)
+			{
+				String schemaSuperTypeString = nameSuperType.toString();
+				if (schemaSuperType != null) {
+					schemaSuperTypeString = schemaSuperType.toString()
+                                                                 + "."
+					                         + nameSuperType.toString();
+				}
+				// Add link to SuperType
+				//m_out.startElement("VARIABLE"); //OBJECT_TYPE";
+				//m_out.pushAttribute("TYPE", schemaSuperTypeString);
+				//m_out.endElement("VARIABLE"); //OBJECT_TYPE";
+				m_out.pushAttribute("NAME", purifyIdentifier(schemaSuperTypeString) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE";
+					m_out.startElement("RETURN"); //OBJECT_TYPE";
+					m_out.pushAttribute("TYPE", purifyIdentifier(schemaSuperTypeString) );
+					m_out.endElement("RETURN"); //OBJECT_TYPE";
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE";
+			}
+			// Output the Collection SuperType if it has been identified
+                        if (m_out != null && collectionType != null)
+			{
+				String schemaSuperTypeString = "";
+				// Add link to Collection SuperType
+				m_out.pushAttribute("NAME", purifyIdentifier(baseType) );
+				m_out.startElement("SUPERTYPE"); //OBJECT_TYPE";
+				        m_out.pushAttribute("TYPE", purifyIdentifier(collectionType + " OF " + baseType) );
+					m_out.pushAttribute("NAME", "COLLECTION" );
+					m_out.pushAttribute("COLLECTIONTYPE", purifyIdentifier(collectionType) );
+					m_out.pushAttribute("SUPERTYPE", purifyIdentifier(baseType) );
+				m_out.startElement("RETURN"); //OBJECT_TYPE";
+						m_out.startElement("COMMENT");
+						m_out.cdata("Collection Type : " + collectionType + " OF " + baseType );
+						m_out.endElement("COMMENT"); //OBJECT_TYPE";
+				m_out.endElement("RETURN"); //OBJECT_TYPE";
+				m_out.endElement("SUPERTYPE"); //OBJECT_TYPE";
+			}
+
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+			if (null!= tokenSpecificationForm)
+			{
+			   processPackageComment(tokenSpecificationForm);
+			}
+		}
+
+		(tokenIsAsUnder= "(" )
+		{
+			// possibly, package comment is here
+			processPackageComment(tokenIsAsUnder);
+		}
+
+		(LOOKAHEAD(2) typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) | attributeDeclaration(typeVersion, tokenAlterTypeString) ) 
+		( "," ( LOOKAHEAD(2) typeMethod(isPackageLevel,typeVersion, tokenAlterTypeString, objectStart) | attributeDeclaration(typeVersion, tokenAlterTypeString) ) )*
+
+		")" 
+	]        
+        
+/* */
+	
+	( [ <NOT> ] 
+	  (
+	    <FINAL>   /*OBJECTS TYPES ONLY */ 
+          | <INSTANTIABLE>   //OBJECT TYPES ONLY 
+	  | <NULL>   //COLLECTION TYPES ONLY 
+	  )
+	)*
+
+        //DEPENDENT HANDLING CLAUSE
+	[
+            (
+              <INVALIDATE>
+            )
+            |
+            (
+              <CASCADE>
+              (
+               (
+                 [ <NOT> ] <INCLUDING><TABLE><DATA>
+               )
+               |
+               (
+                 <CONVERT><TO><SUBSTITUTABLE>
+               )
+              )*
+            
+              [
+                [ <FORCE> ]
+                <EXCEPTIONS> <INTO> exceptionsName = qualifiedName()
+              ]
+            )
+        ] 
+
+}
+
+
+
+/*
+void typeBody() throws SAXException :
+{ Token name=null; }
+{
+	[<CREATE> [<OR> <REPLACE>]]
+
+	<TYPE> <BODY> (LOOKAHEAD(2) ID()".")? name=ID()
+	{
+		System.err.println("TYPE BODY FOUND");
+		if (m_out != null)
+		{
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.startElement("PACKAGE_BODY"); //OBJECT_TYPE_BODY
+		}
+	}
+
+	(
+	  (
+	    wrappedObject() 
+	  )
+	  |
+	  (
+	    (<IS> | <AS>)
+
+		    declarativeSection(true) //SRT 20110524 Allow PLDOc in Type Bodies 
+
+	    [ <BEGIN> (statement())* (exceptionHandler())? ] <END> [ID()] ";" 
+	  )
+	)
+	{
+		if (m_out != null) m_out.endElement("PACKAGE_BODY"); //OBJECT_TYPE_BODY
+		System.err.println("TYPE BODY LEFT");
+	}
+}
+*/
+
+
+/**
+  * Method 
+**/
+void attributeDeclaration(int typeVersion, String alterTypeAction) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	Hashtable attributes = null;
+	String elementName = "VARIABLE";
+}
+{
+	name=ID()  type=datatype()
+	{
+		if (m_out != null )
+		{
+			attributes = new Hashtable();
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			if (null!=alterTypeAction) attributes.put("ACTION",alterTypeAction);
+			tags = processMemberComment(name, elementName, name.toString(), attributes);
+			m_out.pushAttribute("TYPE", purifyIdentifier(type));
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+
+
+void attribute(int typeVersion, String alterTypeAction) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	String elementName = "VARIABLE";
+	Hashtable attributes = null;
+}
+{
+	name=ID()  
+	{
+		if (m_out != null )
+		{
+			attributes = new Hashtable();
+			attributes.put("VERSION",Integer.toString(typeVersion));
+			if (null!=alterTypeAction) attributes.put("ACTION",alterTypeAction);
+			tags = processMemberComment(name, elementName, name.toString(), attributes);
+			m_out.pushAttribute("TYPE", "(dropped)");
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+
+/*
+ This was quick cut from PRAGMA
+*/
+void pragma_clause() throws org.xml.sax.SAXException :
+{ Token start,name,functionName,exceptionName,errorNumber; Hashtable tags = null; }
+{
+	start=<PRAGMA>
+	(
+		name=<SERIALLY_REUSABLE>
+		|
+		name=<AUTONOMOUS_TRANSACTION>
+		|
+		name=<RESTRICT_REFERENCES> "(" (functionName=ID() /*| <_DEFAULT>*/)
+		("," (ID() | StringLiteral() /* 20110526 <STRING_LITERAL> */) )+	")"
+		|
+		name=<EXCEPTION_INIT> "(" exceptionName=<IDENTIFIER> "," ["+"|"-"] errorNumber=numericLiteral() ")"
+		|
+		name=<INTERFACE> "(" <IDENTIFIER> "," <IDENTIFIER> "," numericLiteral() ")"
+	)
+}
+

@@ -1,0 +1,12 @@
+
+  CREATE OR REPLACE FUNCTION "SYS"."SCN_TO_TIMESTAMP" (query_scn IN NUMBER)
+return TIMESTAMP
+IS EXTERNAL
+NAME "ktfexscntot"
+WITH CONTEXT
+PARAMETERS(context,
+           query_scn OCINUMBER,
+           RETURN)
+LIBRARY DBMS_TRAN_LIB;
+/
+

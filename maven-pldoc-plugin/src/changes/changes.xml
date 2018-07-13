@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://maven.apache.org/changes/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/changes/1.0.0 http://maven.apache.org/xsd/changes-1.0.0.xsd">
+    <properties>
+        <title>PLDoc Maven Plug-in Project</title>
+        <author email="altumano at users.sourceforge.net">Albert Tumanov</author>
+    </properties>
+    <body>
+        <release version="3.0.17" date="2018-01-16"  description="Enable Maven-encoded project passwords and retrieving credentials from Maven server settings" >
+            <action type="add" dev="sturton" >Enable Maven-encoded passwords and retrieving credentials from Maven server settings</action>
+        </release>
+        <release version="3.0.16" date="2017-11-23"  description="Upissue to require PLDoc 1.5.20" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.20</action>
+        </release>
+        <release version="3.0.15" date="2016-11-23"  description="Upissue to require PLDoc 1.5.19" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.19</action>
+        </release>
+        <release version="3.0.14" date="2016-08-08"  description="Upissue to require PLDoc 1.5.18" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.18</action>
+        </release>
+        <release version="3.0.13" date="2015-01-15"  description="Upissue to require PLDoc 1.5.17" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.17</action>
+        </release>
+        <release version="3.0.12" date="2015-01-05"  description="Upissue to require PLDoc 1.5.16" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.16</action>
+        </release>
+        <release version="3.0.11" date="2014-08-07"  description="Upissue to require PLDoc 1.5.15" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.15</action>
+        </release>
+        <release version="3.0.10" date="2014-02-23"  description="Upissue to require PLDoc 1.5.14" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.14</action>
+        </release>
+        <release version="3.0.9" date="2014-02-15"  description="Upissue to require PLDoc 1.5.13" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.13</action>
+        </release>
+        <release version="3.0.8" date="2014-01-30"  description="Upissue to require PLDoc 1.5.12" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.12</action>
+        </release>
+        <release version="3.0.7" date="2013-11-14"  description="Upissue to require PLDoc 1.5.11" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.11</action>
+        </release>
+        <release version="3.0.6" date="2013-11-13"  description="Upissue to require PLDoc 1.5.10" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.10</action>
+        </release>
+        <release version="3.0.5" date="2013-11-10"  description="Upissue to require PLDoc 1.5.8" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.8</action>
+        </release>
+        <release version="3.0.4" date="2013-11-09"  description="Upissue to require PLDoc 1.5.8" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.8</action>
+        </release>
+        <release version="3.0.3" date="2013-10-21"  description="Upissue to require PLDoc 1.5.7" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.7</action>
+        </release>
+        <release version="3.0.2" date="2013-08-04"  description="Upissue to require PLDoc 1.5.6" >
+            <action type="fix" dev="sturton" >Project POM file - require version 1.5.6</action>
+            <action type="update" dev="sturton" >Project POM file - Move to Sourceforge2 tracking</action>
+        </release>
+        <release version="3.0.1" date="2013-07-22"  description="Correct corrupt signatures" >
+            <action type="fix" dev="sturton" >Fix corrupt signatures for 3.0.0 artefacts</action>
+        </release>
+        <release version="3.0.0" date="2013-07-22"  description="Allow multiple source directories" >
+            <action type="add" dev="sturton" >Add FileSets support in order to allow multiple source directories</action>
+        </release>
+        <release version="2.29" date="2013-07-17"  description="Upissue to require PLDoc 1.5.4" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.5.4</action>
+        </release>
+        <release version="2.28" date="2013-06-17"  description="Upissue to require PLDoc 1.5.3" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.5.3</action>
+        </release>
+        <release version="2.27" date="2013-05-24"  description="Upissue to require PLDoc 1.5.2" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.5.2</action>
+        </release>
+        <release version="2.26" date="2013-05-22"  description="Upissue to require PLDoc 1.5.1" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.5.1</action>
+        </release>
+        <release version="2.25" date="2013-05-20"  description="Upissue to require PLDoc 1.5.0" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.5.0</action>
+        </release>
+        <release version="2.24" date="2013-05-12"  description="Upissue to require PLDoc 1.4.3" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.4.3</action>
+        </release>
+        <release version="2.23" date="2013-04-30"  description="Upissue to require PLDoc 1.4.2" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.4.2</action>
+        </release>
+        <release version="2.22" date="2013-04-29"  description="Upissue to require PLDoc 1.4.1" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.4.1</action>
+        </release>
+        <release version="2.21" date="2013-04-28"  description="Support new source code integration" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.4.0</action>
+            <action type="add" dev="sturton" >Add plugin support for new PLDoc 'savesourcecode' and 'sourcestylesheet' settings</action>
+        </release>
+        <release version="2.20" date="2013-04-12"  description="Support new PLSCOPE setting" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.3.11</action>
+            <action type="add" dev="sturton" >Add plugin support for new PLDoc 'plscope' setting</action>
+        </release>
+        <release version="2.19" date="2013-04-08"  description="Support new PLSCOPE setting" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.3.10</action>
+            <action type="add" dev="sturton" >Add plugin support for new PLDoc 'plscope' setting</action>
+        </release>
+        <release version="2.18" date="2013-04-01"  description=" Migrate to new Sourceforge format and Sonatype OSSRH releases" >
+            <action type="update" dev="sturton" >Project POM file - require version 1.3.9</action>
+            <action type="update" dev="sturton" >Project POM file - update to Sonatype OSS parent </action>
+            <action type="update" dev="sturton" >Project POM file - update SCM locations for new Sourceforge project format</action>
+        </release>
+        <release version="2.17" date="2012-12-31"  description="Release to incorporate PLDoc 1.3.4" >
+            <action type="update" dev="sturton" >project POM file - update dependent PLDoc version to [1.3.4,)</action>
+            <action type="update" dev="sturton" >Add Maven support for stylesheet and overview files</action>
+        </release>
+        <release version="2.16.1" date="2012-06-20"  description="Release to incorporate PLDoc 1.3.1" >
+            <action type="update" dev="sturton" >project POM file - update dependent PLDoc version to [1.3.0,)</action>
+        </release>
+        <release version="2.16.0" date="2012-06-18"  description="Add ignoreInformalComments property (incorporate PLDoc 1.3.0)" >
+            <action type="update" dev="sturton" >project POM file - update dependent PLDoc version to 1.3.0</action>
+            <action type="add" dev="sturton" >Add ignoreInformalComment property</action>
+            <action type="update" dev="sturton" >Update properties documentation page for new properties</action>
+        </release>
+        <release version="2.15.2" date="2012-06-12"  description="Release to incorporate PLDoc 1.2.1" >
+            <action type="update" dev="sturton" >project POM file - update dependent PLDoc version to 1.2.1</action>
+        </release>
+        <release version="2.15.1" date="2012-06-10"  description="Allow PLDoc to document Other Database Types" >
+            <action type="update" dev="sturton" >Improve documentation for non-Oracle databases</action>
+            <action type="add" dev="sturton" >Bundled distribution archives: add scripts to install JDBC JAR files into local Maven repository</action>
+        </release>
+        <release version="2.15" date="2012-06-10"  description="Allow PLDoc to document Other Database Types" >
+            <action type="add" dev="sturton" >Add properties to allow the PLDoc Maven tasks to process non-Oracle databases</action>
+        </release>
+        <release version="2.14" date="2012-05-09"  description="Release to incorporate PLDoc 1.1.4 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.1.4</action>
+        </release>
+        <release version="2.13" date="2012-05-05"  description="Release to incorporate PLDoc 1.1.3 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.1.3</action>
+        </release>
+        <release version="2.12" date="2012-03-14"  description="Release to incorporate PLDoc 1.1.2 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.1.2</action>
+        </release>
+        <release version="2.11" date="2012-02-27"  description="Release to incorporate PLDoc 1.1.1 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.1.1</action>
+        </release>
+        <release version="2.10" date="2012-02-06"  description="Release to incorporate PLDoc 1.1.0 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.0.0</action>
+            <action type="update" issue="3477662" dev="sturton" >Plugin gains new "namesCase" setting from the PLDocTask ANT task: it has 4 options:-"lower" (coerce all names to lower case), "upper" (coerce all names to upper case), "mixed" (all names are left as-is, relying on the coder to ensure that case matches) and "default" (Oracle default: unquoted names are upper case, quoted names are mixed case)</action>
+        </release>
+        <release version="2.9" date="2012-01-30"  description="Release to incorporate PLDoc 1.0.0 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 1.0.0</action>
+        </release>
+        <release version="2.8" date="2012-01-22"  description="Release to incorporate PLDoc 0.9.10 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 0.9.10</action>
+        </release>
+        <release version="2.7" date="2012-01-12"  description="Release to incorporate PLDoc 0.9.9 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 0.9.9</action>
+        </release>
+        <release version="2.6" date="2011-12-07"  description="Release to incorporate PLDoc 0.9.8 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 0.9.8</action>
+            <action type="add" dev="sturton" > Add inputEncoding property</action>
+        </release>
+        <release version="2.5" date="2011-11-27"  description="Release to incorporate PLDoc 0.9.7 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 0.9.7</action>
+        </release>
+        <release version="2.4" date="2011-11-21"  description="Release to incorporate PLDoc 0.9.6 ">
+            <action type="update" dev="sturton" > project POM file - update dependent PLDoc version to 0.9.6</action>
+            <action type="update" dev="sturton" > Example POM files - make maven-pldoc-plugin version LATEST to avoid requirement for bundle download after every maven-pldoc-plugin release</action>
+        </release>
+        <release version="2.3" date="2011-10-03"  description="Documentation fix " >
+            <action type="fix" dev="sturton" > PLDoc.java - make as similar as possible to javadoc plugin; add documentation tags;</action>
+            <action type="fix" dev="sturton" > pldoc-*-pom.xml - remove/comment out ignored/overwritten properties for Site Report instances</action>
+            <action type="fix" dev="sturton" > pldoc-maven_example.sh - remove call to ant</action>
+        </release>
+
+        <release version="2.2" date="2011-09-28"  description="Documentation fix " >
+            <action type="fix" dev="sturton" > PLDoc.java - Correct embedded example to reflect correct (mixed) case of new PLdoc properties</action>
+            <action type="fix" dev="sturton" > pldoc-*-pom.xml - correct Oracle JDBC plugin version to match the version in the placeholder POM.xml on Maven Central</action>
+            <action type="update" dev="sturton" > downloads.apt.vm - add links to plugin bundles; add information on installing the plugin into a local repository</action>
+        </release>
+
+        <release version="2.1" date="2011-09-28"  description="Add support for database-based PL/SQL via updated ANT task (PLDoc 0.95)" >
+            <action type="update" dev="sturton" > pom.xml - Update to reflect migration to Subversion and amended Sourceforge site details</action>
+        </release>
+
+        <release version="2.0"  date="2009-02-13" />
+
+        <release version="1.0"  />
+    </body>
+</document>

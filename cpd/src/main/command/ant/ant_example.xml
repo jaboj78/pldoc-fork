@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="samples" default="plsql-cpd-doc" basedir=".">
+  <description>
+    Example of using pldoc Ant task to document an entire database.
+    Run it using a command like this:
+
+      ant -f ant_enterprise example.xml
+
+    NB: if you are using Java 1.4 or later, you'll need to override the embedded XML classes.
+    iN Java 1.4, the simplest way to do this is to define environment variable ANT_OPTS before running Ant:
+
+      export ANT_OPTS="-Djava.endorsed.dirs=$PLDOC_HOME/target -Dpldoc.home=${PLDOC_HOME}"
+
+    or on Windows:
+
+      set ANT_OPTS=-Djava.endorsed.dirs=%PLDOC_HOME%\target -Dpldoc.home=%PLDOC_HOME%
+
+    where PLDOC_HOME is the directory where pldoc is installed.
+
+    ${project.build.finalName}-jar-with-dependencies.jar contains all runtime Xalan and Xerces classes
+    to run PLDoc successfully.
+  </description>
+
+  <taskdef name="pldoc-cpd" classname="net.sourceforge.pldoc.cpd.ant.PLDocCPDTask">
+    <classpath>
+      <pathelement location="${pldoc.home}/target/${project.build.finalName}-jar-with-dependencies.jar"/>
+      <pathelement location="${JDBC_HOME}/ojdbc14.jar"/>
+      <pathelement location="${JDBC_HOME}/orai18n.jar"/>
+    </classpath>
+  </taskdef>
+
+  <target name="plsql-cpd-doc" description="PL/SQL CPD documentation generator">
+    <pldoc-cpd
+          verbose="yes"
+          destdir="EnterpriseDoc-Ant"
+	  ignorecomments="true"
+	  ignoreidentifiers="true"
+	  ignoreliterals="true"
+	  minimumtokens="100"
+	  showskippedpackages="true"
+          format="xml"
+          outputfile="ANT-EXAMPLE-CPD.xml"
+          stylesheet="/Users/sturton/Dropbox/Work/PLDOC-grammar/pmd-src-5.0.0/etc/xslt/cpdhtml.xslt"
+	  >
+
+       <fileset dir="samples" includes="sample*.sql"/> <!-- here should be included any other masks for PL/SQL files -->
+    </pldoc-cpd>
+  </target>
+
+</project>

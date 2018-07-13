@@ -1,0 +1,59 @@
+Other Databases
+
+ Several databases have implemented PL/SQL compatibility layers and so may possibly contain PLDoc.
+
+ Currently, these databases are known to support PL/SQL:-
+
+ * {{{./TimesTen.html}TimesTen}} (now owned by Oracle)
+
+ * {{{./EnterpriseDB.html}PostgresPlus/EnterpriseDB}} 
+
+ * {{{./DB2.html}DB2}} (using functionality licensed from EnterpriseDB)
+
+ []
+
+ In order to allow PLDoc to work, 2 things are required:-
+
+ * JDBC connection
+
+ * Access to source code (preferably with comments)  
+
+ []
+ 
+ This can be accomplished for each database type by specifying:-
+
+ *  database specific JDBC JAR files in the CLASSPATH
+
+ *  possible libraries in the PATH, LD_LIBRARY_PATH or DYLD_LIBRARY_PATH paths   
+
+ *  -driver JDBC driver class 
+
+ *  -url JDBC URL specifying the database to connect to  
+
+ *  -getmetadata - a callable statement taking the same parameters as Oracle's DBMS_METADATA.GET_DDL 
+
+ *  -returntype - an integer corresponding to the java.sql.types constant for the object type returned by getmetadata, typically 12 (VARCHAR2) or 2005 (CLOB)  
+
+ []
+
+ Typical values for each database type are shown below:
+
+*---*---*---*---*---*---*---*---*
+|Database Type|Verified?|JAR files|-driver|-url|-returntype|-getmetadata|Notes|
+*---*---*---*---*---*---*---*---+
+|TimesTen 11.2.1 direct|Y|ttjdbc6.jar ttjdbc5.jar|com.timesten.jdbc.TimesTenDriver|jdbc:timesten:direct:plsqldb|12|"'{ ? = call PLS.GET_SOURCE( ? ,  ? ,  ? ,  ? , ? , ? ) }'"|This {{{http://www.oracledistilled.com/java/connect-to-an-oracle-timesten-in-memory-database-using-java-and-jdbc/}JDBC-ODBC}} driver also requires $OTT_HOME/lib specified in the appropriate PATH, LD_LIBRARY_PATH, or DYLD_LIBRARY_PATH|
+*---*---*---*---*---*---*---*---*
+|TimesTen 11.2.2 direct|Y|ttjdbc6.jar ttjdbc5.jar|com.timesten.jdbc.TimesTenDriver|jdbc:timesten:direct:plsqldb|2005 (default)|"'{ ? = call PLS.GET_SOURCE_LOB( ? ,  ? ,  ? ,  ? , ? , ? ) }'"|also requires $OTT_HOME/lib in PATH, LD_LIBRARY_PATH, or DYLD_LIBRARY_PATH|
+*---*---*---*---*---*---*---*---*
+|TimesTen 11.2.* client|Y|ttjdbc6.jar or ttjdbc5.jar |com.timesten.jdbc.TimesTenDriver|"jdbc:timesten:client: TT_SERVER=server_host_name; TT_SERVER_DNS=Server_DSN; TCP_PORT=server_port"|12|"'{ ? = call PLS.GET_SOURCE( ? ,  ? ,  ? ,  ? , ? , ? ) }'"|ditto|
+*---*---*---*---*---*---*---*---*
+|DB2 Express 9.7.5 local database|Y|db2jcc4.jar db2jcc_license_cu.jar|com.ibm.db2.jcc.DB2Driver|jdbc:db2://host:port/db|2005 (default)|"'BEGIN ? := DB2INST1.GET_SOURCE_LOB( ? ,  ? ,  ? ,  ? , ? , ? ); END;'"| |
+*---*---*---*---*---*---*---*---+
+|DB2 Express 9.7.5 local database|Y|db2jcc4.jar db2jcc_license_cu.jar|com.ibm.db2.jcc.DB2Driver|jdbc:db2:db|2005 (default)|"\"BEGIN SELECT text INTO ? FROM dba_source WHERE type =  ? AND name = ? AND owner = ? AND  ? LIKE '%'  AND ? LIKE '%' AND ? LIKE '%' ; END;\""| |
+*---*---*---*---*---*---*---*---+
+|EnterpriseDB EDB JDBC|N|edb-jdbc14.jar|com.edb.Driver|jdbc:edb://host:port/database|12|"'{ ? = call GET_SOURCE( ? ,  ? ,  ? ,  ? , ? , ? ) }'"| |
+*---*---*---*---*---*---*---*---*
+|EnterpriseDB Postgres JDBC|Y|postgresql-[server version].[buildnumber].jdbc|org.postgresql.Driver|jdbc:postgresql://host:port/database|12|"'{ ? = call GET_SOURCE( ? ,  ? ,  ? ,  ? , ? , ? ) }'"| |
+*---*---*---*---*---*---*---*---*
+
+

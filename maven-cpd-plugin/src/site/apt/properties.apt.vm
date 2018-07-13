@@ -1,0 +1,59 @@
+    -----------------------------
+    Maven PLDoc Plugin Properties
+    -----------------------------
+
+*--------*--------*-----------*------*
+|Property|Optional|Description|Example|
+*--------*--------*-----------*------*
+| maven.pldoc.application.title |Yes| Name of the application, appears in the generated documentation. Default value is ${pom.name} | |
+*--------*--------*-----------*------*
+| maven.pldoc.src.dir |Yes| The location of the PL/SQL source code. Default value is ${basedir}/src/main/sql | |
+*--------*--------*-----------*------*
+| maven.pldoc.build.dir |Yes| The location of the generated documentation (HTML files). Default value is ${maven.docs.dest}/pldoc | |
+*--------*--------*-----------*------*
+| maven.pldoc.includes |Yes| Specifies a list of patterns to include in the documentation generation process. Default value is **/*.sql | |
+*--------*--------*-----------*------*
+| maven.pldoc.inputEncoding |Yes| The encoding used in the input files. Default value is the operating system default encoding.  | |
+*--------*--------*-----------*------*
+| maven.pldoc.overviewfile |Yes| The overview file in HTML format.  | |
+*--------*--------*-----------*------*
+| maven.pldoc.stylesheet |Yes| CSS File for the result documentation; this CSS is only used when format is XML | |
+*--------*--------*-----------*------*
+| maven.pldoc.sourcestylesheet |Yes| CSS File for any extracted source code | |
+*--------*--------*-----------*------*
+| maven.pldoc.saveSourceCode |Yes| Save source code to the file system whilst reading from the database | no |
+*--------*--------*-----------*------*
+| maven.pldoc.ignoreComments |Yes| Ignore content of comments when searching for matching code | no |
+*--------*--------*-----------*------*
+| maven.pldoc.ignoreIdentifiers |Yes| Ignore content of variables or pbject names when searching for matching code | no |
+*--------*--------*-----------*------*
+| maven.pldoc.ignoreLiterals |Yes| Ignore content of dates number and string literals when searching for matching code | no |
+*--------*--------*-----------*------*
+| maven.pldoc.minimumToken |Yes| Minimum of tokens to constitute a match| 50 |
+*--------*--------*-----------*------*
+| maven.pldoc.format |Yes| Output format for any code matches found: text, xml, csv | text |
+*--------*--------*-----------*------*
+| maven.pldoc.exitonerror |Yes| "yes" forces program exit when some input file cannot be processed. If "no" (the default), the file is skipped and processing continues.  | |
+*--------*--------*-----------*------*
+| maven.pldoc.dbUrl |Yes| JDBC URL to connect to the target database - jdbc:oracle:thin:@//{HOST}:{PORT}/{SERVICE or SID}|jdbc:oracle:thin:@//192.168.100.1:1521/orcl |
+*--------*--------*-----------*------*
+| maven.pldoc.dbUser |Yes| Database user name  - the user should have execute privilege to the PL/SQL or should have SELECT_CATALOG_ROLE| |
+*--------*--------*-----------*------*
+| maven.pldoc.dbPassword |Yes| Database user password | |
+*--------*--------*-----------*------*
+| maven.pldoc.inputTypes |Yes| Comma-separated list of Oracle Object types which should be parsed from the data dictionary |PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY|
+*--------*--------*-----------*------*
+| maven.pldoc.inputObjects |Yes| Comma separated list of SCHEME_NAME.OBJECT_NAME values to be checked for matching objects- these values may contain Oracle wildcards, e.g. "%" and "_" |HR.%,%,PM.%,SCOTT.%,SH.%|
+*--------*--------*-----------*------*
+| maven.pldoc.showSkippedPackages |Yes| Display list of modules which failed to parse in log output and in generated documentation.  | |
+*--------*--------*-----------*------*
+| maven.pldoc.ignoreInformalComments |Yes| Ignore informal PL/SQL comments "--" when searching for PLDoc comments. | |
+*--------*--------*-----------*------*
+| maven.pldoc.driverName |Yes| Fully qualified class name of the JDBC driver used to access a database.  | com.timesten.jdbc.TimesTenDriver |
+*--------*--------*-----------*------*
+| maven.pldoc.getMetadataStatement |Yes| A callable statement taking the same parameters as Oracle's DBMS_METADATA.GET_DDL function.|  "? = call PLS.GET_SOURCE_LOB( ? , ? , ? , ? , ? , ? )" |
+*--------*--------*-----------*------*
+| maven.pldoc.getMetadataStatementReturnType |Yes| Integer equivalent to the java.sql.types constant returned by getMetaDataStatement: typically 12 (VARCHAR2) or 2005 (CLOB).  | 2005 |
+*--------*--------*-----------*------*
+Maven PLDoc Plugin Settings 
+

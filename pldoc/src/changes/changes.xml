@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document xmlns="http://maven.apache.org/changes/1.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/changes/1.0.0 http://maven.apache.org/xsd/changes-1.0.0.xsd">
+    <properties>
+        <title>PLDoc Project</title>
+        <author email="altumano at users.sourceforge.net">Albert Tumanov</author>
+    </properties>
+    <body>
+        <release version="1.5.21" date="2018-01-01"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" issue="111" due-to="Torsten Kleiber" due-to-email="tkleiber@sourceforge.net" >PLDoc 1.5.19 cannot work with german umlauts and ß (esszet) characters</action>
+        </release>
+        <release version="1.5.20" date="2017-11-23"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" issue="108" due-to="Lorenzo Snidero" due-to-email="lsnidero@sourceforge.net" >Parse OBJECT TYPE functions as PACKAGES</action>
+		<action type="fix" dev="sturton" issue="110" due-to="Vaclav Votipka" due-to-email="enca@sourceforge.net" >@link keyword bugs and improvement</action>
+		<action type="fix" dev="sturton" >Revert link generation for implicitly referenced Package Types owned by other schemas</action>
+        </release>
+        <release version="1.5.19" date="2016-11-23"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" issue="109" due-to="James Sumners" due-to-email="jsumners@sourceforge.net" >Parse OBJECT TYPE functions as PACKAGES </action>
+        </release>
+        <release version="1.5.18" date="2016-08-06"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >URIencode schema names - cope with Oracle 12c Common Users (C## prefix)</action>
+        </release>
+        <release version="1.5.17" date="2015-01-15"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Allow more flexible conditional compilation code; exclude objects in the recycle bin</action>
+        </release>
+        <release version="1.5.16" date="2015-01-05"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Correct scraped source code suffix mapping for FUNCTIONs ('fns' to 'fnc')</action>
+        </release>
+        <release version="1.5.15" date="2014-07-29"  description="Integrate with maven-pmd-plugin" >
+		<action type="update" dev="sturton" >Populate scraped source code with path to PLDoc; alter source stylesheet to generate link to related PLDoc</action>
+        </release>
+        <release version="1.5.14" date="2014-02-23"  description="Minor Fixes" >
+		<action type="fix" issue="103" dev="sturton" >Strip BOM from UTF* InputStreams</action>
+        </release>
+        <release version="1.5.13" date="2014-02-15"  description="Minor Fixes" >
+		<action type="update" dev="sturton" >Add Windows and Linux Drag and Drop scripts</action>
+		<action type="fix" issue="101" dev="sturton" >PRAGMA INLINE(...) breaks parser</action>
+        </release>
+        <release version="1.5.12" date="2014-01-30"  description="Minor Fixes" >
+		<action type="fix" issue="102" dev="sturton" >Allow Package and Type bodies to be EDITIONABLE</action>
+        </release>
+        <release version="1.5.11" date="2013-11-14"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Avoid java.net.URISyntaxException in ResourceResolver on Windows platforms</action>
+        </release>
+        <release version="1.5.10" date="2013-11-13"  description="Minor Fixes" >
+		<action type="update" dev="sturton" >Remove debug messages</action>
+        </release>
+        <release version="1.5.9" date="2013-11-13"  description="Updates" >
+		<action type="update" dev="sturton" >Generate better links for types in other schemas using private synonyms</action>
+		<action type="update" dev="sturton" >Generate landing links for PL/SQL RECORD types</action>
+        </release>
+        <release version="1.5.8" date="2013-11-09"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Generate better links for types in other schemas</action>
+        </release>
+        <release version="1.5.7" date="2013-10-21"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Make RELEASE an unreserved keyword</action>
+        </release>
+        <release version="1.5.6" date="2013-08-04"  description="Minor Fixes" >
+		<action type="update" dev="sturton" >pldoc - update POM file to Sourceforge2 tracking</action>
+		<action type="fix" dev="sturton" issue="91">Make NULLIF and RENAME unreserved keywords</action>
+        </release>
+        <release version="1.5.5" date="2013-07-22"  description="Minor Fix" >
+		<action type="update" dev="sturton" >Correct 12C ACCESSIBLE BY clause for multiple accessors</action>
+        </release>
+        <release version="1.5.4" date="2013-07-17"  description="Minor Updates" >
+		<action type="update" dev="sturton" >Support 11G EDITIONABLE/NONEDITIONABLE objects</action>
+		<action type="update" dev="sturton" >Support 12C ACCESSIBLE BY clause</action>
+        </release>
+        <release version="1.5.3" date="2013-06-24"  description="Minor Fix" >
+		<action type="fix" dev="sturton" >Allow "DEFINE" SQL*plus keyword as unreserved keywordf within Pl/SQL</action>
+        </release>
+        <release version="1.5.2" date="2013-05-24"  description="Minor Fix" >
+		<action type="fix" dev="sturton" >Generate valid XHTML for scraped sourcecode </action>
+		<action type="update" dev="sturton" >Add links to CPD and maven-cpd-plugin projects, and to project news</action>
+        </release>
+        <release version="1.5.1" date="2013-05-22"  description="Minor Fixes" >
+		<action type="fix" dev="sturton" >Attempt to identify PROCEDURE and FUNCTION schema from source when parsing SQL scripts, defaulting to the traditional default (GLOBAL) when no schema is given</action>
+		<action type="fix" dev="sturton" >Whilst aggregating FUNCTIONs and PROCEDUREs in to _${SCHEMA} pseudo-packages, key is SCHEMA,NAME, rather than NAME</action>
+        </release>
+        <release version="1.5.0" date="2013-05-20"  description="Rearrange output" >
+		<action type="update" dev="sturton" >Output web pages to separate schema subdirectories, preventing overwritten HTML files when different schemas have objects with the same object name</action>
+        </release>
+        <release version="1.4.3" date="2013-05-12"  description="" >
+		<action type="update" dev="sturton" >Add CPD CSS settings to facilitate consistent PLDoc and PLDoc-CPD output documentation</action>
+		<action type="update" dev="sturton" >Make PLScope dictionary views consistent with changes made in release 1.4.1 - attempt to use DBA_* dictionary view and revert to ALL_* views on error</action>
+		<action type="update" dev="sturton" >Expose methods to create static CSS and XSL for downstream Maven projects</action>
+		<action type="update" dev="sturton" >Make ANT task camelCase like showSkippedPackages </action>
+        </release>
+        <release version="1.4.2" date="2013-04-30"  description="Parser Bug Fixes" >
+		<action type="fix" dev="sturton" >Allow trigger REFERENCING clause to have a minimum of ZERO sub-clauses</action>
+		<action type="fix" dev="sturton" >Support ANSI Date literals</action>
+        </release>
+        <release version="1.4.1" date="2013-04-29"  description="Aspiration and Fallback" >
+		<action type="update" dev="sturton" >Initially attempt to locate objects for processing from DBA_OBJECTS, falling back to ALL_OBJECTS on error</action>
+        </release>
+        <release version="1.4.0" date="2013-04-28"  description="Source Code Integration" >
+		<action type="fix" dev="sturton" >Correct infinite loop in SubstitutionReader for situation when the replacement text contains the search text</action>
+		<action type="add" dev="sturton" >Add option to save database source code to file system for subsequent display using new  "-savesourcecode" and "-sourcestylesheetfile" command-line flags</action>
+		<action type="add" dev="sturton" >Add option to save database source code to file system for subsequent display using new  "savesourcecode" and "sourcestylesheet" Ant task attributes</action>
+        </release>
+        <release version="1.3.11" date="2013-04-12"  description="PLScope call fixes" >
+		<action type="fix" dev="sturton" >Correct generation of caller/callee information for standalone FUNCTIONs, PROCEDUREs and TRIGGERs</action>
+		<action type="update" dev="sturton" >Convert "Calls:" and "Called From": sections into links</action>
+        </release>
+        <release version="1.3.10" date="2013-04-08"  description="Include PLScope call information; support Java" >
+		<action type="update" dev="sturton" >pom.xml - add PMD as dependency</action>
+		<action type="add" dev="sturton" >Add support for extracting and merging PLScope calling information in PLDoc</action>
+		<action type="add" dev="sturton" >Add support for parsing CREATE OR REPLACE JAVA statements - Java parsing is delegated to the PMD Java parser</action>
+            <action type="add" dev="sturton" >Add property to the PLDoc ANT task to request inclusion of PLScope call information</action>
+        </release>
+        <release version="1.3.9" date="2013-03-31"  description="Migrate to new Sourceforge project format" >
+		<action type="update" dev="sturton" >pom.xml - updated for new source code locations</action>
+        </release>
+        <release version="1.3.8" date="2013-03-30"  description="Move deployments to Sonatype OSS Maven Repository" >
+		<action type="update" dev="sturton" >pldoc.sourceforge.net rsync synchronisation to Maven Central repository has ceased - redirect release deployments to intermediate Sonatype OSSRH.
+
+	        Original rsync synchronisation request - http://jira.codehaus.org/browse/MAVENUPLOAD-2349;
+	        rsync synchronisation reactivation request - http://jira.codehaus.org/browse/MAVENUPLOAD-2824;
+		Sonatype OSSRH setup request -https://issues.sonatype.org/browse/OSSRH-5753.
+	        </action>
+        </release>
+        <release version="1.3.7" date="2013-03-25"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" >Support multiple labels before global Block </action>
+        </release>
+        <release version="1.3.6" date="2013-01-03"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" >Support "INTO", "USING" and "RETURNING" clauses in "EXECUTE IMMEDIATE" statements</action>
+            <action type="update" dev="sturton" >Reduce parsing errors in SQL scripts - cope with (and ignore) SYNONYM, DIRECTORY, DATABASE LINK commands and various otherwise unsupported DDL or access control commands</action>
+        </release>
+        <release version="1.3.5" date="2013-01-02"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" issue="3599012" >Support "FORCE" keyword in CREATE OR REPLACE TYPE</action>
+        </release>
+        <release version="1.3.4" date="2012-12-31"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" >Correct parsing of 'NOT NULL' constraint in TYPE and SUBTYPE definitions; allow globalBlocks to be preceded by labels</action>
+            <action type="fix" dev="sturton" >Schema Summary Page was not a well-formed HTML page</action>
+            <action type="fix" dev="sturton" >Retrofit skip2NextTokenOccurrence() special token handling from PMD work</action>
+            <action type="update" dev="sturton" >Retrofit support for CONTINUE statement (new in 11G) from PMD work</action>
+            <action type="fix" dev="sturton" >Ensure ANT support for stylesheet and overview parameters</action>
+            <action type="update" dev="sturton" >JAVACC: change CHOICE_AMBIGUITY_CHECK from 3 to 2 (the default) - this dramatically speeds up the JAVACC step (back to a few minutes from 90-100-minutes), but may introduce errors</action>
+        </release>
+        <release version="1.3.3" date="2012-08-04"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" issue="3553725" >Support "AT LOCAL" and "AT TIME ZONE (DBTIMEZONE|SESSIONTIMEZONE|literal|expression)" time zone clauses</action>
+        </release>
+        <release version="1.3.2" date="2012-07-19"  description="Minor Bug Fixes" >
+            <action type="update" dev="sturton" >Add SUMMARY element for objects and object level methods in Application.xml- allow relating PL/SCOPE information to methods</action>
+            <action type="update" dev="sturton" >Display processed/skipped object counts as pie-chart in the generator page</action>
+            <action type="update" dev="sturton" >Add PRECEDES trigger ordering syntax</action>
+            <action type="update" dev="sturton" >Support (FORWARD|REVERSE) CROSSEDITION Cross-Edition Trigger syntax</action>
+        </release>
+        <release version="1.3.1" date="2012-06-20"  description="Minor Bug Fixes" >
+            <action type="fix" dev="sturton" issue="3535118" >Support remote procedure calls</action>
+        </release>
+        <release version="1.3.0" date="2012-06-18"  description="Add ignoreInformalComments property to ANT task" >
+            <action type="update" dev="sturton" >Add ignoreInformalComments property to ANT task</action>
+        </release>
+        <release version="1.2.1" date="2012-06-12"  description="Minor Bug fixes" >
+            <action type="fix" dev="sturton" issue="3532414" due-to="Torsten Kleiber" due-to-email="tkleiber@sourceforge.net" >Support datatype across database link</action>
+        </release>
+        <release version="1.2.0" date="2012-06-10"  description="Allow PLDoc to document Other Database Types" >
+            <action type="add" dev="sturton" >Add properties to allow the PLDoc ANT tasks to process non-Oracle databases</action>
+        </release>
+        <release version="1.1.4" date="2012-05-09"  description="Minor Bug fixes" >
+            <action type="fix" dev="sturton" issue="3521945" due-to="Harald Jocham" due-to-email="jarry87@sourceforge.net" >Allow USING (CHAR_CS|NCHAR_CS) character set specification within arguments</action>
+        </release>
+        <release version="1.1.3" date="2012-05-05"  description="Minor Bug fixes" >
+            <action type="fix" dev="sturton" issue="3512149" due-to="Gary Bentley" due-to-email="barrygently@sourceforge.net" >Allow ATTRIBUTE keyword as a name</action>
+            <action type="fix" dev="sturton" issue="3512150" due-to="Gary Bentley" due-to-email="barrygently@sourceforge.net" >Allow MAP keyword as a name in body code</action>
+            <action type="fix" dev="sturton" due-to="Gary Bentley" due-to-email="barrygently@sourceforge.net" >Allow others (STATIC|UROWID|VARRAY|VARYING|EXTERNAL|MODIFY|AGGREGATE|OVERRIDING|OID|UNDER|RESULT|FINAL|INSTANTIABLE) unreserved keywords as names in body code</action>
+            <action type="fix" dev="sturton" >Allow STATIC keyword as a name</action>
+            <action type="fix" dev="sturton" >Allow these keywords as names in body code (some of which need quoting to compile ...): BULK|BY|BYTE|AT|AUTHID|NCHAR|NVARCHAR2|BFILE|BLOB|CLOB|NCLOB|CLOSE|COLLECT|COMMIT|CURRENT|DEC|DEFINER|DOUBLE|EXTENDS|FUNCTION|HEAP|IMMEDIATE|INDICATOR|INTERVAL|ISOLATION|JAVA|LEVEL|MAX|MIN|MLSLABEL|NATURAL|NUMERIC|OPAQUE|OPEN|ORGANIZATION|PACKAGE|PRECISION|REAL|RETURN|REVERSE|ROLLBACK|ROWID|ROWNUM|SAVEPOINT|SUCCESSFUL|TIMESTAMP
+	    </action>
+        </release>
+        <release version="1.1.2" date="2012-03-14"  description="Minor Bug fixes" >
+            <action type="fix" dev="sturton" issue="3495570" >Correct PLDoc usage message on encountering invalid command-line</action>
+        </release>
+        <release version="1.1.1" date="2012-02-27"  description="Minor Bug fixes" >
+            <action type="update" dev="sturton" >Experimental- expose PLDoc Resolver, Resources, and parse() method; create net.sourceforge.PLDoc.database.PLDocParser class to define PLDoc parsing within databases- this is an intermediate stage to allowing PL/SQL access to PLDoc parsing</action>
+            <action type="fix" dev="sturton" >unit.xsl generate method landing page nmes in correct case, rather than lower case</action>
+        </release>
+        <release version="1.1.0" date="2012-02-06"  description="Allow Document mixed-case generation in PLDOc and ANT task and Minor Bug fixes" >
+            <action type="update" issue="3477662" dev="sturton" >PLDocTask ANT task "namesCase" setting now has 4 options:-"lower" (coerce all names to lower case), "upper" (coerce all names to upper case), "mixed" (all names are left as-is, relying on the coder to ensure that case matches) and "default" (Oracle default: unquoted names are upper case, quoted names are mixed case)</action>
+            <action type="update" issue="3477662" dev="sturton" >Allow mixed case documentation generation - add this to the command-line "-defaultNamesCase mixed"</action>
+            <action type="update"  dev="sturton" >Add ResourceResolver to TransformerFactory in order to allow xsl:import and xsl:include</action>
+            <action type="update"  dev="sturton" >Refactor common XSLT variables and templates into common and common-exslt.xsl</action>
+            <action type="fix" dev="sturton" >Correct CURSOR documentation generation</action>
+        </release>
+        <release version="1.0.0" date="2012-01-30"  description="Bug fixes - declare success and release as 1.0.0" >
+            <action type="update" dev="sturton" >Output PLDoc release version in Generator page</action>
+            <action type="update" dev="sturton" >Document Compound Triggers like package bodies</action>
+        </release>
+        <release version="0.9.10" date="2012-01-22"  description="Bug fixes" >
+            <action type="update" dev="sturton" >Update POM.XML to use JAVACC Maven plugin 2.6</action>
+            <action type="fix" issue="3473753" dev="sturton" due-to="Wernfried Domscheit" due-to-email="wernfried@sourceforge.net" >
+	    Support MULTISET operators.
+	    "OF" keyword in MULTISET conditions is optional;
+	    </action>
+            <action type="fix" issue="3472934" dev="sturton" >
+	    Allow SUBTYPE RANGE limits to be negative numbers.
+	    </action>
+            <action type="fix" issue="3473352" dev="sturton" >
+	    Ignore Java Escape Code Prefix "\u"  
+	    </action>
+        </release>
+        <release version="0.9.9" date="2012-01-12"  description="Bug fixes" >
+            <action type="fix" issue="3469812" dev="sturton" due-to="Wernfried Domscheit" due-to-email="wernfried@sourceforge.net" >
+	    Add "RELIES_ON (table(,table)*)" clause to RESULT_CACHE pragma;
+	    support MULTISET keywords and conditions;
+	    correct TRIM keywords for SQL99 TRIM syntax (LEADING and TRAILING rather than LEFT and RIGHT).
+	    </action>
+        </release>
+        <release version="0.9.8" date="2011-12-06"  description="Bug fixes" >
+            <action type="fix" issue="3441966" dev="sturton" due-to="Gurpreet Singh" due-to-email="gskhurana@sourceforge.net" >XML parsing error when running pldoc in ANT.</action>
+            <action type="fix" issue="3449496" dev="sturton" >Correctly generate deprecated markup in body pages</action>
+            <action type="update" dev="sturton" >Generate sample documentation using ISO-8859-15 input encoding to demonstrate national character settings</action>
+        </release>
+        <release version="0.9.7" date="2011-11-26"  description="Minor bug fixes" >
+            <action type="add" issue="3418199" dev="sturton" due-to="Gurpreet Singh" due-to-email="gskhurana@sourceforge.net" >Generate documentation for PACKAGE and OBJECT TYPE bodies. </action>
+            <action type="fix" issue="3443147" dev="sturton" >ProductionsObjectTypes.jj -  parse simplest inherited subtype</action>
+            <action type="fix" issue="3441906" dev="sturton" >Correctly generate deprecated page</action>
+        </release>
+        <release version="0.9.6" date="2011-11-20"  description="Minor bug fixes" >
+            <action type="fix" issue="3440459" dev="sturton" due-to="Tom Wiley" due-to-email="wiley.te@gmail.com"> Productions.jj - Fix regression where packaged functions and procedures without parameter lists were parsed as fields. </action>
+            <action type="fix" dev="sturton" > pldoc_ant_example.sh -  set pldoc.home Ant property to the script&apos;s execution directory </action>
+            <action type="fix" dev="sturton" > Unit.xsl -  sort method and field detail by name</action>
+        </release>
+        <release version="0.9.5" date="2011-09-26"  description="Add support for database-based PL/SQL to ANT task; update ANT examples for JAVA 5 and above" >
+            <action type="fix" dev="sturton" > Settings.java - add mising setter method required for PLDocTask</action>
+            <action type="fix" dev="sturton" > PLDoc.java -  when called from PLDocTask, redirect in allschemas.xsl showed same problem as unit.xsl had done. Same workaround applied (pass absolute path explicitly as targetFolder XSL parameter) </action>
+            <action type="update" dev="sturton" > pom.xml - Filter ANT example batch scripts </action>
+            <action type="update" dev="sturton" > pom.xml - Add ANT examples to distribution </action>
+        </release>
+        <release version="0.9.4" date="2011-09-14"  description="Increased support for file-based PL/SQL" >
+            <action type="fix" issue="1927841" dev="sturton" >Fixed problem with spaces in output directory paths</action>
+            <action type="fix" issue="1433480" dev="sturton" >SQL*Plus commands caused subsequent PL/SQL to be ignored</action>
+            <action type="fix" issue="3407913" dev="sturton" >SQL commands in scripts cause parsing to fail</action>
+            <action type="update" dev="sturton" > pom.xml - move reporting info to recommended Maven 3 location ; add mailing list information; added message about approximate duration of JAVACC phase </action>
+            <action type="update" dev="sturton" > changes.xml  - convert changes.txt to changes.xml </action>
+        </release>
+
+        <release version="0.9.3" date="2011-08-31" description="More Mavenisation of the project" >
+            <action type="add" dev="sturton" > Add ability to skip PLSQL.jj generation (and subsequent unnecessary JavaCC and Javac steps) to pom.xml use "skipJavacc=true" on the command line </action>
+            <action type="add" dev="sturton" > file-based integration tests from pldoc_test.sh/pldoc_test.bat </action>
+            <action type="update" dev="sturton" due-to="popalka" > Module HTML pages are now encoded as UTF-8 rather than ISO-8859-1, preventing corruption of module pages </action>
+            <action type="fix" dev="sturton" > Bundled example scripts now run against bundled samples directory </action>
+            <action type="fix" dev="sturton" > Site menu link to Sourceforge development site corrected </action>
+        </release>
+
+        <release version="0.9.2" date="2011-08-30" description="Generate application bundles for end-users" >
+            <action type="add" dev="sturton" > Maven now creates ZIP, TGZ, and TBZ bundles of JAR files, scripts and sample files </action>
+            <action type="add" dev="sturton" > Object/file parsing messages are now suppressed by default: use the new -verbose flag to display them </action>
+            <action type="add" dev="sturton" > Site Download menu option now links to download page containing links to JAR files and bundles </action>
+
+        </release>
+
+        <release version="0.9.1" date="2011-08-24" description="Major external development merged into code tree; project source code moved to Subversion" >
+            <action type="update" dev="sturton" > PLDoc repository moved to Subversion </action>
+            <action type="add" dev="sturton" > Parser supports Collections (see test/TestDoc3/cand2172_tab.html) </action>
+            <action type="add" dev="sturton" issue="585794" > Parser supports Object Types (see test/testinput/objecttypes, test/TestDoc3/cand2169_t.html) </action>
+            <action type="add" dev="sturton" issue="650505" > Parser supports Schema-level Procedures and Functions(see test/testinput/schemalevel) </action>
+            <action type="add" dev="sturton" > Parser supports 11g Triggers (see test/testinput/11g-source, test/TestDoc3/_test_user.html </action>
+            <action type="add" dev="sturton" issue="531624" > Parser supports Package and Object Type Bodies</action>
+            <action type="add" dev="sturton" > Parser supports Conditional Compilation tokens (see test/TestDoc3/_global.html#prc_conditional) </action>
+            <action type="add" dev="sturton" issue="1606392" > Parser supports Q-quoted strings (normal cases - see test/TestDoc3/pkg_qstrings.html) </action>
+            <action type="add" dev="sturton" > Parser supports Default values (see test/testinput/datetime-source/pkg_datetime_literals.pks, test/TestDoc3/pkg_datetime_literals.html) </action>
+            <action type="add" dev="sturton" > Parser supports most unreserved words (see test/TestDoc3/pkg_test_unreserved_keyword.html) </action>
+            <action type="add" dev="sturton" > Parser supports split operators, e.g. " 1 ! /* comment ... */ = 2 " (see test/TestDoc3/split_operators.html) </action>
+            <action type="add" dev="sturton" > Document schema-level functions and procedures within faux-package of the form "_SCHEMA-NAME" </action>
+            <action type="add" dev="sturton" issue="650469"> support @see tags) </action>
+            <action type="add" dev="sturton" issue="752732"> inline tags (see test/testinput/objecttypes/TY_FIELD_AGGREGATOR.tps, test/TestDoc3/ty_field_aggregator.html) </action>
+            <action type="add" dev="sturton" > Maven now creates 2 artefacts (original JAR and a standalone JAR containing all required classes)</action>
+            <action type="update" dev="sturton" issue="650472" > Parse functions based on Java, C libraries </action>
+            <action type="update" dev="sturton" > Reuse cursors to prevent MAX_CURSORS exceeded problems </action>
+            <action type="add" dev="sturton" > Allow case of identifiers and keywords to be specified (deviating from defaults would require stylesheet rewrite) </action>
+            <action type="add" dev="sturton" > Attempt to automatically generate HTML links between objects </action>
+            <action type="add" dev="sturton" > Extract metadata using specified SQL92 callable statement (for EnterpriseDB PLDoc generation) </action>
+            <action type="fix" dev="sturton" issue="1901322" > ARRAY keyword</action>
+            <action type="fix" dev="sturton" > lots of minor fixes</action>
+        </release>
+
+        <release version="0.9.0" description="PLDoc Maven 2 Plugin" >
+            <action type="add" dev="altumano" > pldoc maven 2 pom has been added, with maven 2 plugin (2.0)</action>
+            <action type="add" dev="altumano" > synchronization with central maven repo initiated: http://jira.codehaus.org/browse/MAVENUPLOAD-2349</action>
+            <action type="fix" dev="altumano" > cur dir issue, part of the documentation could be generated in a different folder.</action>
+            <action type="update" dev="gpaulissen" > in pldoc.bat, pldoc.sh, removed obsolete Oracle jars and added new Oracle Jdbc driver ojdbc14</action>
+            <action type="update" dev="altumano" > Oracle classes not necessary for building</action>
+            <action type="fix" issue="1433480" dev="altumano" > SET Causes an error (#1433480)</action>
+            <action type="fix" issue="1464791"  dev="altumano" > Use of GLOBAL keyword in a package name (#1464791)</action>
+        </release>
+
+        <release version="0.8.3.1" date="2006-07-10" >
+            <action type="add" dev="altumano" > Lexical parser errors are handled like exceptions and will not interrupt the program any longer.</action>
+            <action type="add" dev="altumano" > More verbose output added at the end of parsing all packages.</action>
+            <action type="add" dev="altumano" > Added some new generator summary tags like creation date.</action>
+            <action type="add" dev="altumano" > Added the dummy package _GLOBAL for all global functions.</action>
+            <action type="add" dev="altumano" > Added documentation for triggers </action>
+            <action type="add" dev="altumano" > Refactored tag handling - linked tags like param, return and throws are are language dependent and those are handled like before.  
+	    Custom tags like author or deprecated and any other tag the user wishes to have will go under the custom tag node TAG.  </action>
+            <action type="add" dev="altumano" > XSLT: Added a generator summary page.  </action>
+            <action type="add" dev="altumano" > XSLT: Now the deprecated and index list work </action>
+            <action type="add" dev="altumano" > XSLT: Added triggers to the unit page </action>
+            <action type="add" dev="altumano" > XSLT: Refactored the navigation bar </action>
+        </release>
+
+        <release version="0.8.1.s1" date="2006-07-10" >
+            <action type="update" dev="altumano" >  successfully processes all kVASy p411 forms pld's </action>
+            <action type="fix" dev="altumano" >  expression: expression() [&lt;NOT&gt;] &lt;BETWEEN&gt; expression() &lt;AND&gt; expression() </action>
+            <action type="fix" dev="altumano" >   expression: [&lt;NOT&gt;] &lt;IN&gt; ... </action>
+            <action type="fix" dev="altumano" >   expression: [&lt;NOT&gt;] &lt;IN&gt; ... &lt;OR&gt; ... </action>
+            <action type="fix" dev="altumano" >   statement &lt;EXIT&gt; [&lt;WHEN&gt; expression() | &lt;IDENTIFIER&gt;] </action>
+            <action type="fix" dev="altumano" >   statement &lt;END&gt; &lt;LOOP&gt; [&lt;IDENTIFIER&gt;] ";" </action>
+            <action type="fix" dev="altumano" >   expression: &lt;LIKE&gt; </action>
+            <action type="update" dev="altumano" >   (statement())+ ==&gt; (statement())* </action>
+            <action type="fix" dev="altumano" >   pragma: name=&lt;INTERFACE&gt; "(" &lt;IDENTIFIER&gt; "," &lt;IDENTIFIER&gt; "," numericLiteral() ")" </action>
+            <action type="fix" dev="altumano" >   token: &lt; &lt;SELECT&gt; | &lt;INSERT&gt; | &lt;UPDATE&gt; | &lt;DELETE&gt; | &lt;COMMIT&gt; | &lt;ROLLBACK&gt;&gt; : IN_SQL_STATEMENT_ENDED_SEMICOLON </action>
+            <action type="fix" dev="altumano" >   qualifiedName(), qualifiedID(), unqualifiedID() </action>
+            <action type="fix" dev="altumano" >   much more ... </action>
+        </release>
+
+        <release version="0.8.3" date="2006-01-22" >
+            <action type="add" dev="gpaulissen" > added support for generating documentation from the Oracle dictionary (Oracle 9i or above).</action>
+            <action type="add" dev="altumano" > improved format of the HTML output:</action>
+            <action type="update" dev="altumano" > changed index.xsl to create the 3-frame view (as in normal javadoc) </action>
+            <action type="add" dev="altumano" > added output for schema overview in upper left frame </action>
+            <action type="update" dev="altumano" > changed output for list view in lower left frame </action>
+            <action type="add" dev="altumano" > added overviews/summaries </action>
+            <action type="fix" dev="altumano" > corrected the suggested CVSROOT in readme.txt</action>
+            <action type="fix"  issue="999222" dev="altumano" > Error using a doctitle other than "Sample Application" (#999222)</action>
+            <action type="fix" issue="1028068"  dev="altumano" > Error when parameter is DEFAULT (2) (#1028068)</action>
+            <action type="update" dev="altumano" > use single quotes in pldoc_example.bat (to work on Windows XP)</action>
+        </release>
+
+        <release version="0.8.2"  date="2004-07-21" >
+            <action type="add" dev="altumano" > Initial support for parsing tables and views (only simpler cases yet)</action>
+            <action type="add" dev="altumano" > In application.xml, use &lt;TAG type="@deprecated"&gt; instead of &lt;DEPRECATED> and &lt;TAG type="@throws""&gt; instead of &lt;THROWS"&gt; (code submitted by Steve Holt)</action>
+            <action type="fix" issue="939294" dev="altumano" > Keyword PIPELINED unknown (#939294)</action>
+            <action type="fix" issue="876225" dev="altumano" > invocation of pldoc.bat fails when pldoc is installed into directory with spaces in the path (#876225)</action>
+            <action type="fix" issue="832509" dev="altumano" > Runtime/command line parameter to skip unparsable files (#832509)</action>
+            <action type="fix" dev="altumano" > Corrected name extracting for multiple-word datatypes (like LONG RAW and REF CURSOR)</action>
+            <action type="fix" issue="971941" dev="altumano" > Unable to use timestamp with time zone data type (#971941)</action>
+        </release>
+
+        <release version="0.8.1"  date="2003-11-30" >
+            <action type="add" issue="769012" dev="altumano" > Ant task (#769012)</action>
+            <action type="update" dev="altumano" > all source files moved to src directory</action>
+            <action type="update" dev="altumano" > build-related files moved to build directory</action>
+            <action type="update" dev="altumano" > pldoc.jar now contains also *.xsl, *.css and *.dtd files</action>
+            <action type="fix" issue="827062"  dev="altumano" > lower case pragma causes error (#827062)</action>
+            <action type="fix" issue="711093"  dev="altumano" > dumps on reserved word DETERMINISTIC (#711093)</action>
+            <action type="fix" issue="831256" dev="altumano" > NULL modifier in the COLUMN definition (#831256)</action>
+        </release>
+
+        <release version="0.8"  date="2003-10-14" >
+            <action type="update" dev="altumano" > Xalan jars upgraded from version 2.2.D14 to 2.5.1</action>
+            <action type="add" dev="altumano" > option -inputencoding to specify character encodings of input files</action>
+            <action type="add" issue="638551"  dev="altumano" > show types defined in package spec (#638551)</action>
+            <action type="add" issue="650466" dev="altumano" > Better anchors (#650466)</action>
+            <action type="add" issue="650501" dev="altumano" > Align func/proc parameters by the first (#650501)</action>
+            <action type="add" issue="771453" dev="altumano" > Add a command line options to control case convertion (#771453)</action>
+            <action type="fix" issue="731017" dev="altumano" > documentation typo (#731017)</action>
+            <action type="fix" issue="751296" dev="altumano" > PLDoc does not work on JDK below 1.3 (#751296)</action>
+            <action type="fix" issue="765345" dev="altumano" > VARRAY bug (#765345)</action>
+            <action type="fix" issue="804634" dev="altumano" > parameter mode (OUT, IN OUT) not shown (#804634)</action>
+            <action type="fix" issue="809871" dev="altumano" > show DEFAULT value for parameters (#809871)</action>
+        </release>
+
+        <release version="0.7" date="2003-04-24" >
+            <action type="add" issue="644050" dev="altumano" > Implemented: Package comments more conveniently (#644050) </action>
+            <action type="add" issue="692488" dev="altumano" > Implemented: make documentation part of the distribution (#692488) </action>
+            <action type="add" issue="696678" dev="altumano" > Implemented: Beginner Drag-and-drop (#696678) </action>
+            <action type="add" issue="723291" dev="altumano" > Implemented: Support SQL*Plus substitution variables (#723291) </action>
+            <action type="fix" issue="663581" dev="altumano" > -doctitle option and sentence argument (#663581)</action>
+            <action type="fix" issue="700040" dev="altumano" > Parser fails if: "end; -- end package" (#700040)</action>
+        </release>
+
+        <release version="0.6.8"  date="2002-12-15" >
+            <action type="fix"  issue="643043" dev="altumano" > Procedure w/o params appears as variable (#643043)</action>
+            <action type="fix" issue="652703" dev="altumano" > Wrong api gen for overloaded procedures (#652703)</action>
+            <action type="fix" issue="653029" dev="altumano" > Field Details not generated (#653029)</action>
+            <action type="fix" issue="653408" dev="altumano" > CRLF removed from overview document (#653408)</action>
+            <action type="fix" issue="654037" dev="altumano" > The first sentence extraction incorrect (#654037)</action>
+            <action type="fix" issue="643037" dev="altumano" > Implemented: The classes should be in packages (#643037) </action>
+            <action type="fix" issue="647744" dev="altumano" > Implemented: Change license to LGPL (#647744) </action>
+            <action type="fix" issue="654036" dev="altumano" > Implemented: Do not sort field/method details section (#654036) </action>
+            <action type="add" dev="altumano" > Enhanced: classes packed into pldoc.jar </action>
+            <action type="add" dev="altumano" > Enhanced: show PLDoc version number </action>
+        </release>
+
+        <release version="0.6.7"  date="2002-11-16" >
+            <action type="fix" issue="637931" dev="altumano" > Allow multiple @throws like @param (#637931)</action>
+            <action type="fix" dev="altumano" > error parsing REF object_type</action>
+            <action type="add" issue="592444" > Implemented: Support 9iR2 assoc array index types (#592444) </action>
+            <action type="add" issue="556039" dev="altumano" > Implemented: Treat constants in package spec as field (#556039) </action>
+            <action type="add" dev="altumano" > Enhanced: run pldoc from any directory (thanks to Kim Jersin) </action>
+            <action type="add" dev="altumano" > Enhanced: show fully qualified names of datatypes </action>
+        </release>
+
+        <release version="0.6.6"  date="2002-08-24" >
+            <action type="fix" issue="594662" dev="altumano" > @deprecated of function makes pack. deprecated (#594662)</action>
+            <action type="fix" issue="594668" dev="altumano" > @param MUST be followed by ONE space (#594668)</action>
+            <action type="fix" issue="595625" dev="altumano" > Space missing in output when joining lines (#595625)</action>
+            <action type="add" dev="altumano" > Enhanced: now using Ant for building </action>
+        </release>
+
+        <release version="0.6.5"  date="2002-05-30" >
+            <action type="add" dev="altumano" > @throws tag support in function/procedure comments</action>
+            <action type="add" dev="altumano" > @deprecated tag support in package/function/procedure comments</action>
+            <action type="fix" dev="altumano" > parsing prefixed function calls</action>
+        </release>
+
+        <release version="0.6.1"  date="2002-05-11" >
+            <action type="fix" dev="altumano" > bug causing IndexOutOfBoundsException when parsing comments</action>
+            <action type="fix" dev="altumano" > allow HTML in @return description</action>
+            <action type="update" dev="altumano" > in samples, @headcom tag moved to the end of comment</action>
+        </release>
+
+        <release version="0.6"  date="2002-04-29" >
+            <action type="update" dev="altumano" > in formal comments, tags section must be after the main text, not before</action>
+            <action type="add" dev="altumano" > declaration Java stored procedures can be parsed</action>
+            <action type="remove" dev="altumano" > Use and Package links</action>
+            <action type="update" dev="altumano" > * Enhanced: parameter names are shown in lowercase</action>
+            <action type="fix" dev="altumano" > @param description may span on the next line</action>
+            <action type="fix" dev="altumano" > strings may contain whatever symbols except closing quote</action>
+        </release>
+
+        <release version="0.5"  date="2002-03-31" >
+            <action type="add" dev="altumano" > cursors can now be parsed in package specs</action>
+            <action type="add" dev="altumano" > some simple Java stored procedure callspecs can be parsed</action>
+            <action type="fix" dev="altumano" > lowercase procedures did not show up</action>
+            <action type="fix" dev="altumano" > error when overview file not specified</action>
+            <action type="fix" dev="altumano" > quoted identifier support</action>
+            <action type="fix" dev="altumano" > parsing mixed-type expressions</action>
+            <action type="fix" dev="altumano" > parsing REF CURSOR declarations</action>
+            <action type="fix" dev="altumano" > allow &lt; and &gt; in informal comments</action>
+            <action type="fix" dev="altumano" > package name can be reserved word</action>
+        </release>
+
+        <release version="0.4"  date="2002-03-08" >
+            <action type="add" dev="altumano" > added date expressions</action>
+            <action type="add" dev="altumano" > variable names in expressions can have dot inside</action>
+            <action type="add" dev="altumano" > -overview option, allows to specify file with summary text</action>
+            <action type="add" dev="altumano" > UNIX shell scripts make.sh and pldoc.sh</action>
+        </release>
+
+        <release version="0.3"  date="2002-03-01" >
+            <action type="add" dev="altumano" > Record types supported</action>
+            <action type="add" dev="altumano" > All expressions (boolean, numeric, character, date) supported</action>
+            <action type="add" dev="altumano" > Allows to specify the output directory</action>
+            <action type="add" dev="altumano" > Custom stylesheet file can be used (using the -stylesheetfile option)</action>
+            <action type="add" dev="altumano" > Copies stylesheet.css the output directory</action>
+        </release>
+
+        <release version="0.2"  date="2002-02-11" />
+
+        <release version="0.1"  date="2002-01-17" />
+    </body>
+</document>

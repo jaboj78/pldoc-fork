@@ -1,0 +1,97 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.mycompany.app</groupId>
+  <artifactId>my-app</artifactId>
+  <packaging>jar</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>Maven Quick Start Archetype</name>
+  <url>http://maven.apache.org</url>
+
+  <build>
+    <plugins>
+      <plugin>
+	<groupId>net.sourceforge.pldoc</groupId>
+	<artifactId>maven-cpd-plugin</artifactId>
+	<version>${project.version}</version>
+	  <dependencies>
+	    <dependency>
+	     <groupId>com.ibm</groupId>
+	     <artifactId>db2jcc4</artifactId>
+	     <version>9.7.5</version>
+	    </dependency>
+	    <dependency>
+	     <groupId>com.ibm</groupId>
+	     <artifactId>db2jcc_license_cu</artifactId>
+	     <version>9.7.5</version>
+	    </dependency>
+	  </dependencies>
+	<configuration>
+	  <applicationTitle>${maven.pldoc.applicationTitleGoal}</applicationTitle>
+	  <!-- sourceDirectory>src/test/resources/samples</sourceDirectory>
+	  <includes>*.sql</includes -->
+	  <destDir>${maven.pldoc.destDirGoal}</destDir>
+	  <outputDirectory>target/docs/apidocs/outputDirectory</outputDirectory>
+	  <reportOutputDirectory>target/docs/apidocs</reportOutputDirectory>
+	  <ignoreComments>true</ignoreComments>
+	  <ignoreIdentifiers>true</ignoreIdentifiers>
+	  <ignoreLiterals>true</ignoreLiterals>
+	  <format>xml</format>
+	  <outputFile>CPD-maven-out.xml</outputFile>
+	  <stylesheetFile>cpdhtml.xslt</stylesheetFile>
+	  <showSkippedPackages>true</showSkippedPackages>
+	  <dbUrl>${maven.pldoc.dbUrl}</dbUrl>
+	  <dbUser>${maven.pldoc.dbUser}</dbUser>
+	  <dbPassword>${maven.pldoc.dbPassword}</dbPassword>
+	  <driverName>${maven.pldoc.driverName}</driverName>
+	  <getMetadataStatement>${maven.pldoc.getMetadataStatement}</getMetadataStatement>
+	  <getMetadataStatementReturnType>${maven.pldoc.getMetadataStatementReturnType}</getMetadataStatementReturnType>
+	  <inputTypes>PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY</inputTypes>
+	  <inputObjects>DB2INST1.GET_%</inputObjects>
+	</configuration>                    
+      </plugin>
+
+          <plugin>
+		<groupId>org.apache.maven.plugins</groupId>
+		<artifactId>maven-site-plugin</artifactId>
+		<version>3.0</version>
+		<configuration>
+		  <xdocDirectory>src/site/xdocs</xdocDirectory>
+		<reportPlugins>
+		  <plugin>
+		    <groupId>net.sourceforge.pldoc</groupId>
+		    <artifactId>maven-cpd-plugin</artifactId>
+		    <version>LATEST</version>
+		    <configuration>
+		      <name>${maven.pldoc.applicationTitleSite} (via Name Attribute)</name>
+			  <applicationTitle>${maven.pldoc.applicationTitleSite}</applicationTitle>
+			  <destDir>${maven.pldoc.destDirSite}</destDir>
+		      <!-- ignored within Site Report - use destDir  
+		      <reportOutputDirectory>target/site/apidocs</reportOutputDirectory>
+		      -->
+		      <showSkippedPackages>true</showSkippedPackages>
+		      <!-- Use Settings instaed 
+		      <dbUrl>jdbc:oracle:thin:@//192.168.100.22:1521/orcl</dbUrl>
+		      <dbUser>system</dbUser>
+		      <dbPassword>oracle</dbPassword>
+		      -->
+			  <dbUrl>${maven.pldoc.dbUrl}</dbUrl>
+			  <dbUser>${maven.pldoc.dbUser}</dbUser>
+			  <dbPassword>${maven.pldoc.dbPassword}</dbPassword>
+			  <driverName>${maven.pldoc.driverName}</driverName>
+			  <getMetadataStatement>${maven.pldoc.getMetadataStatement}</getMetadataStatement>
+			  <getMetadataStatementReturnType>${maven.pldoc.getMetadataStatementReturnType}</getMetadataStatementReturnType>
+			  <format>xml</format>
+			  <outputFile>index.xml</outputFile>
+			  <inputTypes>PROCEDURE,FUNCTION,TRIGGER,PACKAGE,TYPE,PACKAGE BODY,TYPE BODY</inputTypes>
+			  <inputObjects>DB2INST1.GET_%</inputObjects>
+		    </configuration>                    
+		  </plugin>
+		</reportPlugins>
+		</configuration>
+	    </plugin>
+    </plugins>
+  </build>
+</project>

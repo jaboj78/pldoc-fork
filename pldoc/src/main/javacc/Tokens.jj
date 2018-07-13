@@ -1,0 +1,2272 @@
+// Copyright (C) 2002 Albert Tumanov
+
+/* WHITE SPACE */
+
+SKIP :
+{
+        //Tracker Issue 1433480 - skip2 and skipPast need to be able to check for EOL - so the characters 
+	//cannot be SKIPped
+	//" " | "\t" | "\n" | "\r" | "\f"
+	" " | "\t" | "\f"
+}
+
+/* COMMENTS */
+
+MORE :
+{
+	<"/**" ~["/"]> : IN_FORMAL_COMMENT
+|
+	"/*" : IN_MULTI_LINE_COMMENT
+}
+
+SPECIAL_TOKEN :
+{
+	<SINGLE_LINE_COMMENT: "--"(~["\n","\r"])* ("\n"|"\r"|"\r\n")?>
+}
+
+//Tracker Issue 1433480 - skip2 and skipPast need to be able to check for EOL - so it cannot be SKIPped
+SPECIAL_TOKEN :
+{
+	<EOL: ("\n"|"\r"|"\r\n") >
+}
+
+<IN_FORMAL_COMMENT>
+SPECIAL_TOKEN :
+{
+	<FORMAL_COMMENT: "*/" > : DEFAULT
+}
+
+<IN_MULTI_LINE_COMMENT>
+SPECIAL_TOKEN :
+{
+	<MULTI_LINE_COMMENT: "*/" > : DEFAULT
+}
+
+/*
+<IN_SQL_STATEMENT_ENDED_SEMICOLON>
+SKIP :
+{
+	<SQL_STATEMENT: ";" > : DEFAULT
+}
+*/
+
+<IN_FORMAL_COMMENT, IN_MULTI_LINE_COMMENT,
+ IN_SQL_STATEMENT_ENDED_SEMICOLON>
+MORE :
+{
+	< ~[] >
+}
+
+/* PSEUDO-RESERVED WORDS */
+
+TOKEN [IGNORE_CASE]:
+{
+<REPLACE: "REPLACE"> |
+<DEFINER: "DEFINER"> |
+<CURRENT_USER: "CURRENT_USER"> |
+<SERIALLY_REUSABLE: "SERIALLY_REUSABLE"> |
+<RESTRICT_REFERENCES: "RESTRICT_REFERENCES"> |
+<EXCEPTION_INIT: "EXCEPTION_INIT"> |
+<AUTONOMOUS_TRANSACTION: "AUTONOMOUS_TRANSACTION"> |
+<LANGUAGE: "LANGUAGE">
+}
+
+/* PL/SQL RESERVED WORDS */
+/**
+ * 2006-05-20 - Matthias Hendler - Removed: <COLUMN: "COLUMN">
+ *                                 Added: <MERGE: "MERGE">, <AFTER: "AFTER">, <BEFORE: "BEFORE">,
+ *                                 <INSTEADOF: "INSTEAD OF">, <FOREACHROW: "FOR EACH ROW">, <REFERENCING: "REFERENCING">,
+ *                                 <OLD: "OLD">, <PARENT: "PARENT">
+ */
+
+TOKEN [IGNORE_CASE]:
+{
+<ADD: "ADD"> |
+<AGGREGATE: "AGGREGATE"> |
+<ALL: "ALL"> |
+<ALTER: "ALTER"> |
+<AND: "AND"> |
+<ANY: "ANY"> |
+<ARRAY: "ARRAY"> |
+<AS: "AS"> |
+<ASC: "ASC"> |
+<AT: "AT"> |
+<ATTRIBUTE: "ATTRIBUTE"> |
+<AUTHID: "AUTHID"> |
+<AVG: "AVG"> |
+<BEGIN: "BEGIN"> |
+<BETWEEN: "BETWEEN"> |
+<BINARY_INTEGER: "BINARY_INTEGER"> |
+<BODY: "BODY"> |
+<BOOLEAN: "BOOLEAN"> |
+<BULK: "BULK"> |
+<BY: "BY"> |
+<BYTE: "BYTE"> |
+<CASCADE: "CASCADE"> |
+<CASE: "CASE"> |
+<CHAR: "CHAR"> |
+<CHAR_BASE: "CHAR_BASE"> |
+<CHECK: "CHECK"> |
+<CLOSE: "CLOSE"> |
+<CLUSTER: "CLUSTER"> |
+<COALESCE: "COALESCE"> |
+<COLLECT: "COLLECT"> |
+<COLUMN: "COLUMN"> |
+<COMMENT: "COMMENT"> |
+<COMMIT: "COMMIT"> |
+<COMPRESS: "COMPRESS"> |
+<CONNECT: "CONNECT"> |
+<CONSTANT: "CONSTANT"> |
+<CONSTRUCTOR: "CONSTRUCTOR"> |
+<CONTINUE: "CONTINUE"> |
+<CONVERT: "CONVERT"> |
+<CREATE: "CREATE"> |
+<CURRENT: "CURRENT"> |
+<CURRVAL: "CURRVAL"> |
+<CURSOR: "CURSOR"> |
+<DATA: "DATA"> |
+<DATE: "DATE"> |
+<DAY: "DAY"> |
+<DECLARE: "DECLARE"> |
+<DECIMAL: "DECIMAL"> |
+<_DEFAULT: "DEFAULT"> |
+<DELETE: "DELETE"> |
+<DESC: "DESC"> |
+<DETERMINISTIC: "DETERMINISTIC"> |
+<DISABLE: "DISABLE"> | // Needed for 11G Trigger Syntax 
+<DISTINCT: "DISTINCT"> |
+<DO: "DO"> |
+<DROP: "DROP"> |
+<EDITIONABLE: "EDITIONABLE"> |
+<ELEMENT: "ELEMENT"> |
+<ELSE: "ELSE"> |
+<ELSIF: "ELSIF"> |
+<ENABLE: "ENABLE"> | // Needed for 11G Trigger Syntax 
+<END: "END"> |
+<ESCAPE: "ESCAPE"> |
+<EXCEPT: "EXCEPT"> |
+<EXCEPTION: "EXCEPTION"> |
+<EXCEPTIONS: "EXCEPTIONS"> |
+<EXCLUSIVE: "EXCLUSIVE"> |
+<EXECUTE: "EXECUTE"> |
+<EXISTS: "EXISTS"> |
+<EXIT: "EXIT"> |
+<EXTERNAL: "EXTERNAL"> |
+//<EXTERNAL_NAME: "EXTERNAL NAME"> |
+<EXTENDS: "EXTENDS"> |
+<EXTRACT: "EXTRACT"> |
+<FALSE: "FALSE"> |
+<FETCH: "FETCH"> |
+<FINAL: "FINAL"> |
+<FLOAT: "FLOAT"> |
+<FOR: "FOR"> |
+<FORALL: "FORALL"> |
+<FORCE: "FORCE"> |
+<FROM: "FROM"> |
+<FUNCTION: "FUNCTION"> |
+<GLOBAL: "GLOBAL"> |
+<GOTO: "GOTO"> |
+<GROUP: "GROUP"> |
+<GRANT: "GRANT"> | //SRT 2011-04-17
+<HASH: "HASH"> |
+<HAVING: "HAVING"> |
+<HEAP: "HEAP"> |
+<HOUR: "HOUR"> |
+<IDENTIFIED: "IDENTIFIED"> | //SRT 2011-04-17
+<IF: "IF"> |
+<IMMEDIATE: "IMMEDIATE"> |
+<IN: "IN"> |
+<INDEX: "INDEX"> |
+<INDICES: "INDICES"> |
+<INCLUDING: "INCLUDING"> |
+<INDEXTYPE: "INDEXTYPE"> |
+<INDICATOR: "INDICATOR"> |
+<INSERT: "INSERT"> |
+<INSTANTIABLE: "INSTANTIABLE"> |
+<INTEGER: "INTEGER"> |
+<INTERFACE: "INTERFACE"> |
+<INTERSECT: "INTERSECT"> |
+<INTERVAL: "INTERVAL"> |
+<INTO: "INTO"> |
+<INVALIDATE: "INVALIDATE"> |
+<IS: "IS"> |
+<ISOLATION: "ISOLATION"> |
+<JAVA: "JAVA"> |
+//<LANGUAGE: "LANGUAGE"> |
+<LEVEL: "LEVEL"> |
+<LIKE: "LIKE"> |
+<LIMIT: "LIMIT"> | 
+<LIMITED: "LIMITED"> |
+<LOCK: "LOCK"> |
+<LONG: "LONG"> |
+<LOOP: "LOOP"> |
+<MAP: "MAP"> |
+<MAX: "MAX"> |
+<MEMBER: "MEMBER"> | 
+<MERGE: "MERGE"> | 
+<MIN: "MIN"> |
+<MINUS: "MINUS"> |
+<MINUTE: "MINUTE"> |
+<MLSLABEL: "MLSLABEL"> |
+<MODIFY: "MODIFY"> |
+<MOD: "MOD"> |
+<MODE: "MODE"> |
+<MONTH: "MONTH"> |
+<NATURAL: "NATURAL"> |
+<NATURALN: "NATURALN"> |
+<NEW: "NEW"> |
+<NEW_DOT: "NEW."> |
+<NEXTVAL: "NEXTVAL"> |
+<NO: "NO"> |
+<NOCOMPRESS: "NOCOMPRESS"> | //SRT 2011-04-17
+<NOCOPY: "NOCOPY"> |
+<NONEDITIONABLE: "NONEDITIONABLE"> |
+<NOT: "NOT"> |
+<NOWAIT: "NOWAIT"> |
+<NULL: "NULL"> |
+<NULLIF: "NULLIF"> |
+<NUMBER: "NUMBER"> |
+<BFILE_BASE: "BFILE_BASE"> |
+<BLOB_BASE: "BLOB_BASE"> |
+//<CHAR_BASE: "CHAR_BASE"> |
+<CLOB_BASE: "CLOB_BASE"> |
+<DATE_BASE: "DATE_BASE"> |
+<NUMBER_BASE: "NUMBER_BASE"> |
+<OBJECT: "OBJECT"> |
+<OCIROWID: "OCIROWID"> |
+<OF: "OF"> |
+<OID: "OID"> |
+<ON: "ON"> |
+<OPAQUE: "OPAQUE"> |
+<OPEN: "OPEN"> |
+<OPERATOR: "OPERATOR"> |
+<OPTION: "OPTION"> |
+<OR: "OR"> |
+<ORDER: "ORDER"> |
+<ORGANIZATION: "ORGANIZATION"> |
+<OTHERS: "OTHERS"> |
+<OUT: "OUT"> |
+<OVERRIDING: "OVERRIDING"> |
+<PACKAGE: "PACKAGE"> |
+<PARALLEL_ENABLE: "PARALLEL_ENABLE"> |
+<PARTITION: "PARTITION"> |
+<PCTFREE: "PCTFREE"> |
+<PIPE: "PIPE"> |
+<PIPELINED: "PIPELINED"> |
+<PLS_INTEGER: "PLS_INTEGER"> |
+<POSITIVE: "POSITIVE"> |
+<POSITIVEN: "POSITIVEN"> |
+<PRAGMA: "PRAGMA"> |
+<PRESERVE: "PRESERVE"> |
+<PRIOR: "PRIOR"> |
+<PROMPT: "PROMPT"> |
+<PRIVATE: "PRIVATE"> |
+<PROCEDURE: "PROCEDURE"> |
+<PUBLIC: "PUBLIC"> |
+//<QQUOTE_START: "Q'">  |  // Mark the start of a Q-quoted string, e.g. Q'[ This string contains a single-quote(') ]'
+<RAISE: "RAISE"> |
+<RANGE: "RANGE"> |
+<RAW: "RAW"> |
+<REAL: "REAL"> |
+<RECORD: "RECORD"> |
+<REF: "REF"> |
+<RELEASE: "RELEASE"> |
+<RELIES_ON: "RELIES_ON"> | 
+<RENAME: "RENAME"> | //SRT 2011-04-17
+<RESOURCE: "RESOURCE"> | //SRT 2011-04-17
+<RESULT: "RESULT"> |
+<RESULT_CACHE: "RESULT_CACHE"> |
+<RETURN: "RETURN"> |
+<RETURNING: "RETURNING"> |
+<REVERSE: "REVERSE"> |
+<REVOKE: "REVOKE"> | //SRT 2011-04-17
+<ROLLBACK: "ROLLBACK"> |
+<ROW: "ROW"> |
+<ROWS: "ROWS"> |
+<ROWID: "ROWID"> |
+<ROWNUM: "ROWNUM"> |
+<ROWTYPE: "ROWTYPE"> |
+<SAVE: "SAVE"> |
+<SAVEPOINT: "SAVEPOINT"> |
+<SECOND: "SECOND"> |
+<SELECT: "SELECT"> |
+<SELF: "SELF"> |
+<SEPARATE: "SEPARATE"> |
+<SET: "SET"> |
+<SIZE: "SIZE"> | //SRT 2011-04-17
+<SHARE: "SHARE"> |
+<SMALLINT: "SMALLINT"> |
+<SPACE: "SPACE"> |
+<SQL: "SQL"> |
+<SQLCODE: "SQLCODE"> |
+<SQLERRM: "SQLERRM"> |
+<START: "START"> |
+<STATIC: "STATIC"> |
+<STDDEV: "STDDEV"> |
+<SUBTYPE: "SUBTYPE"> |
+<SUBSTITUTABLE: "SUBSTITUTABLE"> |
+<SUCCESSFUL: "SUCCESSFUL"> |
+<SUM: "SUM"> |
+<SYNONYM: "SYNONYM"> |
+<SYSDATE: "SYSDATE"> |
+<SYS_REFCURSOR: "SYS_REFCURSOR"> |
+<TABLE: "TABLE"> |
+<TEMPORARY: "TEMPORARY"> |
+<THEN: "THEN"> |
+<TIME: "TIME"> |
+<TIMESTAMP: "TIMESTAMP"> |
+<TIMEZONE_REGION: "TIMEZONE_REGION"> |
+<TIMEZONE_ABBR: "TIMEZONE_ABBR"> |
+<TIMEZONE_MINUTE: "TIMEZONE_MINUTE"> |
+<TIMEZONE_HOUR: "TIMEZONE_HOUR"> |
+<TO: "TO"> |
+<TRANSACTION: "TRANSACTION"> |
+<TRIGGER: "TRIGGER"> |
+<TRUE: "TRUE"> |
+<TYPE: "TYPE"> |
+<UI: "UI"> |
+<UNDER: "UNDER"> |
+<UNIQUE: "UNIQUE"> | //SRT 2011-04-17
+<USING: "USING"> |
+<VALUES: "VALUES"> | //SRT 2011-04-17
+<WHEN: "WHEN"> |
+<WHERE: "WHERE"> | //SRT 2011-04-17
+<WHILE: "WHILE"> |
+<YES: "YES"> | //SRT 2011-04-17
+
+
+<SHOW: "SHOW"> |
+<SPOOL: "SPOOL"> |
+
+// are they reserved or not ?
+// most are not reserved, but cannot use just "WHERE" etc instead - resolves as identifier !
+//<WHERE: "WHERE"> |
+//<WHILE: "WHILE"> |
+//<NAME: "NAME"> |
+<A: "A"> |
+<UPDATE: "UPDATE"> |
+<VARCHAR: "VARCHAR"> |
+<VARCHAR2: "VARCHAR2"> |
+<DOUBLE: "DOUBLE"> |
+<DEC: "DEC"> |
+<PRECISION: "PRECISION"> |
+<INT: "INT"> |
+<NUMERIC: "NUMERIC"> |
+<SIGNTYPE: "SIGNTYPE"> |
+<NCHAR: "NCHAR"> |
+<NVARCHAR2: "NVARCHAR2"> |
+<STRING: "STRING"> |
+<UROWID: "UROWID"> |
+<VARRAY: "VARRAY"> |
+<VARYING: "VARYING"> |
+<BFILE: "BFILE"> |
+<BLOB: "BLOB"> |
+<CLOB: "CLOB"> |
+<NCLOB: "NCLOB"> |
+<YEAR: "YEAR"> |
+<LOCAL: "LOCAL"> |
+<WITH: "WITH"> |
+<ZONE: "ZONE"> |
+<CHARACTER: "CHARACTER"> | 
+<AFTER: "AFTER"> |   
+<BEFORE: "BEFORE"> |   
+<INSTEADOF: "INSTEAD OF"> |   
+<FOREACHROW: "FOR EACH ROW"> |  
+<REFERENCING: "REFERENCING"> | 
+<OLD: "OLD"> |  
+<PARENT: "PARENT"> |  
+<VIEW: "VIEW"> |
+<UNION: "UNION">
+| <CC_IF: "$IF"> 
+| <CC_THEN: "$THEN"> 
+| <CC_ELSE: "$ELSE"> 
+| <CC_ELSIF: "$ELSIF"> 
+| <CC_END: "$END"> 
+| <CC_ERROR: "$ERROR"> 
+| <CC_PLSQL_LINE: "$PLSQL_LINE"> 
+| <CC_PLSQL_UNIT: "$PLSQL_UNIT"> 
+| <PLSQL_CCFLAGS: "$PLSQL_CCFLAGS">
+| <PLSQL_DEBUG: "$PLSQL_DEBUG">
+| <PLSQL_OPTIMIZE_LEVEL: "$PLSQL_OPTIMIZE_LEVEL">
+| <PLSQL_CODE_TYPE: "$PLSQL_CODE_TYPE">
+| <PLSQL_WARNINGS: "$PLSQL_WARNINGS">
+| <NLS_LENGTH_SEMANTICS: "$NLS_LENGTH_SEMANTICS">
+| <ANALYZE: "ANALYZE">  //11G Trigger Syntax
+| <ASSOCIATE: "ASSOCIATE">  //11G Trigger Syntax
+| <AUDIT: "AUDIT">  //11G Trigger Syntax
+| <COMPOUND: "COMPOUND">  //11G Trigger Syntax
+| <DATABASE: "DATABASE">  //11G Trigger Syntax
+| <CALL: "CALL"> //11G Trigger Syntax
+| <DDL: "DDL">  //11G Trigger Syntax
+| <DISASSOCIATE: "DISASSOCIATE">  //11G Trigger Syntax
+| <EACH: "EACH">  //11G Trigger Syntax
+| <FOLLOWS: "FOLLOWS">  //11G Trigger Syntax
+| <LOGOFF: "LOGOFF">  //11G Trigger Syntax
+| <LOGON: "LOGON">  //11G Trigger Syntax
+| <NESTED: "NESTED">  //11G Trigger Syntax
+| <NOAUDIT: "NOAUDIT">  //11G Trigger Syntax
+| <SCHEMA: "SCHEMA">  //11G Trigger Syntax
+| <SERVERERROR: "SERVERERROR">  //11G Trigger Syntax
+| <SHUTDOWN: "SHUTDOWN">  //11G Trigger Syntax
+| <STARTUP: "STARTUP">  //11G Trigger Syntax
+| <STATEMENT: "STATEMENT">  //11G Trigger Syntax
+| <STATISTICS: "STATISTICS">  //11G Trigger Syntax
+| <SUSPEND: "SUSPEND">  //11G Trigger Syntax
+| <TRUNCATE: "TRUNCATE">  //11G Trigger Syntax
+| <WRAPPED: "WRAPPED"> //XE testing 
+| <LIBRARY: "LIBRARY"> //XE testing 
+| <NAME: "NAME"> //XE testing  non-PLSQL functions 
+| <STRUCT: "STRUCT"> //XE testing non-PLSQL functions 
+| <CONTEXT: "CONTEXT"> //XE testing non-PLSQL functions 
+| <PARAMETERS: "PARAMETERS"> //XE testing non-PLSQL functions 
+| <LENGTH: "LENGTH"> //XE testing non-PLSQL functions 
+| <TDO: "TDO"> //XE testing non-PLSQL functions 
+| <MAXLEN: "MAXLEN"> //XE testing non-PLSQL functions 
+| <CHARSETID: "CHARSETID"> //XE testing non-PLSQL functions 
+| <CHARSETFORM: "CHARSETFORM"> //XE testing non-PLSQL functions 
+//SQLPlus Commands
+| <ACCEPT : "ACCEPT">
+| <ACCESSIBLE : "ACCESSIBLE">
+| <COPY : "COPY">
+| <DEFINE : "DEFINE">
+| <DISCONNECT : "DISCONNECT">
+| <HOST : "HOST">
+| <PRINT : "PRINT">
+| <QUIT : "QUIT">
+| <REMARK : "REMARK">
+| <UNDEFINE : "UNDEFINE">
+| <VARIABLE : "VARIABLE">
+| <WHENEVER : "WHENEVER">
+| <ATTACH : "ATTACH">
+| <CAST : "CAST">
+| <TREAT : "TREAT">
+| <TRIM : "TRIM">
+| <LEFT : "LEFT">
+| <RIGHT : "RIGHT">
+| <BOTH : "BOTH">
+| <EMPTY : "EMPTY">
+| <MULTISET : "MULTISET">
+| <SUBMULTISET : "SUBMULTISET">
+| <LEADING : "LEADING">
+| <TRAILING : "TRAILING">
+| <CHAR_CS : "CHAR_CS">
+| <NCHAR_CS : "NCHAR_CS">
+| <PRECEDES : "PRECEDES">
+| <FORWARD : "FORWARD">
+| <CROSSEDITION : "CROSSEDITION">
+| <DBTIMEZONE : "DBTIMEZONE">
+| <SESSIONTIMEZONE : "SESSIONTIMEZONE">
+| <AUTHENTICATED : "AUTHENTICATED">
+| <LINK : "LINK">
+| <SHARED : "SHARED">
+| <DIRECTORY : "DIRECTORY">
+| <USER : "USER">
+//Support JAVA SOURCE
+|<COMPILE: "COMPILE"> 
+|<RESOLVE: "RESOLVE"> 
+|<RESOLVER: "RESOLVER"> 
+|<NAMED: "NAMED"> 
+|<SOURCE: "SOURCE"> 
+|<CLASS: "CLASS"> 
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - Added #GERMAN_SPECIAL_CHARACTERS and #SPECIAL_CHARACTERS.
+ *                                 Added ":" to <IDENTIFIER>
+ */
+TOKEN :
+{
+< #EXTENDED_LATIN_CHARACTERS:  [ "\u0192", "\u0160", "\u0152", "\u017D", "\u0161", "\u0153", "\u017E", "\u0178", "\u00AA", "\u00BA", "\u00B2","\u00B3", "\u00B9", "\u00C0" - "\u00CF" ,"\u00D0" - "\u00D6" ,"\u00D8" - "\u00DF" ,"\u00E0" - "\u00EF" ,"\u00F0" - "\u00F6" ,"\u00F8" - "\u00FF" ,"\u0100" - "\u017F" ,"\u0180" - "\u024F" ]  >
+|
+< #EXTENDED_WINDOWS_CHARACTERS:  [ "\u20AC", "\u201A", "\u201E", "\u2026", "\u2020", "\u02C6", "\u2030", "\u2039", "\u2018", "\u2019", "\u201C", "\u201D", "\u2022", "\u2013", "\u2014", "\u20DC", "\u2122", "\u203A", "\u00A0" - "\u00A9", "\u00AB" - "\u00AF", "\u00B0", "\u00B1", "\u00B4" - "\u00B8", "\u00BB" - "\u00BF", "\u00D7", "\u00F7" ]  >
+|
+< #GERMAN_SPECIAL_CHARACTERS: "Ä" | "Ö" | "Ü" | "ä" | "ü" | "ö" | "ß" >
+|
+< #LETTER: ["A"-"Z"] | ["a"-"z"] | <EXTENDED_LATIN_CHARACTERS> >
+|
+< #DIGIT: ["0"-"9"]>
+|
+< #_CHARACTER: <_CHARACTER_WO_ASTERISK> | "'" >
+|
+< #_CHARACTER_WO_ASTERISK: <LETTER> | <DIGIT> | "(" | ")" | "+" | "-" | "*" | "/" | "<" | ">"
+ | "=" | "!" | "~" | "^" | ";" | ":" | "." | "@" | "%" | "," | "\"" | "#"
+ | "$" | "&" | "_" | "|" | "{" | "}" | "?" | "[" | "]"
+ | " " | "\t" >
+|
+< #SPECIAL_CHARACTERS: "á" | "" | "" | "" | "" | "" | "ý" | "²" | "" | "³" | "µ">
+|
+< #DELIMITER: "+" | "%" | "'" | "\"" | "." | "/" | "(" | ")" | ":" | "," | "*" | "=" | "<" | ">" | "@" | ";" | "-">
+|
+< IDENTIFIER:
+	( ("$" | ":" | <LETTER>) ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* ) // 2006-05-17 - Matthias Hendler - Bind variablen werden nun als Identifier akzeptiert.
+	//SRT Does NOT seem to like identifiers 2 or fewer characters( <LETTER> ( <LETTER> )  )
+	//( <LETTER> ( <DIGIT>  ) )
+	//( <LETTER> ( "$" ) )
+	//( <LETTER> ( "_" ) )
+	//( <LETTER> ( "#" ) )
+	|
+	( (<LETTER> | "$" ) ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* )
+	|
+//SRT	( "\"" (<_CHARACTER_WO_ASTERISK>)* "\"" )
+	( "\""  <LETTER> ( <LETTER> | <DIGIT> | "$" | "_" | "#" )* "\"" )
+>
+|
+< UNSIGNED_NUMERIC_LITERAL: <FLOAT_LITERAL> ( ["e","E"] (["-","+"])? <FLOAT_LITERAL> )? (["f","F","d","D"])? >
+|
+< #FLOAT_LITERAL: <INTEGER_LITERAL> ( "." <INTEGER_LITERAL> )? | "." <INTEGER_LITERAL> >
+|
+< #INTEGER_LITERAL: ( <DIGIT> )+ >
+|
+
+< #_WHATEVER_CHARACTER_WO_ASTERISK: (~["'"]) >
+|
+< CHARACTER_LITERAL: "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> )? "'" >
+//|< STRING_LITERAL: 
+//  (["q","Q"])* "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | "''")* "'" 
+//> //Cope with Q-quoted stringswithout single quotes in them 
+|< STRING_LITERAL: 
+// Hard-code the most likely q-quote strings 
+             "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" 
+|(["n","N"]) "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" //National Character Set String 
+|(["q","Q"]) "'" (<_WHATEVER_CHARACTER_WO_ASTERISK> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "''")* "'" // Bug 160632
+|(["q","Q"]) "'[" (~["[","]"])* "]'" 
+|(["q","Q"]) "'{" (~["{","}"])* "}'" 
+|(["q","Q"]) "'<" (~["<",">"])* ">'" 
+|(["q","Q"]) "'(" (~["(",")"])* ")'" 
+|(["q","Q"]) "'/" (~["/"])* "/'" 
+|(["q","Q"]) "'!" (~["!"])* "!'" 
+|(["q","Q"]) "'#" (~["#"])* "#'" 
+> //Cope with Q-quoted stringswithout single quotes in them 
+|
+< #_WHATEVER_CHARACTER_WO_QUOTE: (~["\""]) >
+|
+< QUOTED_LITERAL: "\"" (<_WHATEVER_CHARACTER_WO_QUOTE> | <SPECIAL_CHARACTERS> | <EXTENDED_WINDOWS_CHARACTERS> | "\\\"")* "\"" >
+| 
+< SQLDATA_CLASS: "SQLData" >
+| 
+< CUSTOMDATUM_CLASS: "CustomDatum" >
+| 
+< ORADATA_CLASS:  "OraData"  >
+| 
+< JAVA_INTERFACE_CLASS: ( "SQLData" | "CustomDatum" | "OraData" ) >
+//|
+//< #BOOLEAN_LITERAL: "TRUE" | "FALSE" >
+| 
+<SQLPLUS_TERMINATOR: ( ";" | "/" ) >
+}
+
+//SRT 2011-04-17 - START 
+Token KEYWORD_RESERVED (): {}
+{
+// PL/SQL RESERVED WORDS - V$RESERVED.RESERVED='Y' 
+( <ALL>
+| <ALTER>
+| <AND>
+| <ANY>
+| <AS>
+| <ASC>
+| <BETWEEN>
+| <BY>
+| <CHAR>
+| <CHECK>
+| <CLUSTER>
+| <COMPRESS>
+| <CONNECT>
+| <CREATE>
+| <DATE>
+| <DECIMAL>
+| <_DEFAULT>
+| <DELETE>
+| <DESC>
+| <DISTINCT>
+| <DROP>
+| <ELSE>
+| <EXCLUSIVE>
+| <EXISTS>
+| <FLOAT>
+| <FOR>
+| <FROM>
+| <GRANT>
+| <GROUP>
+| <HAVING>
+| <IDENTIFIED>
+| <IN>
+| <INDEX>
+| <INSERT>
+| <INTEGER>
+| <INTERSECT>
+| <INTO>
+| <IS>
+| <LIKE>
+| <LOCK>
+| <LONG>
+| <MINUS>
+| <MODE>
+| <NOCOMPRESS>
+| <NOT>
+| <NOWAIT>
+| <NULL>
+| <NUMBER>
+| <OF>
+| <ON>
+| <OPTION>
+| <OR>
+| <ORDER>
+| <PCTFREE>
+| <PRIOR>
+| <PUBLIC>
+| <RAW>
+//| <RENAME> // Bug-91 Although RENAME is a reserved word, it may be used in PLSQL as a name 
+| <RESOURCE>
+| <REVOKE>
+| <SELECT>
+| <SET>
+| <SHARE>
+| <SIZE>
+| <SMALLINT>
+| <START>
+| <SYNONYM>
+| <TABLE>
+| <THEN>
+| <TO>
+| <TRIGGER>
+| <UNION>
+| <UNIQUE>
+| <UPDATE>
+| <VALUES>
+| <VARCHAR>
+| <VARCHAR2>
+| <VIEW>
+| <WHERE>
+| <WITH>
+)
+ {return token;}
+}
+
+Token KEYWORD_UNRESERVED (): {}
+{
+// PL/SQL UNRESERVED KEYWORDS - V$RESERVED.RESERVED='N' 
+(<FALSE>
+ | <TRUE>
+ | <A>
+//| <ABORT>
+| <ACCEPT>
+//| <ACCESS>
+//| <ACCESSED>test_unreserved_keyword.pks
+//| <ACCOUNT>
+//| <ACTIVATE>
+| <ADD>
+//| <ADMIN>test_unreserved_keyword.pks
+//| <ADMINISTER>
+//| <ADMINISTRATOR>
+//| <ADVISE>
+//| <ADVISOR>
+| <AFTER>
+| <AGGREGATE>
+//| <ALIAS>
+//| <ALL_ROWS>
+//| <ALLOCATE>
+//| <ALLOW>
+//| <ALWAYS>
+| <ANALYZE>
+//| <ANCILLARY>
+//| <AND_EQUAL>
+//| <ANTIJOIN>
+//| <APPEND>
+//| <APPLY>
+//| <ARCHIVE>
+//| <ARCHIVELOG>
+//| <ARRAY>test_unreserved_keyword.pks
+| <ASSOCIATE>
+| <AT>
+| <ATTACH>
+| <ATTRIBUTE> //PLDoc Bug 3512149  test_unreserved_keyword.pks
+//| <ATTRIBUTES>
+| <AUDIT>
+| <AUTHENTICATED>
+//| <AUTHENTICATION>
+| <AUTHID>
+//| <AUTHORIZATION>
+//| <AUTO>
+//| <AUTOALLOCATE>
+//| <AUTOEXTEND>
+//| <AUTOMATIC>
+//| <AVAILABILITY>
+//| <BACKUP>
+//| <BATCH>
+//| <BECOME>
+| <BEFORE>
+//| <BEGIN>
+//| <BEGIN_OUTLINE_DATA>test_unreserved_keyword.pks
+//| <BEHALF>
+| <BFILE> //-test_unreserved_keyword.pks
+//| <BIGFILE>
+//| <BINARY_DOUBLE>
+//| <BINARY_DOUBLE_INFINITY>
+//| <BINARY_DOUBLE_NAN>
+//| <BINARY_FLOAT>
+//| <BINARY_FLOAT_INFINITY>
+//| <BINARY_FLOAT_NAN>
+//| <BINDING>
+//| <BITMAP>
+//| <BITMAP_TREE>
+//| <BITMAPS>
+//| <BITS>
+| <BLOB>
+//| <BLOCK>
+//| <BLOCK_RANGE>
+//| <BLOCKS>
+//| <BLOCKSIZE>
+//| <BODY>
+| <BOTH>
+//| <BOUND>
+//| <BROADCAST>
+//| <BUFFER>
+//| <BUFFER_CACHE>test_unreserved_keyword.pks
+//| <BUFFER_POOL>
+//| <BUILD>
+| <BULK>
+//| <BYPASS_RECURSIVE_CHECK>
+//| <BYPASS_UJVC>
+//| <BY> // RESERVED WORD !!!
+| <BYTE>//test_unreserved_keyword.pks
+//| <CACHE>
+//| <CACHE_CB>
+//| <CACHE_INSTANCES>
+//| <CACHE_TEMP_TABLE>
+| <CALL>
+//| <CANCEL>
+//| <CARDINALITY>
+| <CASCADE>
+//| <CASE>
+| <CAST>
+//| <CATEGORY>
+//| <CERTIFICATE>
+//| <CFILE>
+//| <CHAINED>
+//| <CHANGE>
+| <CHAR_CS>
+| <CHARACTER>
+| <CHARSETFORM>
+| <CHARSETID>
+//| <CHECKPOINT>
+//| <CHILD>
+//| <CHOOSE>
+//| <CHUNK>
+//| <CIV_GB>
+| <CLASS>
+//| <CLEAR>
+| <CLOB>
+//| <CLONE>
+| <CLOSE>
+//| <CLOSE_CACHED_OPEN_CURSORS>
+//| <CLUSTERING_FACTOR>
+| <COALESCE>
+//| <COARSE>
+| <COLLECT>
+| <COLUMN>
+//| <COLUMN_STATS>
+//| <COLUMN_VALUE>
+//| <COLUMNS>
+| <COMMENT>
+| <COMMIT>
+//| <COMMITTED>
+//| <COMPACT>
+//| <COMPATIBILITY>
+| <COMPILE>
+//| <COMPLETE>
+//| <COMPOSITE_LIMIT>
+| <COMPOUND>
+//| <COMPUTE>
+//| <CONFORMING>
+//| <CONNECT_BY_COST_BASED>
+//| <CONNECT_BY_FILTERING>
+//| <CONNECT_BY_ISCYCLE>
+//| <CONNECT_BY_ISLEAF>
+//| <CONNECT_BY_ROOT>
+//| <CONNECT_TIME>
+//| <CONSIDER>
+//| <CONSISTENT>
+//| <CONSTRAINT>
+//| <CONSTRAINTS>
+| <CONSTRUCTOR> 
+//| <CONTAINER>
+//| <CONTENT>
+//| <CONTENTS>
+| <CONTEXT>
+| <CONTINUE>
+//| <CONTROLFILE>
+| <CONVERT>
+| <COPY>
+//| <CORRUPTION>
+//| <COST>
+//| <CPU_COSTING>
+//| <CPU_PER_CALL>
+//| <CPU_PER_SESSION>
+//| <CREATE_STORED_OUTLINES>
+//| <CROSS>
+//| <CUBE>
+//| <CUBE_GB>
+| <CURRENT>
+//| <CURRENT_DATE>
+//| <CURRENT_SCHEMA>
+//| <CURRENT_TIME>
+//| <CURRENT_TIMESTAMP>
+| <CURRENT_USER>
+| <CURSOR>
+//| <CURSOR_SHARING_EXACT>
+//| <CURSOR_SPECIFIC_SEGMENT>
+//| <CYCLE>
+//| <DANGLING>
+| <DATA>
+| <DATABASE>
+//| <DATAFILE>
+//| <DATAFILES>
+//| <DATAOBJNO>
+//| <DATE_MODE>
+| <DAY>
+//| <DB_ROLE_CHANGE>
+//| <DBA>
+//| <DBA_RECYCLEBIN>
+//| <DBMS_STATS>
+| <DBTIMEZONE>
+| <DDL>
+//| <DEALLOCATE>
+//| <DEBUG>
+| <DEC>
+//| <DECLARE>
+//| <DECREMENT>
+//| <DECRYPT>
+//| <DEFERRABLE>
+//| <DEFERRED>
+//| <DEFINED>
+| <DEFINE>
+| <DEFINER>
+//| <DEGREE>
+//| <DELAY>
+//| <DEMAND>
+//| <DENSE_RANK>
+//| <DEQUEUE>
+//| <DEREF>
+//| <DEREF_NO_REWRITE>
+//| <DETACHED>
+//| <DETERMINES>
+//| <DICTIONARY>
+//| <DIMENSION>
+| <DIRECTORY>
+| <DISABLE>
+//| <DISABLE_RPKE>
+| <DISASSOCIATE>
+| <DISCONNECT>
+//| <DISK>
+//| <DISKGROUP>
+//| <DISKS>
+//| <DISMOUNT>
+//| <DISTINGUISHED>
+//| <DISTRIBUTED>
+//| <DML>
+//| <DML_UPDATE>
+//| <DOCUMENT>
+//| <DOMAIN_INDEX_NO_SORT>
+//| <DOMAIN_INDEX_SORT>
+| <DOUBLE>
+//| <DOWNGRADE>
+//| <DRIVING_SITE>
+//| <DUMP>
+//| <DYNAMIC>
+//| <DYNAMIC_SAMPLING>
+//| <DYNAMIC_SAMPLING_EST_CDN>
+//| <E>
+| <EACH>
+| <ELEMENT>
+//| <ELIMINATE_JOIN>
+//| <ELIMINATE_OBY>
+//| <ELIMINATE_OUTER_JOIN>
+| <EMPTY>
+| <ENABLE>
+//| <ENCRYPT>
+//| <ENCRYPTION>
+//| <END>
+//| <END_OUTLINE_DATA>
+//| <ENFORCE>
+//| <ENFORCED>
+//| <ENQUEUE>
+//| <ENTERPRISE>
+//| <ENTRY>
+//| <ERROR>
+//| <ERROR_ON_OVERLAP_TIME>
+//| <ERRORS>
+| <ESCAPE>
+//| <ESTIMATE>
+//| <EVALNAME>
+//| <EVALUATION>
+//| <EVENTS>
+| <EXCEPT>
+| <EXCEPTIONS>
+//| <EXCHANGE>
+//| <EXCLUDING>
+//| <EXECUTE>
+//| <EXEMPT>
+//| <EXPAND_GSET_TO_UNION>
+//| <EXPIRE>
+//| <EXPLAIN>
+//| <EXPLOSION>
+//| <EXPORT>
+//| <EXPR_CORR_CHECK>
+| <EXTENDS>
+//| <EXTENT>
+//| <EXTENTS>
+| <EXTERNAL>
+//| <EXTERNALLY>
+| <EXTRACT>
+//| <FACT>
+//| <FAILED>
+//| <FAILED_LOGIN_ATTEMPTS>
+//| <FAILGROUP>
+//| <FAST>
+//| <FBTSCAN>
+//| <FIC_CIV>
+//| <FIC_PIV>
+//| <FILE>
+//| <FILTER>
+| <FINAL>
+//| <FINE>
+//| <FINISH>
+//| <FIRST>
+//| <FIRST_ROWS>
+//| <FLAGGER>
+//| <FLASHBACK>
+//| <FLOB>
+//| <FLUSH>
+//| <FOLLOWING>
+| <FOLLOWS>
+| <FORCE>
+//| <FORCE_XML_QUERY_REWRITE>
+//| <FOREIGN>
+//| <FREELIST>
+//| <FREELISTS>
+//| <FREEPOOLS>
+//| <FRESH>
+//| <FULL>
+| <FUNCTION>
+//| <FUNCTIONS>
+//| <G>
+//| <GATHER_PLAN_STATISTICS>
+//| <GBY_CONC_ROLLUP>
+//| <GENERATED>
+| <GLOBAL>
+//| <GLOBAL_NAME>
+//| <GLOBAL_TOPIC_ENABLED>
+//| <GLOBALLY>
+//| <GROUP_BY>
+//| <GROUPING>
+//| <GROUPS>
+//| <GUARANTEE>
+//| <GUARANTEED>
+//| <GUARD>
+| <HASH>
+//| <HASH_AJ>
+//| <HASH_SJ>
+//| <HASHKEYS>
+//| <HEADER>
+| <HEAP>
+//| <HIERARCHY>
+//| <HIGH>
+//| <HINTSET_BEGIN>
+//| <HINTSET_END>
+| <HOST>
+| <HOUR>
+//| <HWM_BROKERED>
+//| <ID>
+//| <IDENTIFIER>
+//| <IDENTITY>
+//| <IDGENERATORS>
+//| <IDLE_TIME>
+//| <IF>
+//| <IGNORE>
+//| <IGNORE_OPTIM_EMBEDDED_HINTS>
+//| <IGNORE_WHERE_CLAUSE>
+| <IMMEDIATE>
+//| <IMPORT>
+//| <IN_MEMORY_METADATA>
+//| <INCLUDE_VERSION>
+//| <INCLUDING>
+//| <INCREMENT>
+//| <INCREMENTAL>
+//| <INDEX_ASC>
+//| <INDEX_COMBINE>
+//| <INDEX_DESC>
+//| <INDEX_FFS>
+//| <INDEX_FILTER>
+//| <INDEX_JOIN>
+//| <INDEX_ROWS>
+//| <INDEX_RRS>
+//| <INDEX_RS>
+//| <INDEX_RS_ASC>
+//| <INDEX_RS_DESC>
+//| <INDEX_SCAN>
+//| <INDEX_SKIP_SCAN>
+//| <INDEX_SS>
+//| <INDEX_SS_ASC>
+//| <INDEX_SS_DESC>
+//| <INDEX_STATS>
+//| <INDEXED>
+//| <INDEXES>
+| <INDEXTYPE>
+//| <INDEXTYPES>
+| <INDICATOR>
+| <INDICES> // FORALL i I INDICES OF collection - SPARSE COLLECTIONS 
+//| <INFINITE>
+//| <INFORMATIONAL>
+//| <INITIAL>
+//| <INITIALIZED>
+//| <INITIALLY>
+//| <INITRANS>
+//| <INLINE>
+//| <INLINE_XMLTYPE_NT>
+//| <INNER>
+//| <INSTANCE>
+//| <INSTANCES>
+| <INSTANTIABLE>
+//| <INSTANTLY>
+//| <INSTEAD>
+//| <INT>
+//| <INTERMEDIATE>
+//| <INTERNAL_CONVERT>
+//| <INTERNAL_USE>
+//| <INTERPRETED>
+| <INTERVAL>
+| <INVALIDATE>
+| <ISOLATION>
+//| <ISOLATION_LEVEL>
+//| <ITERATE>
+//| <ITERATION_NUMBER>
+| <JAVA>
+//| <JOB>
+//| <JOIN>
+//| <K>
+//| <KEEP>
+//| <KERBEROS>
+//| <KEY>
+//| <KEY_LENGTH>
+//| <KEYS>
+//| <KEYSIZE>
+//| <KILL>
+| <LANGUAGE>
+//| <LAST>
+//| <LATERAL>
+//| <LAYER>
+//| <LDAP_REG_SYNC_INTERVAL>
+//| <LDAP_REGISTRATION>
+//| <LDAP_REGISTRATION_ENABLED>
+| <LEADING>
+| <LEFT>
+| <LENGTH>
+//| <LESS>
+| <LEVEL>
+//| <LEVELS>
+| <LIBRARY>
+//| <LIKE_EXPAND>
+//| <LIKE2>
+//| <LIKE4>
+//| <LIKEC>
+| <LIMIT>
+| <LINK>
+//| <LIST>
+//| <LOB>
+| <LOCAL>
+//| <LOCAL_INDEXES>
+//| <LOCALTIME>
+//| <LOCALTIMESTAMP>
+//| <LOCATION>
+//| <LOCATOR>
+//| <LOCKED>
+//| <LOG>
+//| <LOGFILE>
+//| <LOGGING>
+//| <LOGICAL>
+//| <LOGICAL_READS_PER_CALL>
+//| <LOGICAL_READS_PER_SESSION>
+| <LOGOFF>
+| <LOGON>
+//| <M>
+//| <MAIN>
+//| <MANAGE>
+//| <MANAGED>
+//| <MANAGEMENT>
+//| <MANUAL>
+| <MAP> // Bug 3512150
+//| <MAPPING>
+//| <MASTER>
+//| <MATCHED>
+//| <MATERIALIZE>
+//| <MATERIALIZED>
+| <MAX>
+//| <MAXARCHLOGS>
+//| <MAXDATAFILES>
+//| <MAXEXTENTS>
+//| <MAXIMIZE>
+//| <MAXINSTANCES>
+| <MAXLEN>
+//| <MAXLOGFILES>
+//| <MAXLOGHISTORY>
+//| <MAXLOGMEMBERS>
+//| <MAXSIZE>
+//| <MAXTRANS>
+//| <MAXVALUE>
+//| <MEASURES>
+| <MEMBER>
+//| <MEMORY>
+| <MERGE>
+//| <MERGE_AJ>
+//| <MERGE_CONST_ON>
+//| <MERGE_SJ>
+//| <METHOD>
+//| <MIGRATE>
+| <MIN>
+//| <MINEXTENTS>
+//| <MINIMIZE>
+//| <MINIMUM>
+//| <MINUS_NULL>
+| <MINUTE>
+//| <MINVALUE>
+//| <MIRROR>
+| <MLSLABEL>
+//| <MODEL>
+//| <MODEL_COMPILE_SUBQUERY>
+//| <MODEL_DONTVERIFY_UNIQUENESS>
+//| <MODEL_DYNAMIC_SUBQUERY>
+//| <MODEL_MIN_ANALYSIS>
+//| <MODEL_NO_ANALYSIS>
+//| <MODEL_PBY>
+//| <MODEL_PUSH_REF>
+| <MODIFY>
+//| <MONITORING>
+| <MONTH>
+//| <MOUNT>
+//| <MOVE>
+//| <MOVEMENT>
+| <MULTISET>
+//| <MV_MERGE>
+| <NAME>
+| <NAMED>
+//| <NAN>
+//| <NATIONAL>
+//| <NATIVE>
+//| <NATIVE_FULL_OUTER_JOIN>
+| <NATURAL>
+//| <NAV>
+| <NCHAR>
+| <NCHAR_CS>
+| <NCLOB>
+//| <NEEDED>
+| <NESTED>
+//| <NESTED_TABLE_FAST_INSERT>
+//| <NESTED_TABLE_GET_REFS>
+//| <NESTED_TABLE_ID>
+//| <NESTED_TABLE_SET_REFS>
+//| <NESTED_TABLE_SET_SETID>
+//| <NETWORK>
+//| <NEVER>
+| <NEW>
+//| <NEXT>
+//| <NL_AJ>
+//| <NL_SJ>
+//| <NLS_CALENDAR>
+//| <NLS_CHARACTERSET>
+//| <NLS_COMP>
+//| <NLS_CURRENCY>
+//| <NLS_DATE_FORMAT>
+//| <NLS_DATE_LANGUAGE>
+//| <NLS_ISO_CURRENCY>
+//| <NLS_LANG>
+//| <NLS_LANGUAGE>
+//| <NLS_LENGTH_SEMANTICS>
+//| <NLS_NCHAR_CONV_EXCP>
+//| <NLS_NUMERIC_CHARACTERS>
+//| <NLS_SORT>
+//| <NLS_SPECIAL_CHARS>
+//| <NLS_TERRITORY>
+| <NO>
+//| <NO_ACCESS>
+//| <NO_BASETABLE_MULTIMV_REWRITE>
+//| <NO_BUFFER>
+//| <NO_CARTESIAN>
+//| <NO_CONNECT_BY_COST_BASED>
+//| <NO_CONNECT_BY_FILTERING>
+//| <NO_CPU_COSTING>
+//| <NO_ELIMINATE_JOIN>
+//| <NO_ELIMINATE_OBY>
+//| <NO_ELIMINATE_OUTER_JOIN>
+//| <NO_EXPAND>
+//| <NO_EXPAND_GSET_TO_UNION>
+//| <NO_FACT>
+//| <NO_FILTERING>
+//| <NO_INDEX>
+//| <NO_INDEX_FFS>
+//| <NO_INDEX_RS>
+//| <NO_INDEX_SS>
+//| <NO_MERGE>
+//| <NO_MODEL_PUSH_REF>
+//| <NO_MONITORING>
+//| <NO_MULTIMV_REWRITE>
+//| <NO_NATIVE_FULL_OUTER_JOIN>
+//| <NO_ORDER_ROLLUPS>
+//| <NO_PARALLEL>
+//| <NO_PARALLEL_INDEX>
+//| <NO_PARTIAL_COMMIT>
+//| <NO_PRUNE_GSETS>
+//| <NO_PULL_PRED>
+//| <NO_PUSH_PRED>
+//| <NO_PUSH_SUBQ>
+//| <NO_PX_JOIN_FILTER>
+//| <NO_QKN_BUFF>
+//| <NO_QUERY_TRANSFORMATION>
+//| <NO_REF_CASCADE>
+//| <NO_REWRITE>
+//| <NO_SEMIJOIN>
+//| <NO_SET_TO_JOIN>
+//| <NO_SQL_TUNE>
+//| <NO_STAR_TRANSFORMATION>
+//| <NO_STATS_GSETS>
+//| <NO_SWAP_JOIN_INPUTS>
+//| <NO_TEMP_TABLE>
+//| <NO_UNNEST>
+//| <NO_USE_HASH>
+//| <NO_USE_HASH_AGGREGATION>
+//| <NO_USE_MERGE>
+//| <NO_USE_NL>
+//| <NO_XML_DML_REWRITE>
+//| <NO_XML_QUERY_REWRITE>
+//| <NOAPPEND>
+//| <NOARCHIVELOG>
+| <NOAUDIT>
+//| <NOCACHE>
+//| <NOCPU_COSTING>
+//| <NOCYCLE>
+//| <NODELAY>
+//| <NOFORCE>
+//| <NOGUARANTEE>
+//| <NOLOGGING>
+//| <NOMAPPING>
+//| <NOMAXVALUE>
+//| <NOMINIMIZE>
+//| <NOMINVALUE>
+//| <NOMONITORING>
+//| <NONE>
+//| <NOORDER>
+//| <NOOVERRIDE>
+//| <NOPARALLEL>
+//| <NOPARALLEL_INDEX>
+//| <NORELY>
+//| <NOREPAIR>
+//| <NORESETLOGS>
+//| <NOREVERSE>
+//| <NOREWRITE>
+//| <NORMAL>
+//| <NOROWDEPENDENCIES>
+//| <NOSEGMENT>
+//| <NOSORT>
+//| <NOSTRICT>
+//| <NOSWITCH>
+//| <NOTHING>
+//| <NOTIFICATION>
+//| <NOVALIDATE>
+//| <NULLS>
+//| <NUM_INDEX_KEYS>
+| <NUMERIC>
+| <NVARCHAR2>
+| <OBJECT>
+//| <OBJNO>
+//| <OBJNO_REUSE>
+//| <OFF>
+//| <OFFLINE>
+| <OID>
+//| <OIDINDEX>
+| <OLD>
+//| <OLD_PUSH_PRED>
+//| <ONLINE>
+//| <ONLY>
+| <OPAQUE>
+//| <OPAQUE_TRANSFORM>
+//| <OPAQUE_XCANONICAL>
+//| <OPCODE>
+| <OPEN>
+//| <OPERATOR>
+//| <OPT_ESTIMATE>
+//| <OPT_PARAM>
+//| <OPTIMAL>
+//| <OPTIMIZER_FEATURES_ENABLE>
+//| <OPTIMIZER_GOAL>
+//| <OR_EXPAND>
+//| <ORA_ROWSCN>
+//| <ORDERED>
+//| <ORDERED_PREDICATES>
+//| <ORDINALITY>
+| <ORGANIZATION>
+| <OTHERS>
+//| <OUT_OF_LINE>
+//| <OUTER>
+//| <OUTLINE>
+//| <OUTLINE_LEAF>
+//| <OVER>
+//| <OVERFLOW>
+//| <OVERFLOW_NOMOVE>
+//| <OVERLAPS>
+| <OVERRIDING>
+//| <OWN>
+//| <P>
+| <PACKAGE>
+//| <PACKAGES>
+//| <PARALLEL>
+//| <PARALLEL_INDEX>
+| <PARAMETERS>
+| <PARENT>
+//| <PARITY>
+//| <PARTIALLY>
+| <PARTITION>
+//| <PARTITION_HASH>
+//| <PARTITION_LIST>
+//| <PARTITION_RANGE>
+//| <PARTITIONS>
+//| <PASSING>
+//| <PASSWORD>
+//| <PASSWORD_GRACE_TIME>
+//| <PASSWORD_LIFE_TIME>
+//| <PASSWORD_LOCK_TIME>
+//| <PASSWORD_REUSE_MAX>
+//| <PASSWORD_REUSE_TIME>
+//| <PASSWORD_VERIFY_FUNCTION>
+//| <PATH>
+//| <PATHS>
+//| <PCTINCREASE>
+//| <PCTTHRESHOLD>
+//| <PCTUSED>
+//| <PCTVERSION>
+//| <PERCENT>
+//| <PERFORMANCE>
+//| <PERMANENT>
+//| <PFILE>
+//| <PHYSICAL>
+//| <PIV_GB>
+//| <PIV_SSF>
+//| <PLAN>
+//| <PLSQL_CCFLAGS>
+//| <PLSQL_CODE_TYPE>
+//| <PLSQL_DEBUG>
+//| <PLSQL_OPTIMIZE_LEVEL>
+//| <PLSQL_WARNINGS>
+//| <POINT>
+//| <POLICY>
+//| <POST_TRANSACTION>
+//| <POWER>
+//| <PQ_DISTRIBUTE>
+//| <PQ_MAP>
+//| <PQ_NOMAP>
+//| <PREBUILT>
+//| <PRECEDING>
+| <PRECISION>
+//| <PRECOMPUTE_SUBQUERY>
+//| <PREPARE>
+//| <PRESENT>
+| <PRESERVE>
+//| <PRESERVE_OID>
+//| <PRIMARY>
+| <PRINT>
+//| <PRIVATE>
+//| <PRIVATE_SGA>
+//| <PRIVILEGE>
+//| <PRIVILEGES>
+| <PROCEDURE>
+//| <PROFILE>
+//| <PROGRAM>
+//| <PROJECT>
+//| <PROTECTED>
+//| <PROTECTION>
+//| <PULL_PRED>
+//| <PURGE>
+//| <PUSH_PRED>
+//| <PUSH_SUBQ>
+//| <PX_GRANULE>
+//| <PX_JOIN_FILTER>
+//| <QB_NAME>
+//| <QUERY>
+//| <QUERY_BLOCK>
+//| <QUEUE>
+//| <QUEUE_CURR>
+//| <QUEUE_ROWP>
+| <QUIT>
+//| <QUIESCE>
+//| <QUOTA>
+//| <RANDOM>
+| <RANGE>
+//| <RAPIDLY>
+//| <RBA>
+//| <RBO_OUTLINE>
+//| <READ>
+//| <READS>
+| <REAL>
+//| <REBALANCE>
+//| <REBUILD>
+| <RECORD>
+//| <RECORDS_PER_BLOCK>
+//| <RECOVER>
+//| <RECOVERABLE>
+//| <RECOVERY>
+//| <RECYCLE>
+//| <RECYCLEBIN>
+//| <REDUCED>
+//| <REDUNDANCY>
+| <REF>
+//| <REF_CASCADE_CURSOR>
+//| <REFERENCE>
+//| <REFERENCED>
+//| <REFERENCES>
+//| <REFERENCING>
+//| <REFRESH>
+//| <REGEXP_LIKE>
+//| <REGISTER>
+//| <REJECT>
+//| <REKEY>
+//| <RELATIONAL>
+//| <RELY>
+| <RELIES_ON>
+| <REMARK>
+//| <REMOTE_MAPPED>
+//| <REPAIR>
+//| <REPLACE>
+//| <REQUIRED>
+//| <RESET>
+//| <RESETLOGS>
+//| <RESIZE>
+| <RESOLVE>
+| <RESOLVER>
+//| <RESTORE>
+//| <RESTORE_AS_INTERVALS>
+//| <RESTRICT>
+//| <RESTRICT_ALL_REF_CONS>
+//| <RESTRICTED>
+//| <RESUMABLE>
+| <RESULT>
+| <RESULT_CACHE> 
+//| <RESUME>
+//| <RETENTION>
+| <RETURN>
+| <RETURNING>
+//| <REUSE>
+| <REVERSE>
+//| <REWRITE>
+//| <REWRITE_OR_ERROR>
+| <RIGHT>
+//| <ROLE>
+//| <ROLES>
+| <ROLLBACK>
+//| <ROLLING>
+//| <ROLLUP>
+| <ROW>
+//| <ROW_LENGTH>
+//| <ROWDEPENDENCIES>
+| <ROWID>
+| <ROWNUM>
+| <ROWS>
+//| <RULE>
+//| <RULES>
+//| <SALT>
+//| <SAMPLE>
+| <SAVE>
+//| <SAVE_AS_INTERVALS>
+| <SAVEPOINT>
+//| <SB4>
+//| <SCALE>
+//| <SCALE_ROWS>
+//| <SCAN>
+//| <SCAN_INSTANCES>
+//| <SCHEDULER>
+| <SCHEMA>
+//| <SCN>
+//| <SCN_ASCENDING>
+//| <SCOPE>
+//| <SD_ALL>
+//| <SD_INHIBIT>
+//| <SD_SHOW>
+| <SECOND>
+//| <SECURITY>
+//| <SEED>
+//| <SEG_BLOCK>
+//| <SEG_FILE>
+//| <SEGMENT>
+//| <SELECTIVITY>
+| <SELF> //20110524
+//| <SEMIJOIN>
+//| <SEMIJOIN_DRIVER>
+//| <SEQUENCE>
+//| <SEQUENCED>
+//| <SEQUENTIAL>
+//| <SERIALIZABLE>
+| <SERVERERROR>
+//| <SESSION>
+//| <SESSION_CACHED_CURSORS>
+//| <SESSIONS_PER_USER>
+| <SESSIONTIMEZONE>
+//| <SESSIONTZNAME>
+| <SET> //SET is defined as a reserved word but is used in "SYS"."DBMS_RESULT_CACHE_API" as a function name and as a pragma parameter
+//| <SET_TO_JOIN>
+//| <SETS>
+//| <SETTINGS>
+//| <SEVERE>
+| <SHARED>
+//| <SHARED_POOL>
+//| <SHRINK>
+| <SHUTDOWN>
+//| <SIBLINGS>
+//| <SID>
+//| <SIMPLE>
+//| <SINGLE>
+//| <SINGLETASK>
+//| <K_SKIP>
+//| <SKIP_EXT_OPTIMIZER>
+//| <SKIP_UNQ_UNUSABLE_IDX>
+//| <SKIP_UNUSABLE_INDEXES>
+//| <SMALLFILE>
+//| <SNAPSHOT>
+//| <SOME>
+//| <SORT>
+| <SOURCE>
+| <SPACE>
+//| <SPECIFICATION>
+//| <SPFILE>
+//| <SPLIT>
+//| <SPREADSHEET>
+//| <SQL>
+//| <SQL_TRACE>
+//| <SQLLDR>
+//| <STANDALONE>
+//| <STANDBY>
+//| <STAR>
+//| <STAR_TRANSFORMATION>
+| <STARTUP>
+| <STATEMENT>
+//| <STATEMENT_ID>
+| <STATIC>
+| <STATISTICS>
+//| <STOP>
+//| <STORAGE>
+//| <STORE>
+//| <STREAMS>
+//| <STRICT>
+//| <STRING>
+//| <STRIP>
+| <STRUCT>
+//| <STRUCTURE>
+| <SUBMULTISET>
+//| <SUBPARTITION>
+//| <SUBPARTITION_REL>
+//| <SUBPARTITIONS>
+//| <SUBQUERIES>
+| <SUBSTITUTABLE>
+| <SUBTYPE> // XDBPM_ANALYZE_XMLSCHEMA 
+| <SUCCESSFUL>
+//| <SUMMARY>
+//| <SUPPLEMENTAL>
+| <SUSPEND>
+//| <SWAP_JOIN_INPUTS>
+//| <SWITCH>
+//| <SWITCHOVER>
+//| <SYS_DL_CURSOR>
+//| <SYS_FBT_INSDEL>
+//| <SYS_OP_BITVEC>
+//| <SYS_OP_CAST>
+//| <SYS_OP_ENFORCE_NOT_NULL$>
+//| <SYS_OP_EXTRACT>
+//| <SYS_OP_NOEXPAND>
+//| <SYS_OP_NTCIMG$>
+//| <SYS_PARALLEL_TXN>
+//| <SYS_RID_ORDER>
+//| <SYSAUX>
+//| <SYSDATE>
+//| <SYSDBA>
+//| <SYSOPER>
+//| <SYSTEM>
+//| <SYSTIMESTAMP>
+//| <T>
+//| <TABLE_STATS>
+//| <TABLES>
+//| <TABLESPACE>
+//| <TABLESPACE_NO>
+//| <TABNO>
+| <TDO>
+//| <TEMP_TABLE>
+//| <TEMPFILE>
+//| <TEMPLATE>
+| <TEMPORARY>
+//| <TEST>
+//| <THAN>
+//| <THE>
+//| <THREAD>
+//| <THROUGH>
+| <TIME>
+//| <TIME_ZONE>
+//| <TIMEOUT>
+| <TIMESTAMP>
+| <TIMEZONE_ABBR>
+| <TIMEZONE_HOUR>
+| <TIMEZONE_MINUTE>
+//| <TIMEZONE_OFFSET>
+| <TIMEZONE_REGION>
+//| <TIV_GB>
+//| <TIV_SSF>
+//| <TO_CHAR>
+//| <TOPLEVEL>
+//| <TRACE>
+//| <TRACING>
+//| <TRACKING>
+| <TRAILING>
+| <TRANSACTION>
+//| <TRANSITIONAL>
+| <TREAT>
+//| <TRIGGERS>
+| <TRIM>
+| <TRUNCATE>
+//| <TRUSTED>
+//| <TUNING>
+//| <TX>
+//| <TYPE>
+//| <TYPES>
+//| <TZ_OFFSET>
+//| <U>
+//| <UB2>
+//| <UBA>
+//| <UID>
+//| <UNARCHIVED>
+//| <UNBOUND>
+//| <UNBOUNDED>
+| <UNDEFINE>
+| <UNDER>
+//| <UNDO>
+//| <UNDROP>
+//| <UNIFORM>
+//| <UNLIMITED>
+//| <UNLOCK>
+//| <UNNEST>
+//| <UNPACKED>
+//| <UNPROTECTED>
+//| <UNQUIESCE>
+//| <UNRECOVERABLE>
+//| <UNTIL>
+//| <UNUSABLE>
+//| <UNUSED>
+//| <UPD_INDEXES>
+//| <UPD_JOININDEX>
+//| <UPDATABLE>
+//| <UPDATED>
+//| <UPGRADE>
+//| <UPSERT>
+| <UROWID>
+//| <USAGE>
+//| <USE>
+//| <USE_ANTI>
+//| <USE_CONCAT>
+//| <USE_HASH>
+//| <USE_HASH_AGGREGATION>
+//| <USE_MERGE>
+//| <USE_NL>
+//| <USE_NL_WITH_INDEX>
+//| <USE_PRIVATE_OUTLINES>
+//| <USE_SEMI>
+//| <USE_STORED_OUTLINES>
+//| <USE_TTT_FOR_GSETS>
+//| <USE_WEAK_NAME_RESL>
+| <USER>
+//| <USER_DEFINED>
+//| <USER_RECYCLEBIN>
+//| <USERS>
+| <USING>
+//| <VALIDATE>
+//| <VALIDATION>
+//| <VALUE>
+| <VARRAY>
+| <VARIABLE>
+| <VARYING>
+//| <VECTOR_READ>
+//| <VECTOR_READ_TRACE>
+//| <VERSION>
+//| <VERSIONS>
+//| <WAIT>
+//| <WALLET>
+//| <WELLFORMED>
+//| <WHEN>
+| <WHENEVER>
+//| <WHITESPACE>
+//| <WITHIN>
+//| <WITHOUT>
+//| <WORK>
+//| <WRAPPED>
+//| <WRITE>
+//| <X_DYN_PRUNE>
+//| <XID>
+//| <XML_DML_RWT_STMT>
+//| <XMLATTRIBUTES>
+//| <XMLCOLATTVAL>
+//| <XMLELEMENT>
+//| <XMLFOREST>
+//| <XMLNAMESPACES>
+//| <XMLPARSE>
+//| <XMLPI>
+//| <XMLQUERY>
+//| <XMLROOT>
+//| <XMLSCHEMA>
+//| <XMLSERIALIZE>
+//| <XMLTABLE>
+//| <XMLTYPE>
+| <YEAR>
+| <YES>
+| <ZONE>
+| <SHOW>  // APEX_0400000.WWW_CALCUATOR.SHOW  
+| <WRAPPED>  // APEX_0400000.WWW_CALCUATOR.SHOW  
+| <SYS_REFCURSOR> //Not a keyword - just a type defined in standard 
+| <EDITIONABLE> 
+| <NONEDITIONABLE> 
+| <ACCESSIBLE> 
+| <NULLIF> 
+| <RENAME>
+| <RELEASE>  // RELEASE - 
+)
+
+{ return token; }
+}
+
+//SRT 2011-04-17 - END  */
+/**
+ * 2006-05-20 - Matthias Hendler - added <OLD> and <PARENT>  
+ */
+Token ID(): {}
+{
+	(<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		/*KEYWORDS_UNRESERVED 
+		|<EXTRACT> | <FALSE> | <TRUE>  | <SECOND> | <MINUTE> | <HOUR> | <DAY> | <MONTH> | <YEAR> 
+		 | <NO> |<ROW>  | <COMMENT> | <CURSOR> 
+		*/
+		| <REPLACE> //SYNTAX  
+		//20120501 | <DEFINER> 
+		| <SERIALLY_REUSABLE> | <RESTRICT_REFERENCES> 
+		| <EXCEPTION_INIT> | <AUTONOMOUS_TRANSACTION> // | <LANGUAGE>
+		| <ALL>  //RESERVED WORD 
+		| <ALTER>  //SYNTAX  //RESERVED WORD 
+		| <AND>  //SYNTAX  //RESERVED WORD 
+		| <ANY>  //RESERVED WORD 
+		| <ARRAY> 
+		| <AS>  //SYNTAX  //RESERVED WORD 
+		| <ASC>  //RESERVED WORD 
+		//20120429 | <AT> | <AUTHID> 
+		| <AVG> 
+		//	<BEGIN> |
+		| <BETWEEN>  //RESERVED WORD
+		| <BINARY_INTEGER> 
+		| <BODY> //SYNTAX 
+		| <BOOLEAN> 
+		//201020430 | <BULK> 
+		| <BY> //RESERVED WORD 
+		//201020430 | <BYTE> 
+		| <CASE> //SYNTAX 
+		| <CHAR>  //RESERVED WPRDS 
+		| <CHAR_BASE> 
+		| <CHECK>  //RESERVED WPRDS 
+		//20120501 | <CLOSE> //SYNTAX 
+		| <CLUSTER> //-<COALESCE> |
+		//20120501 | <COLLECT> 
+		| <COMPRESS>  //RESERVED WPRDS 
+		| <CONNECT> //SYNTAX //RESERVED WORD 
+		| <CONSTANT> 
+		| <CREATE> //SYNTAX //RESERVED WORD 
+		//20120501 | <CURRENT> 
+		| <CURRVAL> 
+		| <DATE> //RESERVED WORD 
+		| <DECLARE> //SYNTAX 
+		| <DECIMAL> //RESERVED WORD  
+		| <_DEFAULT> //RESERVED WORD 
+		| <DELETE>  //RESERVED WORD 
+		| <DESC>  //RESERVED WORD 
+		| <DISTINCT>  //RESERVED WORD 
+		| <DO> 
+		| <DROP>  //RESERVED WORD 
+		| <ELSE> //SYNTAX //RESERVED WORD 
+		| <ELSIF> //SYNTAX 
+		
+		//| <END> |<CURRENT_USER> 
+		| <EXCEPTION> //SYNTAX 
+		| <EXCLUSIVE> //SYNTAX //RESERVED WORD 
+		| <EXECUTE> //SYNTAX 
+		| <EXISTS> //SYNTAX //RESERVED WORD 
+		| <EXIT> //SYNTAX 
+		//20120501 | <EXTENDS> 
+		| <FETCH> //SYNTAX 
+		| <FLOAT> //SYNTAX //RESERVED WORD 
+		| <FOR>  //RESERVED WORD 
+		| <FORALL> //SYNTAX 
+		| <FROM>  //RESERVED WORD 
+		
+		// <COMMIT> | <FUNCTION> |	// this causes bug 643043 Procedure w/o params appears as variable
+		| <GOTO> //SYNTAX 
+		| <GROUP>  //RESERVED WORD 
+		| <HAVING>  //RESERVED WORD 
+		//20120501 | <HEAP> 
+		| <IF> //SYNTAX 
+		//20120501 | <IMMEDIATE> 
+		| <IN> //RESERVED WORD 
+		| <INDEX> //RESERVED WORD  
+		//20120501 | <INDICATOR> 
+		| <INSERT> //SYNTAX  //RESERVED WORD  
+		| <INTEGER>  //RESERVED WORD  
+		| <INTERFACE> 
+		| <INTERSECT>  //RESERVED WORD  
+		//20120501 | <INTERVAL> 
+		| <INTO>  //RESERVED WORD  
+		| <IS> //SYNTAX
+		//20120501 | <ISOLATION> | <JAVA> | <LEVEL> 
+		| <LIKE>  //RESERVED WORD  
+		| <LIMITED> 
+		| <LOCK> //SYNTAX  //RESERVED WORD  
+		| <LONG>  //RESERVED WORD  
+		| <LOOP> //SYNTAX 
+		//20120501 | <MAX> | <MIN> 
+		| <MINUS>  //RESERVED WORD  
+		//20120501 | <MLSLABEL> 
+		| <MOD> 
+		| <MODE> //RESERVED WORD   
+		//20120501 | <NATURAL> 
+		| <NATURALN> | <NEXTVAL> | <NOCOPY> 
+		| <NOT> //SYNTAX  //RESERVED WORD  
+		| <NOWAIT>  //RESERVED WORD  
+		| <NULL>  //RESERVED WORD  
+		//| <NULLIF> 
+		| <NUMBER>  //RESERVED WORD  
+		| <NUMBER_BASE> 
+		| <OCIROWID> 
+		| <OF>  //RESERVED WORD  
+		| <ON>  //RESERVED WORD  
+		//20120501 | <OPAQUE> 
+		| <BFILE_BASE> 
+		| <BLOB_BASE> |
+		//<CHAR_BASE> |
+		<CLOB_BASE> |
+		<DATE_BASE> 
+		//20120501 | <OPEN> 
+		| <OPERATOR> | <OPTION> 
+		| <OR> //SYNTAX  //RESERVED WORD  
+		| <ORDER>  //RESERVED WORD  
+		//20120501 | <ORGANIZATION> //| <OTHERS> 
+		| <OUT> 
+		//20120501 | <PACKAGE> //SYNTAX 
+		| <PCTFREE>  //RESERVED WORD  
+		| <PLS_INTEGER> | <POSITIVE> | <POSITIVEN> 
+		// <PRAGMA> |<PARTITION> | <RANGE> | <NEW> | <OLD> | 
+		| <PRIOR>  //RESERVED WORD  
+		| <PRIVATE> 
+		| <PROMPT> //SYNTAX 
+		
+		//	<PROCEDURE> | // this causes bug 643043 Procedure w/o params appears as variable
+		| <PUBLIC>  //RESERVED WORD  
+		| <RAISE> //SYNTAX 
+		| <RAW>  //RESERVED WORD  
+		//20120501 | <REAL> 
+		//<RECORD> | <RETURN> |  <SET> |<REF> | 
+		//20131021| <RELEASE> 
+		//20120501 | <REVERSE> 
+		//20120501 | <ROLLBACK> //SYNTAX 
+		//20120501 | <ROWID> 
+		//20120501 | <ROWNUM> 
+		| <ROWTYPE> 
+		//20120501 | <SAVEPOINT> //SYNTAX 
+		| <SELECT>  //SYNTAX  //RESERVED WORD  
+		| <SEPARATE> 
+		| <SHARE>  //RESERVED WORD  
+		| <SMALLINT>  //RESERVED WORD  
+		| <SQL>  
+		| <SQLCODE> | <SQLERRM> 
+		| <START>  //RESERVED WORD  
+		| <STDDEV> // <SUBTYPE> |
+		//20120501 | <SUCCESSFUL> 
+		| <SUM> 
+		| <SYNONYM>  //RESERVED WORD  
+		| <SYSDATE> 
+		| <TABLE>  //RESERVED WORD  
+		| <THEN> //SYNTAX  //RESERVED WORD  
+		//<SPACE> | <TIME> | <TIMESTAMP> | <TIMEZONE_REGION> | <TIMEZONE_ABBR> | <TIMEZONE_MINUTE> | <TIMEZONE_HOUR> | 
+		| <TO>  //RESERVED WORD  
+		| <TRIGGER>  //RESERVED WORD  
+		| <TYPE> 
+		| <UI> 
+		| <UPDATE> //SYNTAX 
+		| <VARCHAR>  //RESERVED WORD  
+		| <VARCHAR2>  //RESERVED WORD  
+		//20120501 | <DOUBLE> 
+		//20120501 | <DEC> 
+		//20120501 | <PRECISION> 
+		| <INT> 
+		//20120501 | <NUMERIC> 
+		| <SIGNTYPE> 
+		//20120429 | <NCHAR> | <NVARCHAR2> 
+		| <STRING> 
+		//| <UROWID> | <VARRAY> | <VARYING> 
+		//20120429 | <BFILE> | <BLOB> | <CLOB> | <NCLOB> 
+		| <WITH>  //RESERVED WORD  
+		| <WHILE> //SYNTAX 
+		// | <LOCAL> | <ZONE> | <CHARACTER>
+		//| <PARENT>  | <MEMBER> 
+		//20120429 | <CONSTRUCTOR> | <OBJECT> 
+		//PLDoc Bug 3512150  | <STATIC> 
+		//20120427 | <UNDER> | <RESULT> 
+		//20120428 | <FINAL> | <INSTANTIABLE> 
+	        // PlDoc Bug 3512150 | <MAP>
+	        //20120427 | <OVERRIDING>
+	        //20120427 | <OID> 
+		//20120428 | <AGGREGATE>
+		//| <SYS_REFCURSOR>
+		| <JAVA_INTERFACE_CLASS> | <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+		//20120427 | <EXTERNAL>
+                //SRT 20090608 ALTER TYPE key words 
+		//| <ADD>
+		//PLDoc Bug 3512149  | <ATTRIBUTE>
+		//| <ELEMENT>
+		//| <LIMIT>
+		//20120427 | <MODIFY>
+		//SRT 20110524 | <SELF> 
+	)
+	{ return token; }
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - added <OLD>, <NEW>, <LOOP>, <INT>
+ */
+Token unqualifiedID(): {}
+{
+	(
+		<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		| <BODY>
+		//20120501 | <INTERVAL>
+		| <MOD>
+		| <OPERATOR>
+		| <PRIVATE>
+		| <RAW>
+		| <REPLACE>
+		| <STRING>
+		| <SQL>
+		| <SQLCODE>
+		| <SQLERRM>
+		| <SYSDATE>
+		| <TYPE>
+		//| <OLD>  		
+		//| <NEW>			
+		| <LOOP> 
+		| <INT>
+		| <ARRAY>
+		//| <RESULT>
+	        //| KEYWORD_UNRESERVED()  //SRT 2011-04-17
+	)
+	{ return token; }
+}
+
+/**
+ * 2006-05-20 - Matthias Hendler - added <LIMIT>
+ */
+Token qualifiedID(): {}
+{
+	(
+		<IDENTIFIER>
+		| <QUOTED_LITERAL>
+	        | KEYWORD_UNRESERVED()  //SRT 2011-04-17
+		/*
+		| <EXTRACT> --Unreserved Key Word 
+		| <FALSE> --Unreserved Key Word 
+		| <TRUE> --Unreserved Key Word 
+		| <SECOND>
+		| <MINUTE>
+		| <HOUR>
+		| <DAY>
+		| <MONTH>
+		| <YEAR> --Unreserved Key Word 
+		| <NO> //SRT 
+		*/
+		| <REPLACE>
+		//20120501 | <DEFINER>
+		//| <CURRENT_USER>
+		| <SERIALLY_REUSABLE>
+		| <RESTRICT_REFERENCES>
+		| <EXCEPTION_INIT>
+		| <AUTONOMOUS_TRANSACTION>
+		// | <LANGUAGE>
+		//<ALL>
+		//<ALTER>
+		//<AND>
+		//<ANY>
+		| <ARRAY>
+		//<AS>
+		//<ASC>
+		//<AT>
+		//20120429 | <AUTHID>
+		| <AVG>
+		//<BEGIN>
+		//<BETWEEN>
+		| <BINARY_INTEGER>
+		| <BODY>
+		| <BOOLEAN>
+		//201020430 | <BULK>
+		//<BY>
+		//201020430 <BYTE>
+		//<CASE>
+		| <CHAR>
+		| <CHAR_BASE>
+		//<CHECK>
+		//20120501 | <CLOSE>
+		//<CLUSTER>
+		//| <COALESCE>
+		//20120501 | <COLLECT>
+		//| <COMMENT>
+		//| <COMMIT>
+		//<COMPRESS>
+		//<CONNECT>
+		| <CONSTANT>
+		//<CREATE>
+		//<CURRENT>
+		| <CURRVAL>
+		//| <CURSOR>
+		| <DATE>
+		//<DECLARE>
+		| <DECIMAL>
+		//<DEFAULT>
+		| <DELETE>
+		//<DESC>
+		//<DISTINCT>
+		| <DO>
+		//<DROP>
+		//<ELSE>
+		| <ELSIF>
+		//<END>
+		//<EXCEPTION>
+		//<EXCLUSIVE>
+		| <EXECUTE>
+		| <EXISTS>
+		| <EXIT>
+		//20120501 | <EXTENDS>
+		//<FETCH>
+		| <FLOAT>
+		//<FOR>
+		| <FORALL>
+		//<FROM>
+		//| <FUNCTION>
+		//<GOTO>
+		//<GROUP>
+		//<HAVING>
+		//20120501 | <HEAP>
+		//<IF>
+		//20120501 | <IMMEDIATE>
+		//<IN>
+		//<INDEX>
+		//20120501 | <INDICATOR>
+		//<INSERT>
+		| <INTEGER>
+		| <INTERFACE>
+		//<INTERSECT>
+		//20120501 | <INTERVAL>
+		//<INTO>
+		//<IS>
+		//20120501 | <ISOLATION>
+		//20120501 | <JAVA>
+		//20120501 | <LEVEL>
+		//<LIKE>
+		//| <LIMITED>
+		//<LOCK>
+		| <LONG>
+		| <LOOP>
+		//20120501 | <MAX>
+		//20120501 | <MIN>
+		//<MINUS>
+		//20120501 | <MLSLABEL>
+		| <MOD>
+		//<MODE>
+		//20120501 | <NATURAL>
+		| <NATURALN>
+		//| <NEW>
+		| <NEXTVAL>
+		| <NOCOPY>
+		//<NOT>
+		//<NOWAIT>
+		//<NULL>
+		//| <NULLIF>
+		| <NUMBER>
+		| <BFILE_BASE> 
+		| <BLOB_BASE> 
+		//| <CHAR_BASE>
+		| <CLOB_BASE> 
+		| <DATE_BASE> 
+		| <NUMBER_BASE>
+		| <OCIROWID>
+		//<OF>
+		//<ON>
+		//20120501 | <OPAQUE>
+		//20120501 | <OPEN>
+		| <OPERATOR>
+		//<OPTION>
+		//<OR>
+		//<ORDER>
+		//20120501 | <ORGANIZATION>
+		//| <OTHERS>
+		| <OUT>
+		//20120501 | <PACKAGE>
+		//| <PARTITION>
+		//<PCTFREE>
+		| <PLS_INTEGER>
+		| <POSITIVE>
+		| <POSITIVEN>
+		| <PRAGMA>
+		| <PRIOR>
+		| <PRIVATE>
+		| <PROMPT>
+		//<PROCEDURE>
+		//<PUBLIC>
+		| <RAISE>
+		//| <RANGE>
+		| <RAW>
+		//20120501 | <REAL>
+		//| <RECORD>
+		//| <REF>
+		//20131021| <RELEASE>
+		//| <RETURN>
+		//20120501 | <REVERSE>
+		//20120501 | <ROLLBACK>
+		//| <ROW>
+		//20120501 | <ROWID>
+		//20120501 | <ROWNUM>
+		| <ROWTYPE>
+		//20120501 | <SAVEPOINT>
+		//<SELECT>
+		| <SEPARATE>
+		//<SET>
+		//<SHARE>
+		| <SMALLINT>
+		//| <SPACE>
+		//<SQL>
+		| <SQLCODE>
+		| <SQLERRM>
+		//<START>
+		| <STDDEV>
+		//| <SUBTYPE>
+		//20120501 | <SUCCESSFUL>
+		| <SUM>
+		| <SYNONYM>
+		| <SYSDATE>
+		//<TABLE>
+		//<THEN>
+		//| <TIME>
+		//| <TIMESTAMP>
+		//| <TIMEZONE_REGION>
+		//| <TIMEZONE_ABBR>
+		//| <TIMEZONE_MINUTE>
+		//| <TIMEZONE_HOUR>
+		//<TO>
+		| <TRIGGER>
+		| <TYPE>
+		| <UI>
+		//<UPDATE>
+		| <VARCHAR>
+		| <VARCHAR2>
+		//20120501 | <DOUBLE>
+		//20120501 | <DEC>
+		//20120501 | <PRECISION>
+		| <INT>
+		//20120501 | <NUMERIC>
+		| <SIGNTYPE>
+		//20120429 | <NCHAR>
+		//20120429 | <NVARCHAR2>
+		| <STRING>
+		//| <UROWID>
+		//| <VARRAY>
+		//| <VARYING>
+		//20120429 | <BFILE>
+		//20120429 | <BLOB>
+		//20120429 | <CLOB>
+		//20120429 | <NCLOB>
+		//| <LOCAL>
+		//<WITH>
+		| <WHILE>
+		// | <ZONE>
+		//| <CHARACTER>
+		//| <LIMIT>		 
+	        //| KEYWORD_UNRESERVED()  //SRT 2011-04-17
+	)
+	{ return token; }
+}
+
+Token typeKeyword(): {}
+{
+	(
+	<BFILE_BASE> |
+	<BLOB_BASE> |
+	//<CHAR_BASE> |
+	<CLOB_BASE> |
+	<DATE_BASE> |
+	<NUMBER_BASE> | 
+	<BOOLEAN> | <DATE> | <NUMBER> | <FLOAT> | <REAL> | <INTEGER> | <INT> | <SMALLINT>
+	| <DECIMAL> | <NUMERIC> | <DEC> | <BINARY_INTEGER> | <NATURAL> | <NATURALN>
+	| <POSITIVE> | <POSITIVEN> | <SIGNTYPE> | <VARCHAR2> | <VARCHAR> | <STRING> |
+	<LONG> | <RAW> | <ROWID> | <CHAR> | <CHARACTER> | <MLSLABEL> | <BLOB> | <CLOB> | <BFILE> |
+	<NCHAR> | <NVARCHAR2> | <NCLOB> | <PLS_INTEGER> | <TIME> | <TIMESTAMP> | <UROWID> |
+//
+	<ARRAY> | <AUTHID> | <ACCESSIBLE>
+	<CHAR_BASE> |
+	<CURRVAL> |
+	<HOUR> |
+	<INTERVAL> |
+	<MONTH> |
+	<OCIROWID> |
+	<RECORD> | <REF> |
+	<ROW> |
+	<ROWNUM> |
+	<ROWTYPE> | <SECOND> | <SET> |
+	<TABLE> |
+	<TIMEZONE_REGION> | <TIMEZONE_ABBR> | <TIMEZONE_MINUTE> | <TIMEZONE_HOUR> |	 <DOUBLE> | <PRECISION> |
+	<VARRAY> |
+	<YEAR> | <LOCAL> | <WITH> | <ZONE>
+	| <JAVA_INTERFACE_CLASS> | <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+        )
+	{ return token; }
+}
+
+Token javaInterfaceClass(): {}
+{
+	(
+          <SQLDATA_CLASS> | <CUSTOMDATUM_CLASS> | <ORADATA_CLASS>
+        )
+	{ return token; }
+}
+
+
+
+
+/**
+ * Tests, if the new Token if type ID is identical to the old Token of type ID.
+ * 
+ * 2006-05-18 - Matthias Hendler - added: Just for understanding javacc and not used,
+ *                                        cause to many closing ENDs (IDENTIFIER) were mistyped.
+ */
+Token equalsOldIDNewID(Token pOldID) :
+{
+	Token newID;
+}
+{
+	newID = ID()
+	{
+		if (pOldID.image.equals(newID.image)) {
+			return newID;
+		} else {
+			throw new ParseException("PLSQL syntax error on line "+newID.beginLine+" at column "+newID.beginColumn+"!\n"
+				+ "Found \""+newID.image+"\" but expected \""+pOldID.image+"\".");
+		}
+	}
+
+}
+

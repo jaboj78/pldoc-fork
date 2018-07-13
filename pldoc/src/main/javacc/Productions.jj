@@ -1,0 +1,2441 @@
+/**
+ * 2006-05-22 - Matthias Hendler - Added parsing of triggers and global functions/procedures
+ *                                 Refactored printing of custom tags into the XML/DOM.
+ *                                 Custom tags are language independent. Reserved tags are linked
+ *                                 to the documented language like RETURN, PARAM and THROWS.
+ */
+
+/**
+ * 2006-05-22 - Matthias Hendler - added globalBody()
+ */
+void input() throws org.xml.sax.SAXException : {}
+{
+	// SRT 2011-04-17 This syntax breaks the parser when fields of record.attach* are referenced (attachLibrary())*
+	(
+        //    (LOOKAHEAD(6) packageSpec() | LOOKAHEAD(6) packageBody() | LOOKAHEAD(6) typeSpec() | LOOKAHEAD(6) typeBody() | LOOKAHEAD(6) programUnit(true) | sqlPlusCommand())
+	 // SRT 20110514 before (LOOKAHEAD(6) packageSpec() | LOOKAHEAD(6) packageBody() | LOOKAHEAD(6) typeSpec() | LOOKAHEAD(6) typeBody() | LOOKAHEAD(6) table() | LOOKAHEAD(6) view()  | global() | sqlPlusCommand())	("/")*
+	 (LOOKAHEAD(8) javaSpec()  
+	 |LOOKAHEAD(7) packageSpec()  
+	 | LOOKAHEAD(7) packageBody()  
+	 | LOOKAHEAD(6) typeSpec()  
+	 //| LOOKAHEAD(6) typeBody()  {system.err.println("typeSpec"); }
+	 | LOOKAHEAD(6) table()  
+	 | LOOKAHEAD(6) view()   
+	 | LOOKAHEAD(6) triggerUnit()  
+	 | LOOKAHEAD(6) alterTrigger()  
+	 | LOOKAHEAD(6) Synonym()   
+	 | LOOKAHEAD(6) Directory()   
+	 | LOOKAHEAD(6) DatabaseLink()   
+	 | LOOKAHEAD(6) global()  
+	 | LOOKAHEAD(4) programUnit(true,null) 
+	 | LOOKAHEAD(6) DDLCommand()   
+	 | LOOKAHEAD(6) sqlPlusCommand() 
+	 |(<SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<LOCK><TABLE>|<MERGE>|<WITH>) skipPastNextTokenOccurrence(SQLPLUS_TERMINATOR) //Ignore SQL statements in scripts
+	 )	
+	 ("/")*
+	)*
+	<EOF>
+}
+
+
+void DDLCommand() : 
+{ 
+}
+{
+  (
+    DDLEvent()
+    skipPastNextTokenOccurrence(SQLPLUS_TERMINATOR) 
+  )
+}
+
+
+void sqlPlusCommand() : {}
+{
+  // e.g. SHOW ERRORS, GRANT EXECUTE ON ... TO ...
+  // SQLPLUS commands
+  ( "@" 
+  | <ACCEPT>
+  | <COLUMN>
+  | <CONNECT>
+  | <COPY>
+  | <DEFINE>
+  | <DISCONNECT>
+  | <EXECUTE> 
+  | <EXIT> 
+  | <HOST> 
+  | <PRINT> 
+  | <PROMPT> 
+  | <QUIT> 
+  | <REMARK> 
+  | <SET> 
+  | <SHOW> 
+  | <SPOOL> 
+  | <START> 
+  | <UNDEFINE> 
+  | <VARIABLE> 
+  | <WHENEVER> 
+  // DDL that might be encountered
+  | <COMMENT>
+  | <GRANT>
+  | <REVOKE>
+  | <DROP>
+  | <IDENTIFIER>
+  // Attach Library 
+  | "." <ATTACH>
+  )
+  skip2NextTokenOccurrence(EOL) //Tracker Issue 1433480 skip until next EOL Special Token   
+  //[";" | "-"]
+}
+
+/*
+SRT 2011-04-17 This syntax breaks the parser when fields of record.attach* are referenced  in PL/SQL 
+void attachLibrary() :
+{}
+{
+	<".attach"> <IDENTIFIER> <IDENTIFIER> <END> <IDENTIFIER>
+}
+*/
+
+/**
+ * All global definitions of triggers, functions and procedures are evaluated here.
+ * Every occurence goes under a new PACKAGE-Node in the XML document.
+ * This happens, cause a global "block" does not have a definied start and end token 
+ * like a package specification or a package body.
+ * Thats why every construct is handled like a new part of the global package.
+ * To overcome this problem, I could use an infinity lookahead - which should solve the problem 
+ * and slow down the whole parsing.
+ * Another idea would be to lookahead the next tokens and decide wether they belong to a package definition or not.
+ * Then I could decide to stay in this global parsing state. By now lookahead gives the parser a hint to
+ * choose the correct way on a given base. So we can't negate it easily.
+ * On the other hand I could also hold the global state in a global variable. 
+ * But this does not seems the correct way to solve the problem, I think.
+ *
+ * 2006-05-17 - Matthias Hendler - added
+ */
+void global() throws SAXException :
+{ 
+	Token name = null; 
+}
+{
+	{
+		if (m_out != null)
+		{
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(globalPackageName));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaName));
+			// System.err.println("startElement @ global() " );
+			m_out.startElement("PACKAGE");
+		}
+	}
+
+	//SRT Work In progress (LOOKAHEAD ([<DECLARE> declarativeSection(false)] <BEGIN>) globalBlock() | LOOKAHEAD (4) programUnit(true) // | triggerUnit()
+	/*
+	  Remove triggers from global processing because their schema may be defined in the trigger code itself
+	  Still wrap the trigger in a fake package but make the package name dependent on the actual schema 
+	  defaulting to the globalPackageName if it cannot be found 
+	*/
+	(
+	globalBlock(token) 
+	//LOOKAHEAD ( ( label() )* [<DECLARE> declarativeSection(false,token)] <BEGIN>) globalBlock(token) // | LOOKAHEAD (4) programUnit(true,token) 
+	)
+
+	{
+		if (m_out != null)
+		{
+			// System.err.println("endElement @ global() " );
+			m_out.endElement("PACKAGE");
+		}
+	}
+
+}
+
+
+
+/**
+ * Static blocks like package initializers.
+ * 
+ * 2006-05-17 - Matthias Hendler - added
+ */
+void globalBlock(Token objectStart) throws SAXException :
+{ 
+	Token name = null; 
+}
+{
+	(
+		label()
+	)*
+	[
+		<DECLARE>
+		declarativeSection(false, objectStart)
+	]
+	
+	<BEGIN> (statement())* (exceptionHandler())? <END> [<IDENTIFIER>] ";"
+}
+
+
+
+void javaSpec() throws SAXException :
+{ ASTCompilationUnit javaCompilationUnit = null ;
+  Token schema = null, name = null, tokenCreate = null, tokenPackage = null, tokenJavaType = null, tokenIsAs = null, lastToken = null ; 
+}
+{
+    
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <AND> ( <COMPILE> | <RESOLVE> )  ] ]
+	tokenPackage=<JAVA> 
+    (
+      ( ( tokenJavaType = <SOURCE> | tokenJavaType = <RESOURCE> )  <NAMED> (LOOKAHEAD(2) schema=ID()".")? name=ID() )
+      |
+      ( tokenJavaType = <CLASS> [ <SCHEMA> schema=ID() ] )
+    )
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier( (null==name) ? "Unnamed" : name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.pushAttribute("TYPE", purifyIdentifier(tokenJavaType.toString()));
+			m_out.startElement("JAVA");
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+// 		System.err.println("processPackageComment @ packageSpec() " );
+		processPackageComment(tokenPackage);
+	}
+
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+	(tokenIsAs=<ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                          ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                      ")" 
+        )
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+	(tokenIsAs=<RESOLVER> "("  ( "("  ( "*" | <QUOTED_LITERAL> )  [","] ( "-" | unqualifiedID()  )  ")"  )+    ")"    )?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+   (
+	  (
+	    (tokenIsAs=<USING>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+
+        (
+           LOOKAHEAD(<BFILE> "(")  ( <BFILE>  "(" unqualifiedID() "," StringLiteral()  ")" )
+          | LOOKAHEAD( ( <CLOB> | <BLOB> | <BFILE> ) <SELECT> ) ( ( <CLOB> | <BLOB> | <BFILE> ) sqlStatement(null,";") [";"] )
+          | StringLiteral()
+        )
+	  )
+      |
+      (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+
+	    //Populate javaCompilationUnit with productions returned from the wrapped PMD Java parser (also JavaCC generated)
+	    { 
+           javaCompilationUnit = fromDelegatedJavaParser(); 
+        }
+	  )
+	)
+	{ 
+		if (m_out != null) m_out.endElement("JAVA"); 
+	}
+}
+
+
+void packageSpec() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenPackage = null, tokenIsAs = null, lastToken = null ; }
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] ]
+	tokenPackage=<PACKAGE> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			// System.err.println("startElement @ packageSpec() " );
+			m_out.startElement("PACKAGE");
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+// 		System.err.println("processPackageComment @ packageSpec() " );
+		processPackageComment(tokenPackage);
+	}
+
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+
+        [
+	(tokenIsAs=<ACCESSIBLE> <BY>  "(" [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                         ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                      ")" 
+        )
+	{
+		// possibly, package comment is here
+		processPackageComment(tokenIsAs);
+	}
+	]
+
+        (
+	  (
+	    wrappedObject()
+	  )
+	  |
+	  (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+	    declarativeSection(true,name)
+
+	    <END> [ID()] ";" { printSummary("Package Specification", name.beginLine, name, token); }
+	  )
+	)
+	{ 
+		if (m_out != null) m_out.endElement("PACKAGE"); 
+	}
+}
+
+void packageBody() throws SAXException :
+{ Token schema = null, name = null, tokenCreate = null, tokenModuleType = null, tokenIsAs = null; }
+{
+	[tokenCreate=<CREATE> [<OR> <REPLACE>]  [ <EDITIONABLE> | <NONEDITIONABLE> ]  ]
+	( tokenModuleType = <PACKAGE> | tokenModuleType = <TYPE> ) <BODY> (LOOKAHEAD(2) schema=ID()".")? name=ID()
+	{
+		if (m_out != null)
+		{
+			String schemaString = schemaName; //SRT 20110318 "";
+			if (schema != null) {
+				schemaString = schema.toString();
+			}
+			// now start printing the package
+			m_out.pushAttribute("NAME", purifyIdentifier(name.toString()));
+			m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString.toString()));
+			m_out.startElement(
+					    tokenModuleType.image.toUpperCase().equals("PACKAGE")
+			                    ?  "PACKAGE_BODY"
+			                    :  "OBJECT_BODY"
+			                  );
+		}
+		// possibly, package comment is here
+		if(null!= tokenCreate)
+		{
+			processPackageComment(tokenCreate);
+		}
+		processPackageComment(tokenModuleType);
+	}
+
+	(
+	  (
+	    wrappedObject()
+	  )
+	  |
+	  (
+	    (tokenIsAs=<IS> | tokenIsAs=<AS>)
+	    {
+		    // possibly, package comment is here
+		    processPackageComment(tokenIsAs);
+	    }
+
+		  declarativeSection(true,name) //SRT 20110524 Allow PLDOc in Type Bodies 
+
+						    
+	  [ <BEGIN> (statement())* (exceptionHandler())? ] <END> [ID()] ";" 
+	  { printSummary(tokenModuleType.image.toUpperCase().equals("PACKAGE") ?  "Package Body" :  "Object Type Body", name.beginLine, name, token); }
+	  )
+	)
+	{
+		if (m_out != null) m_out.endElement(
+						    tokenModuleType.image.toUpperCase().equals("PACKAGE")
+						    ?  "PACKAGE_BODY"
+						    :  "OBJECT_BODY"
+						   );
+	}
+}
+
+void declarativeUnit(boolean isPackageLevel, Token objectStart) throws SAXException :
+{}
+{
+		pragma(isPackageLevel) |
+		LOOKAHEAD(2)
+		exceptionDeclaration(isPackageLevel) |
+		LOOKAHEAD((<TYPE>|<SUBTYPE>) qualifiedID() (<IS> | <AS> )  ) //SRT 20110616 - make sue soen't break object type
+		subtype_definition(isPackageLevel) |
+		LOOKAHEAD((<FUNCTION>|<PROCEDURE>) qualifiedID() ) //SRT 20111117 - Special case of parameterless methods:choose method in preference to variable 
+		programUnit(isPackageLevel,objectStart)  |
+		LOOKAHEAD(4)
+		variableOrConstantDeclaration(isPackageLevel) |
+		LOOKAHEAD(2)
+		cursorSpec(isPackageLevel) |
+		cursorBody(isPackageLevel) |
+		collectionDeclaration(isPackageLevel) |
+		programUnit(isPackageLevel,objectStart) 
+		|typeMethod(isPackageLevel,1, null,objectStart) //SRT 20110523
+		|CompilationDeclarationFragment(isPackageLevel,objectStart) 
+}
+
+void declarativeSection(boolean isPackageLevel, Token objectStart) throws SAXException :
+{}
+{
+	(
+		declarativeUnit(isPackageLevel, objectStart) 
+	)*
+}
+
+void CompilationDeclarationFragment(boolean isPackageLevel, Token objectStart) throws SAXException :
+{ 
+}
+{
+	( //SRT 20110601 
+	  <CC_IF>  
+	  ConditionalOrExpression()  
+	  <CC_THEN>  
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+
+	  ( 
+	    <CC_ELSIF> 
+	    ConditionalOrExpression() 
+	    <CC_THEN> 
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> 
+	    (declarativeUnit(isPackageLevel,objectStart)
+	     | <CC_ERROR> Expression() <CC_END> 
+	    )* 
+	  )*
+	  <CC_END> 
+	)
+ { 
+   return ;
+ }
+}
+
+
+
+/**
+ * 2006-05-22 - Matthias Hendler - Printing of custom tag "@deprecated" removed.
+ *                                 Printing of any custom tag added. Now user can define his own
+ *								   custom tags which he can evaluate in the XSLT.
+ *                                 This methode also documents global functions/procedures.
+ */
+void programUnit(boolean isPackageLevel, Token objectStart) throws SAXException :
+{
+	Token start, name;
+	Token schema = null;
+	Token globalStart = null;
+	Token startToken = null;
+	Token tokenODCIAggregateType = null; 
+	Token tokenIsAs = null; 
+	String memberName = null;
+	String type = null;
+	Hashtable tags;
+}
+{
+	(
+
+	[globalStart=<CREATE> [<OR> <REPLACE>] [ <EDITIONABLE> | <NONEDITIONABLE> ] 
+         
+        ]
+
+	(start=<FUNCTION>|start=<PROCEDURE>) (LOOKAHEAD(2) schema = ID()".")? name=ID()
+	{
+// 		System.err.println("programUnit: isPackageLevel==" + isPackageLevel);
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+
+			//This is actually a global object 
+			if (null== objectStart)
+			{
+			  String packageString = globalPackageName; // Default Global Package Name 
+			  String schemaString = schemaName; // Default Schema 
+
+
+			  // Attempt to base 
+			  if (null != schema )
+			  {
+			    schemaString = schema.toString();
+			    packageString = ("_" + schemaString ) ; //Base global package name on Schema
+			  }
+
+			  m_out.pushAttribute("NAME", purifyIdentifier(packageString));
+			  m_out.pushAttribute("SCHEMA", purifyIdentifier(schemaString));
+			  m_out.startElement("PACKAGE");
+			}
+
+
+			memberName = purifyKeyword(start.toString()); // SRT 20110420 --start.toString().toUpperCase();
+			/*
+			startToken = (globalStart == null) ? start : globalStart;
+			System.err.println("programUnit: calling processMemberComment @ " + startToken.toString());
+			tags = processMemberComment(startToken, memberName, name.toString());
+			*/
+			if (globalStart == null) 
+			{ // Look for Package Comments and member comments before the start keyword
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ " + start.toString());
+				tags = processMemberComment(start, memberName, name.toString()); 
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ START==" + tags.toString());
+				tags.putAll(processMemberComment(name, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  no CREATE OR REPLACE calling processMemberComment @ NAME==" + tags.toString());
+			}
+			else
+			{ // Look for Package Comments and member comments before the CREATE OR REPLACE, then the start keyword
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment GLOBAlSTART " + globalStart.toString());
+				tags = processMemberComment(globalStart, memberName, name.toString()); // Should find stuff in scripts only
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ GLOBALSTART==" + start.toString());
+				tags.putAll(processMemberComment(start, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ START==" + tags.toString());
+				tags.putAll(processMemberComment(name, null, null)); // Should find stuff in scripts and database code
+				//SRT 20110422 System.err.println("programUnit:  CREATE OR REPLACE calling processMemberComment @ NAME==" + name.toString());
+			}
+		} else {
+			tags = new Hashtable();
+		}
+	}
+
+	( 
+	( wrappedObject() ) 
+	|//UnwrappedCode
+	( ("(") {
+	          /*
+	           Last chance to collect member comment before hitting the parameters
+		   Using DBMS_METADATA.GET_DDL here (between the name and the parameter start is the only 
+		   place to put a comment that contains parameter/return tags.
+
+		   This is because even if the comment occurs before the object name in the original source code,
+		   e.g. <OBJECT TYPE> <COMMENT> <QUALIFIED OBJECT NAME>, 
+		   DBMS_METADATA.GET_DDL returns the code in the form <OBJECT TYPE> <QUALIFIED OBJECT NAME> <COMMENT>
+		 */
+	          tags.putAll(processMemberComment(token, null, null));
+	        } 
+	  parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+	{
+		//SRT 20110422 System.err.println("programUnit: found ParameterDeclaration" );
+	}
+
+	[(<RETURN>){
+	          /*
+	           Last chance to collect member comment (and the return tag) before hitting the RETURN statement
+		 */
+	          tags.putAll(processMemberComment(token, null, null));
+	        }  
+	 type=datatype()
+	{
+		//SRT 20110422 System.err.println("programUnit:  RETURN FOUND matching tags in tags=" + tags.toString());
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) 
+		{
+			// @return
+			String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null) 
+			{
+				for(Iterator it = tagValues.iterator(); it.hasNext(); )
+					returnComment = (String) it.next();
+			}
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null) 
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+	}
+	]
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			// @throws
+			String throwsComment = null;
+			String exceptionName = null;
+			Collection tagValues = (Collection) tags.get("@throws");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while(it.hasNext()) {
+					throwsComment = (String) it.next();
+					// extract when first word - it's the exception name
+					StringTokenizer st = new StringTokenizer(throwsComment);
+					if (st.hasMoreTokens())
+						 exceptionName = st.nextToken();
+					if (exceptionName != null)
+					{
+						m_out.pushAttribute("NAME", purifyIdentifier(exceptionName));
+						m_out.startElement("THROWS");
+						if (throwsComment != null)
+						{
+							m_out.startElement("COMMENT");
+							m_out.cdata(throwsComment.substring(exceptionName.length()));
+							m_out.endElement("COMMENT");
+						}
+						m_out.endElement("THROWS");
+					}
+				}
+			}
+		//SRT 20110422 System.err.println("programUnit: THROW Processing" );
+		}
+		
+		// now print all custom tags
+		if (m_out != null && isPackageLevel)
+		{
+			//SRT 20110422 System.err.println("programUnit:  pre printCustomTags is tags " + tags.toString());
+			printCustomTags(tags);
+		}
+	}
+
+	/*
+	//SRT 20110516  Cope with AUTHID  for schema level functions and procedures 
+	(tokenIsAs=<AUTHID> (<CURRENT_USER> | <DEFINER>))?
+	{
+		// possibly, package comment is here
+		if (m_out != null && isPackageLevel)
+		{
+			if (memberName.toUpperCase().equals("PACKAGE"))
+			{
+				processPackageComment(tokenIsAs);
+			}
+			else 
+			{
+			/*
+			  We are looking to process any comment only; the member is being dealt with elsewhere
+			* /
+			tags.putAll(processMemberComment(tokenIsAs, null, null /* memberName, name.toString() * /));
+			}
+		}	
+	}
+	*/
+
+	( (<AUTHID> ( <CURRENT_USER> | <DEFINER> ) ) 
+	    | (<ACCESSIBLE> <BY>  "(" 
+                                    [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName()  
+                                   ("," [ <FUNCTION> | <PROCEDURE> | <PACKAGE> | <TRIGGER> | <TYPE> ] qualifiedName() )*  
+                                  ")" 
+              )
+
+            | <DETERMINISTIC> 
+	    | <PARALLEL_ENABLE>  [ parallel_clause() ] [ <USING> ID() ["." ID()] ] 
+	   | <PIPELINED> [ ( <USING> ID() ["." ID()] ) 
+	                   |  //20110531
+			   (( <ORDER> | <CLUSTER> ) [ID()] <BY> "(" ID() ( "," ID() )*  ")" ) 
+			 ] //  drvparx.IndexMapDocuments
+	   | <RESULT_CACHE> [ <RELIES_ON> "(" ID() ["." ID()] ( "," ID() ["." ID()])*  ")" ]
+           | CompilationExpression() // Allow Conditional PRAGMA
+	) *
+	
+	[ <AGGREGATE> <USING> tokenODCIAggregateType=ID() ] 
+
+	// body
+	[
+	        
+		(tokenIsAs=<IS> | tokenIsAs=<AS>)
+		{
+			//SRT 20110422 System.err.println("tokenIsAs @ " + tokenIsAs.toString());
+			if (m_out != null && isPackageLevel)
+			{
+				if (memberName.toUpperCase().equals("PACKAGE"))
+				{
+					//SRT 20110422 System.err.println("calling processPackageComment @ " + tokenIsAs.toString() );
+					processPackageComment(tokenIsAs);
+				}
+				else 
+				{
+				//Look for memberComment embedded in the code 
+				//SRT 20110422 System.err.println("calling processMemberComment @ " + tokenIsAs.toString()
+				//SRT 20110422                    + ",memberName=" + memberName
+				//SRT 20110422                    + "name=" + name.toString()
+				//SRT		  );
+				/*
+				  We are looking to process any comment only; the member is being dealt with elsewhere
+				*/
+				tags = processMemberComment(tokenIsAs, null, null /* memberName, name.toString() */);
+				//SRT 20110422 System.err.println("called processMemberComment @ " + tokenIsAs.toString()
+				//SRT 20110422                    + ",memberName=" + memberName
+				//SRT 20110422                    + "name=" + name.toString()
+				//SRT 20110422   );
+				}
+			}	
+		}
+		//SRT (<IS> | <AS>)
+		(
+			LOOKAHEAD(2)
+			callSpecTail(isPackageLevel) //{ System.err.println("Found callSpecTail") ; }
+			|
+			(
+				declarativeSection(false,objectStart)
+				<BEGIN> (statement())* (exceptionHandler())? <END> [ID()]
+			)
+		)
+	]
+	";" //SRT 20110416 { System.err.println("Found terminating semi-colon") ; }
+        {
+	   //Do not generate Summaries for interanl programUnits that are not output 
+           if (isPackageLevel) printSummary("Program Unit", (isPackageLevel && (null != objectStart) ? objectStart.beginLine : name.beginLine), name, token);
+        }
+
+	) //UnwrappedCode
+	) 
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+// 			System.err.println("endElement@ " + start.toString());
+			m_out.endElement(purifyKeyword(start.toString())); // SRT20110420 m_out.endElement(purifyIdentifier(start.toString().toUpperCase()))
+			//This is actually a global object 
+			if (null== objectStart)
+			{
+			  m_out.endElement(purifyKeyword("PACKAGE")); //Wrap the trigger element in a fake package
+			}
+		}
+	}
+}
+
+void parameterDeclaration(Hashtable tags,boolean isPackageLevel) throws SAXException :
+{
+	Token name;
+	Token parameterType = null;
+	String defaultValue = null;
+	String paramMode = "IN", paramType;
+}
+{
+	name=ID()
+	// the order of outer "|" is important !
+	( LOOKAHEAD(2) ( LOOKAHEAD(2) ( (<OUT>{paramMode = "OUT";}|(<IN> <OUT>{paramMode = "IN OUT";})) (LOOKAHEAD(2) <NOCOPY> {paramMode += " NOCOPY" ; } )? ) | <IN> ) )?
+	(parameterType = "..."    /* PL/SQL VARARG */ { paramType = "..." ; }| paramType=datatype())  { parameterType = token;}
+	( (":" "="|<_DEFAULT>) defaultValue =Expression() )?
+	{
+
+		if (m_out != null && isPackageLevel)
+		{
+			String paramName = name.toString();
+			String paramComment = getParamComment(paramName, tags);
+			m_out.pushAttribute("NAME", purifyIdentifier(paramName));
+			m_out.pushAttribute("MODE", paramMode);
+			m_out.pushAttribute("TYPE", purifyIdentifier(paramType));
+			if (null != defaultValue) m_out.pushAttribute("DEFAULT", purifyIdentifier(defaultValue));
+			m_out.startElement("ARGUMENT");
+			if (paramComment != null) {
+				m_out.startElement("COMMENT");
+				m_out.cdata(paramComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("ARGUMENT");
+		}
+	}
+}
+
+
+
+
+String datatype() :
+{ String name = null, dblink = null ; }
+{
+	(
+		// this should be first
+		name = CompilationDataType() |
+		LOOKAHEAD(2) name=scalar_datatype_name()
+		|
+		(
+		  ( [LOOKAHEAD(2) <REF>] name=qualifiedName() 
+		    //Bug 35352414 - datatype may include dblink 
+		    ["@" dblink = qualifiedName() {name += "@" + dblink ;} ]
+		    ["%" (<TYPE>{name += "%TYPE";}|<ROWTYPE>{name += "%ROWTYPE";})] )
+		)
+	)
+	{ return name; }
+}
+
+String CompilationDataType() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	(
+	  <CC_IF> {sb.append(" "); sb.append(token.image) ; } 
+	  string= ConditionalOrExpression() {sb.append(" "); sb.append(string); } 
+	  <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	  string = datatype() {sb.append(" "); sb.append(string); } 
+
+	  ( 
+	    <CC_ELSIF> {sb.append(" "); sb.append(token.image); } 
+	    string = ConditionalOrExpression() {sb.append(" "); sb.append(string); }  
+	    <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	    string = datatype() {sb.append(" "); sb.append(string); } 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> {sb.append(" "); sb.append(token.image); } 
+	    string = datatype()  {sb.append(" "); sb.append(string); } 
+	  )*
+
+	  <CC_END> {sb.append(" "); sb.append(token.image); } 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String collection_type_name() :
+{ Token size=null, precision=null;
+	String name = null;
+}
+{
+     (
+	// Collection types
+  	<TABLE> | <VARRAY> | (<VARYING><ARRAY> {name = "VARYING ARRAY";}) 
+     )
+
+    {
+      if (name == null) {
+        name = token.toString();
+      }
+    }
+	(LOOKAHEAD(2) "(" size=numericLiteral() {name += "(" + size;}
+		["," precision=numericLiteral() {name += "," + precision;}]
+		[ <CHAR> {name += " CHAR" ;}]
+		[ <BYTE> {name += " BYTE" ;}]
+	")" {name += ")";})?
+
+      { return name; }
+}
+
+
+String scalar_datatype_name() :
+{ Token size=null, precision=null ;
+	String name = null, precisionString=null ;
+	String string = null;
+}
+{
+	(
+	//Base types used in SYS.STANDARD
+	<BFILE_BASE> |
+	<BLOB_BASE> |
+	<CHAR_BASE> |
+	<CLOB_BASE> |
+	<DATE_BASE> |
+	<NUMBER_BASE> | 
+
+	// scalar types - numeric:
+  	<BINARY_INTEGER> | <DEC> | <DECIMAL> | (<DOUBLE><PRECISION> {name = "DOUBLE PRECISION";}) |
+  	<FLOAT> | <INT> | <INTEGER> | <NATURAL> |
+	<NATURALN> | <NUMBER> | <NUMERIC> | <PLS_INTEGER> | <POSITIVE> | <POSITIVEN> | <REAL> | <SIGNTYPE> |
+	<SMALLINT> |
+
+	// scalar types - character:
+	(
+	  (
+	  <CHAR> | <CHARACTER> 
+	  //SRT | LOOKAHEAD(2) (<LONG><RAW> {name = "LONG RAW";}) | LOOKAHEAD(2) <LONG> | 
+	  | LOOKAHEAD(2) (<LONG><RAW> {name = "LONG RAW";}) | <LONG> | 
+	  <NCHAR> | <NVARCHAR2> | <RAW> | <ROWID> |
+	  <STRING> | <UROWID> | <VARCHAR> | <VARCHAR2> | <CLOB> | <NCLOB> 
+	  )
+	)
+	|
+	  // scalar types - boolean:
+	  <BOOLEAN> 
+	
+	|
+
+	// composite types
+  	//SRT 20090531 <TABLE> | <VARRAY> | (<VARYING><ARRAY> {name = "VARYING ARRAY";}) |
+	// <RECORD> - defined elsewhere
+
+	// LOB types
+	<BFILE> | <BLOB> |
+
+	// reference types
+  	<SYS_REFCURSOR> | //SRT Added to support pre-defined weak REF CURSOR
+  	(<REF><CURSOR> {name = "REF CURSOR";}) |
+	//<REF> object_type - defined elsewhere
+
+	// scalar types - date/time:
+	<DATE> |
+        LOOKAHEAD(2) (<INTERVAL><YEAR> {name = "INTERVAL YEAR";}) |
+        LOOKAHEAD(2) (<INTERVAL><DAY> {name = "INTERVAL DAY";}) |
+	<TIME> |
+	<TIMESTAMP> |
+      (<SELF><AS><RESULT> {name = "SELF AS RESULT";})  //SRT Added to support CONSTRUCTOR methods 
+     )
+
+    {
+      if (name == null) {
+        name = token.toString();
+      }
+    }
+	(LOOKAHEAD(2) "(" size=numericLiteral() {name += "(" + size;}
+		["," precisionString=UnaryExpression(true) {name += "," + precisionString;}] //NUMBERS may have negative precision
+		[ <CHAR> {name += " CHAR" ;}]
+		[ <BYTE> {name += " BYTE" ;}]
+	")" {name += ")";})?
+
+        /*
+	    LOOKAHEAD(3) (<DAY><TO><SECOND> {name += " DAY TO SECOND";}) |
+	    LOOKAHEAD(3) (YEAR><TO><MONTH> {name += " YEAR TO MONTH";}) |
+	    LOOKAHEAD(4) (<WITH><LOCAL><TIME><ZONE> {name += " WITH LOCAL TIME ZONE";}) |
+	    LOOKAHEAD(3) (<WITH><TIME><ZONE> {name += " WITH TIME ZONE";}) |
+            INTERVAL YEAR[(year_precision)] TO MONTH
+
+            INTERVAL DAY[(day_precision)] TO SECOND[(fractional_seconds_precision)]
+
+            INTERVAL '2-6' YEAR TO MONTH
+            INTERVAL '3 12:30:06.7' DAY TO SECOND(1)
+            
+          Add any fractional_seconds_precision
+        */
+    [
+      /*
+      function NOOP(Str varchar2 CHARACTER SET ANY_CS)
+	       return varchar2 CHARACTER SET Str%CHARSET;
+
+      function NOOP(Str clob CHARACTER SET ANY_CS)
+	       return clob CHARACTER SET Str%CHARSET;
+      */
+
+
+    (<CHARACTER> <SET> string = Name() {name += " CHARACTER SET " + string ;} ) |
+	  
+    LOOKAHEAD(4) (<WITH><LOCAL><TIME><ZONE> {name += " WITH LOCAL TIME ZONE";}) |
+    LOOKAHEAD(3) (<WITH><TIME><ZONE> {name += " WITH TIME ZONE";}) |
+    LOOKAHEAD(2) (<TO><MONTH> {name += " TO MONTH";}) |
+    LOOKAHEAD(2) (<TO><SECOND> {name += " TO SECOND";} 
+			(
+			  LOOKAHEAD(2) "(" precision=numericLiteral() {name += "(" + precision;}
+					")" {name += ")";}
+			)?
+                 )
+   ]
+
+      { return name; }
+}
+
+String DateTimeLiteral() :
+{ Token literal_type= null, type1=null, type2=null, size=null;
+	String literal_string = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  /*
+    INTERVAL Syntax
+
+    INTERVAL'y-m' YEAR[(precision1)] TO MONTH
+    INTERVAL'y' YEAR(precision1)
+    INTERVAL'm' MONTH(precision1)
+
+    INTERVAL'd[h[:m[:s]]]' unit1[(precision1)] TO unit2[(precision2)]
+      unit1,unit2 = {DAY,HOUR,MINUTE,SECOND}
+      constraint unit1 always longer than unit2, i.e. DAY is longer than MINUTE
+      so can have DAY to MINUTE, but not MINUTE to DAY
+  */
+	(
+        <INTERVAL> 
+	|<DATE> //Support ANSI DATE Literals 
+	|<TIMESTAMP> 
+        )
+        { sb.append(token.toString()); }
+
+        (
+         // 20110526 <STRING_LITERAL> 
+         <CHARACTER_LITERAL> {sb.append(" "); sb.append(token.toString()) ;} 
+         |literal_string = StringLiteral() {sb.append(" "); sb.append(literal_string); } 
+        )
+        (  type1 = <YEAR>  
+         | type1 = <MONTH>
+         | type1 = <DAY>
+         | type1 = <HOUR>
+         | type1 = <MINUTE>
+         | type1 = <SECOND>
+        )?
+        { 
+	      if (type1 != null) 
+              {
+		sb.append(" "); sb.append(type1.toString()) ;
+	      }
+           
+        }
+        
+
+	(LOOKAHEAD(2) "(" size=numericLiteral() {sb.append("("); sb.append(size); } 
+	")" {sb.append(")"); } 
+        )?
+
+
+    [
+     (<WITH> {sb.append(" "); sb.append(token.toString()) ;} 
+      (<LOCAL> {sb.append(" "); sb.append(token.toString()) ;} )? 
+      <TIME><ZONE> {sb.append(" TIME ZONE"); }
+     ) 
+    |(<TO> {sb.append(" "); sb.append(token.toString()) ;} 
+        (  type2 = <YEAR>  
+         | type2 = <MONTH>
+         | type2 = <DAY>
+         | type2 = <HOUR>
+         | type2 = <MINUTE>
+         | type2 = <SECOND>
+        )
+        {sb.append(" "); sb.append(type2.toString()) ;} 
+	(LOOKAHEAD(2) "(" size=numericLiteral() {sb.append("("); sb.append(size);} 
+	")" {sb.append(")"); } 
+        )?
+    )
+   ]
+/*
+*/
+
+      { 
+      return sb.toString(); 
+      }
+}
+
+void exceptionHandler() throws org.xml.sax.SAXException :
+{}
+{
+	<EXCEPTION>
+		( LOOKAHEAD(2) <WHEN> qualifiedName() (<OR> qualifiedName())* <THEN> (statement())+ )*
+		[ <WHEN> <OTHERS> <THEN> (statement())+ ]
+}
+
+void skip2NextTerminator(String initiator,String terminator) :
+{
+  Token t = getToken(1);
+  int count = (initiator == null) ? 0 : 1;
+  if(t.image.equals(initiator)) count++;
+  while (count > 0 || !t.image.equals(terminator))
+  {
+    t = getNextToken();
+    t = getToken(1);
+	  if(t.image.equals(initiator)) count++;
+	  if(t.image.equals(terminator)) count--;
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target String. 
+*/
+void skip2NextOccurrence(String target) :
+{
+  Token nextToken = getToken(1);
+  while (!nextToken.image.equals(target)
+	 && (null == nextToken.specialToken || !nextToken.specialToken.image.equals(target) ) //In case the target is a Special Token
+	 && nextToken.kind!=EOF //SRT 20110521 - Prevent endless loop when target does not exist in the input stream
+        )
+  {
+    nextToken = getNextToken();
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to and including the target String. 
+*/
+void skipPastNextOccurrence(String target) :
+{
+  Token t = null;
+  skip2NextOccurrence(target) ;
+  t = getNextToken(); // Chomp this one 
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target Token.kind. 
+*/
+void skip2NextTokenOccurrence(int target) :
+{
+  Token nextToken = getToken(1);
+  Token specToken = null ;
+  while (nextToken.kind!=target
+	 && (null == nextToken.specialToken || nextToken.specialToken.kind!=target ) //In case the target is a Special Token
+	 && nextToken.kind!=EOF //SRT 20110521 - Prevent endless loop when target does not exist in the input stream
+        )
+  {
+  /*
+	Check if the target appears as a SpecialToken 
+
+
+	nextToken.specialToken points to the _LAST_ of any SpecialTokens before the current normal Token.
+
+	It is the head of a doubly-linked list:
+
+	The ${specialToken}.specialToken field POINTS BACKWARDS TOWARDS the FIRST occurring SpecialToken
+	The ${specialToken}.next field POINTS FORWARDS to to the LAST occurring SpecialToken
+
+	This means that if the program is interested in a specific SpecialToken, it must examine the linked list for every Token which has nexToken.specialToken != null.
+    
+    */
+    specToken = nextToken.specialToken;
+    if (null!= specToken) 
+    {
+	    //Walk backwards through the list looking for this Token as a Special Token 
+       while (specToken != null && specToken.kind != target) 
+	    {
+		    specToken = specToken.specialToken;
+	    }
+
+	     //We have found the target as a SpecialToken - break out of normal Token search
+      if (null != specToken && specToken.kind == target) 
+	    {
+		    break;
+      }
+    }
+
+    nextToken = getNextToken();
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to and including the target Token.kind. 
+*/
+void skipPastNextTokenOccurrence(int target) :
+{
+  Token t = null;
+  skip2NextTokenOccurrence(target) ;
+  t = getNextToken(); // Chomp this one 
+}
+{
+	{ return; }
+}
+
+/*
+ Read Tokens up to but not including the target String. 
+*/
+String read2NextOccurrence(String target) :
+{
+  StringBuffer sb = new StringBuffer();
+  Token nextToken = getToken(1);
+  while (!nextToken.image.equals(target)
+	 && nextToken.kind!=EOF 
+        )
+  {
+    nextToken = getNextToken();
+    sb.append(nextToken.image);
+    nextToken = getToken(1);
+  }
+}
+{
+	{ return sb.toString(); }
+}
+
+/*
+ Read Tokens up to and including the target String. 
+*/
+String readPastNextOccurrence(String target) :
+{
+  StringBuffer sb = new StringBuffer();
+  Token t = null;
+  sb.append(read2NextOccurrence(target)) ;
+  t = getNextToken(); // Chomp this one 
+  sb.append(t.image);
+}
+{
+	{ return sb.toString(); }
+}
+
+/**
+ * 2006-05-24 - Matthias Hendler - added MERGE
+ */
+void sqlStatement(String initiator, String terminator) throws SAXException :
+{}
+{
+	(<SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<EXECUTE>|<SET><TRANSACTION>|<LOCK><TABLE>|<MERGE>|<WITH>)
+	skip2NextTerminator(initiator,terminator)
+}
+
+
+/**
+ * 2011-05-15 - SRT - Added to cope with wrapped objects
+  A wrapped function looks like this (always terminated by one or more equals signs "="):-
+  "  CREATE OR REPLACE FUNCTION "TESTUSER"."GET_DATE_STRING"
+/ ** Return SYSDATE formatted using the provided template.
+ *
+ *
+ *  @param p_date_format normal TO_CHARE/TO_DATE date template
+ *  @return formatted datestring
+ *  @see http://www.oracle-base.com/articles/10g/WrapAndDBMS_DDL_10gR2.php#dbms_ddl
+ * /
+wrapped
+a000000
+369
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+abcd
+8
+89 b6
+/SBrhM8+1iUO4QAih+qD2SK8kSowg8eZgcfLCNL+XlquYvSuoVah8JbRPpdHDLHn479SdFLw
+v04omzJ0zOfHdMAzuHQlw+fAsr2ym9YI8I521pRTbnFVAHOOUw4JqPkIyj7wj4VwyL17nhYb
+3qPVuL6SvhZTmEBnRtaErHpzaDuIpqZ0G4s=
+  "
+ */
+
+
+
+void wrappedObject() throws SAXException :
+{}
+{
+	<WRAPPED>
+	{
+	   Token nextToken; 
+		
+		nextToken = getToken(1); //ReadAhead
+		while (
+		     null != nextToken && nextToken.kind!=EOF
+		     )  
+		{
+		        nextToken = getNextToken(); 
+
+			//Execute manual readahead 
+			nextToken = getToken(1); //ReadAhead 1 Token 
+		}
+		return;
+	}
+}
+
+
+// ============================================================================
+// S T A T E M E N T S
+// ============================================================================
+
+/**
+ * 2006-05-24 - Matthias Hendler - added MERGE, EXECUTE choice and LOOKAHEAD at <LOOP>
+ */
+void statement() throws SAXException :
+{}
+{
+	LOOKAHEAD(["("] <SELECT>|<UPDATE>|<INSERT>|<DELETE>|<COMMIT>|<ROLLBACK>|<SAVEPOINT>|<EXECUTE>|<SET><TRANSACTION>|<LOCK><TABLE>|<MERGE>|<WITH>) sqlStatement(null,";") [";"] 
+		| LOOKAHEAD(3) <CONTINUE> [ <IDENTIFIER> ] [ <WHEN> Expression() ] ";" // 11G CONTINUE statement  
+
+		| <CASE> ( Expression() )?
+                ( <WHEN> Expression() <THEN> (statement())+ )*
+		( <ELSE> (statement())+ )*
+		<END> <CASE>  [<IDENTIFIER>]  ";"
+	| <IF> Expression() <THEN> (statement())+
+		( <ELSIF> Expression() <THEN> (statement())+ )*
+		( <ELSE> (statement())+ )*
+		<END> <IF> ";"
+	| <FOR> ID() <IN> [<REVERSE>] Expression()[".."Expression()] <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	| <FORALL> ID() <IN> 
+			    (
+	                     ( <INDICES> | <VALUES> ) <OF> Expression() // Add support for sparse collections
+	                     | Expression() [".." Expression()]
+			    )
+			    [ <SAVE> <EXCEPTIONS> ] sqlStatement(null,";") ";"
+	| LOOKAHEAD(2) <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	| <WHILE> Expression() <LOOP> (statement())+ <END> <LOOP> [<IDENTIFIER>] ";"
+	//
+	| <GOTO> qualifiedName() ";"
+	| <RETURN> [Expression()] ";"
+	| <EXIT> [<WHEN> Expression() | <IDENTIFIER> [<WHEN> Expression()]] ";"
+	| <RAISE> [qualifiedName()] ";"
+	//
+	| <CLOSE> qualifiedName() ";"
+	| <OPEN> [Expression()]
+		//[LOOKAHEAD(functionCall()) functionCall() | qualifiedName()]
+		[<FOR> Expression() [<USING> Expression() ("," Expression())*]] ";"
+	| <FETCH> qualifiedName() [<BULK> <COLLECT>]
+	  //MMUE 04/08/2005 <INTO> (LOOKAHEAD(functionCall()) functionCall() | qualifiedName()) ("," (LOOKAHEAD(functionCall()) functionCall() | qualifiedName()))* ";"
+	  <INTO> Expression() ("," Expression())* [<LIMIT> Expression()] ";"
+	//
+	| label() statement()
+	| [<DECLARE> declarativeSection(false,token)] <BEGIN> (statement())* (exceptionHandler())? <END> [<IDENTIFIER>] ";"
+	//
+        | <EXECUTE> <IMMEDIATE> Expression() /* <STRING_LITERAL> */ 
+	  [ [ <BULK> <COLLECT> ] <INTO> Name() ("," Name())* ] 
+	  [ <USING> [ <IN> [ <OUT> ] | <OUT> ]  Expression() ("," [ <IN> [ <OUT> ] | <OUT> ] Expression())* ] 
+	  [ ( <RETURN> | <RETURNING> ) [ <BULK> <COLLECT> ] <INTO> Expression() ("," Expression())* ] 
+          ";"
+
+	//SRT 20110429 | <EXECUTE> <IMMEDIATE> StringExpression()  [<USING> Expression() ("," Expression())*] ";"
+	// PIPELINED FUNCTION OUTPUT
+	| <PIPE> <ROW> Expression()  ";"
+	// CONDITIONAL COMPILATION 
+	| <CC_IF> ConditionalOrExpression() <CC_THEN> (statement())*
+		( <CC_ELSIF> ConditionalOrExpression() <CC_THEN> (statement())+ )*
+		( <CC_ELSE> (statement())+ )*
+		<CC_END> 
+	| <CC_ERROR> Expression() <CC_END> 
+        | <PRAGMA> Expression() ";"
+        | Expression() ";"
+}
+
+void subtype_definition(boolean isPackageLevel) throws SAXException :
+{
+	Token start, subtype_name=null, constraint=null, base_type=null;
+	Token collection = null, collection2 = null;
+	Token notNullable = null;
+	String startElement = null, endElement = null;
+	String baseType = null, returnType = null, indexBy = null, string = null;
+	Hashtable tags = null;
+	int lastField = 0;
+}
+{
+
+	(
+		( 
+		  start=<SUBTYPE> subtype_name=qualifiedID() // SRT 20110605 to Parse SYS.standars ned to allow nprmally reserved words which are low-level types 
+			{
+				// element generated only on the package level
+				if (m_out != null && isPackageLevel) {
+					tags = processMemberComment(start, "TYPE", subtype_name.toString());
+				}
+			}
+			<IS> baseType=datatype() 
+			{
+				returnType = baseType;
+			}
+			[
+			  ( "(" constraint=<IDENTIFIER> ")") // SRT 20110604 [<NOT> <NULL> ]
+			  {
+				  if (constraint != null) {
+					  returnType += "(" + constraint + ")";
+				  }
+			  }
+			  |
+			  ( constraint = <RANGE> startElement = UnaryExpression(true)  ".." endElement = UnaryExpression(true) ) // In "RANGE -1 .. 31" -1 is a unary Expression
+			  {
+				  if (constraint != null) {
+					  returnType += " RANGE " + startElement + ".." + endElement ;
+				  }
+			  }
+			]
+
+			[<NOT> <NULL> { returnType += " NOT NULL"; } ] //SRT 20110604
+		)
+		 |
+		( start=<TYPE> subtype_name=qualifiedID() // SRT 20110605 to Parse SYS.standars ned to allow nprmally reserved words which are low-level types 
+			{
+				// element generated only on the package level
+				if (m_out != null && isPackageLevel) {
+					tags = processMemberComment(start, "TYPE", subtype_name.toString());
+				}
+			}
+			(<IS>|<AS>)
+			(
+				LOOKAHEAD(2) <NEW> (
+				                    base_type = <CHAR_BASE> 
+				                    |base_type = <DATE_BASE> 
+				                    |base_type = <CLOB_BASE> 
+				                    |base_type = <BLOB_BASE> 
+				                    |base_type = <BFILE_BASE> 
+				                    |base_type = <NUMBER_BASE> 
+				                   ) 
+				  { returnType = "NEW " + base_type.toString().toUpperCase() ; }
+				|
+				//SRT 20110606 SYS.STANDRD 
+				(<OBJECT> {baseType = "OBJECT";} "(" fieldDeclaration(isPackageLevel, tags) ("," fieldDeclaration(isPackageLevel, tags))* ")" )
+					{
+						returnType = "OBJECT";
+						// end for
+					}
+				|
+				(<RECORD> {baseType = "RECORD";} "(" fieldDeclaration(isPackageLevel, tags) ("," fieldDeclaration(isPackageLevel, tags))* ")" )
+				{
+					returnType = "RECORD";
+					// end for
+				}
+				|
+				((collection=<TABLE> | collection=<VARRAY> | collection=<VARYING> collection2=<ARRAY>)["(" constraint=numericLiteral() ")"]
+				<OF> baseType=datatype() (notNullable = <NOT> <NULL>)? (<INDEX> <BY> indexBy=datatype())?)
+				{
+					returnType = collection.toString();
+					if (collection2 != null) {
+						returnType += " " + collection2;
+					}
+					if (constraint != null) {
+						returnType += "(" + constraint + ")";
+					}
+					returnType += " OF " + baseType;
+
+					if (notNullable != null) {
+						returnType += " NOT NULL";
+					}
+
+					if (indexBy != null) {
+						returnType += " INDEX BY " + indexBy;
+					}
+				}
+				|
+				<REF> <CURSOR> [<RETURN> baseType=datatype()]
+				{
+					returnType = "REF CURSOR";
+					if (baseType != null) {
+						returnType += " RETURN " + baseType;
+					}
+				}
+				//Enumeration 
+				| ( "(" 
+				      string = Expression() {returnType ="(" +  string; } 
+				              ( "," string = Expression() {returnType += "," +  string; } )* 
+				    ")" {returnType += ")"; } 
+			          )
+				//Alias for existing type  
+				| returnType = datatype() 
+			)
+		)
+	)
+	";"
+	{
+		// element generated only at the package level
+		if (m_out != null && isPackageLevel)
+		{
+			if (returnType != null)
+			{
+				m_out.pushAttribute("TYPE", returnType);
+				m_out.element("RETURN");
+			}
+			m_out.endElement("TYPE");
+		}
+	}
+}
+
+void fieldDeclaration(boolean isPackageLevel, Hashtable tags) throws SAXException :
+{
+	Token name;
+	String dataType;
+	String defaultValue = null;
+}
+{
+	name=ID() dataType=datatype() [[<NOT>] <NULL>] [ (":" "=" | <_DEFAULT>) defaultValue = Expression() ]  
+	{
+		if (m_out != null && isPackageLevel)
+		{
+			String paramName = name.toString();
+			String paramComment = getParamComment(paramName, tags);
+			m_out.pushAttribute("NAME", purifyIdentifier(paramName));
+			m_out.pushAttribute("TYPE", purifyIdentifier(dataType));
+			if (null != defaultValue) m_out.pushAttribute("DEFAULT", purifyIdentifier(defaultValue));
+			m_out.startElement("FIELD");
+			if (paramComment != null) {
+				m_out.startElement("COMMENT");
+				m_out.cdata(paramComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("FIELD");
+		}
+	}
+}
+
+void collection_type_definition() : {} { <IDENTIFIER> }
+void collectionDeclaration(boolean isPackageLevel) : {} { <IDENTIFIER> }
+void objectDeclaration() : {} { <IDENTIFIER> }
+
+/** Java stored procedure, external function*/
+void callSpecTail(boolean isPackageLevel) : {
+}
+{
+	// /* <LANGUAGE> (/*"C"*/<IDENTIFIER> | <JAVA>)
+
+	(
+		( <EXTERNAL>
+		|<LANGUAGE> (/*"C"*/<IDENTIFIER> | <JAVA>)
+
+		)//SRT 20110516 { System.err.println("Found EXTERNAL or LANG ") ; }
+		//These can appear in any order ....
+		(
+		  ( <LIBRARY> (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )
+			      [ "." (<IDENTIFIER> | <QUOTED_LITERAL> | StringLiteral() )  ]
+		  )
+		  |
+		  ( <NAME> (<IDENTIFIER>  | <QUOTED_LITERAL> /* C */| StringLiteral() /* JAVA */ ) )
+		  //SRT 20110517  Need to cope with  callSpecTails in ObjectTypes  // skip2NextTerminator(null,";") 
+		  //skipPastNextOccurrence(")") // Read until we have eaten the closing bracket ")" 
+		  |
+		  (
+		    <WITH> <CONTEXT>
+		  )
+		  |
+		  (
+		    <PARAMETERS>
+		    skipPastNextOccurrence(")") // Read until we have eaten the closing bracket ")" 
+		  )
+		)*
+	)
+	{
+		return;
+	}
+
+	/* ### or:
+		<LIBRARY> library_name
+		[NAME c_string_literal_name]
+		[WITH CONTEXT]
+		[PARAMETERS (external_parameter[, external_parameter]...)];
+
+		Where library_name is the name of your alias library, c_string_literal_name is the name of your external C procedure, and external_parameter stands for:
+
+		{
+		   CONTEXT
+		 | SELF [{TDO | property}]
+		 | {parameter_name | RETURN} [property] [BY REFERENCE] [external_datatype]
+		 }
+
+		where property stands for:
+
+		{INDICATOR [{STRUCT | TDO}] | LENGTH | MAXLEN | CHARSETID | CHARSETFORM}
+
+		( <INDICATOR> [ <STRUCT> |  <TDO>] |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM>  )
+
+	*/
+
+  /*
+  "
+  (
+  (<EXTERNAL> |  <LANGUAGE> ( <JAVA> | <IDENTIFIER> )  )
+  <NAME> <IDENTIFIER>
+  <LIBRARY> <IDENTIFIER>
+  [ <WITH> <CONTEXT> ]
+  [<PARAMETERS> 
+    "("
+     <CONTEXT> 
+     ( ","
+             (
+	       <SELF> [ <TDO> | [ ( <INDICATOR> [ <STRUCT> |  <TDO>] ) |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM> ] ]
+	     | ( 
+	         (<IDENTIFIER> | <RETURN> )  
+		 [ <TDO> | [ ( <INDICATOR> [ <STRUCT> |  <TDO>] ) |  <LENGTH> |  <MAXLEN> |  <CHARSETID> |  <CHARSETFORM> ] ]
+		 [<BY> <REFERENCE> ]
+		 [ <IDENTIFIER> ]
+               )
+	     )
+      )*
+     ")"
+  ]
+  )
+  {
+   return;
+  }
+  */
+}
+
+
+
+
+
+
+/** Cursor (common part of specification and body) */
+void cursorUnit(boolean isPackageLevel) throws SAXException :
+{
+	Token start, name;
+	String type;
+	Hashtable tags = new Hashtable();
+}
+{
+	(
+	start=<CURSOR> name=ID()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			tags = processMemberComment(start, purifyKeyword(start.toString()), name.toString());
+		} else {
+			tags = new Hashtable();
+		}
+	}
+	( "(" parameterDeclaration(tags,isPackageLevel) ( "," parameterDeclaration(tags,isPackageLevel) )* ")" )*
+	[<RETURN> type=datatype()
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			String returnComment = null;
+			Collection tagValues = (Collection) tags.get("@return");
+			if (tagValues != null)
+			{
+				Iterator it = tagValues.iterator();
+				while (it.hasNext())
+					returnComment = (String) it.next();
+			}
+			m_out.pushAttribute("TYPE", purifyIdentifier(type.toString()));
+			m_out.startElement("RETURN");
+			if (returnComment != null)
+			{
+				m_out.startElement("COMMENT");
+				m_out.cdata(returnComment);
+				m_out.endElement("COMMENT");
+			}
+			m_out.endElement("RETURN");
+		}
+	}
+	]
+	)
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel) {
+			m_out.endElement(purifyKeyword(start.toString()));
+		}
+	}
+	[<IS> ("(")* sqlStatement(null,";")] ";"
+}
+
+void cursorSpec(boolean isPackageLevel) throws SAXException : {}
+{
+	cursorUnit(isPackageLevel)
+}
+
+void cursorBody(boolean isPackageLevel) throws SAXException : {}
+{
+	cursorUnit(isPackageLevel)
+//	<IS> /*<SQL_STATEMENT>*/
+}
+
+
+
+// ============================================================================
+// E X P R E S S I O N S
+// ============================================================================
+
+/*
+String expression() :
+{}
+{
+	"test"
+	{ return ""; }
+}
+*/
+
+
+
+String Expression() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	// Need syntactic lookahead to discriminate between Assignment and a procedure call
+	(
+  	LOOKAHEAD( PrimaryExpression() ":" "=" ) (string = Assignment()) {sb.append(string);  }  
+	| (string = ConditionalOrExpression() )  {sb.append(string); }  
+	//| (string = CompilationExpression() )  {sb.append(string); }  //SRT 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String CompilationExpression() :
+{ 
+  String string = null; 
+  StringBuffer sb = new StringBuffer() ;
+}
+{
+	(
+	  <CC_IF> {sb.append(" "); sb.append(token.image) ; } 
+	  string= ConditionalOrExpression() {sb.append(" "); sb.append(string); } 
+	  <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	  string = Expression() {sb.append(" "); sb.append(string); } 
+
+	  ( 
+	    <CC_ELSIF> {sb.append(" "); sb.append(token.image); } 
+	    string = ConditionalOrExpression() {sb.append(" "); sb.append(string); }  
+	    <CC_THEN> {sb.append(" "); sb.append(token.image); } 
+	    string = Expression() {sb.append(" "); sb.append(string); } 
+	  )* 
+
+	  ( 
+	    <CC_ELSE> {sb.append(" "); sb.append(token.image); } 
+	    string = Expression()  {sb.append(" "); sb.append(string); } 
+	  )*
+
+	  <CC_END> {sb.append(" "); sb.append(token.image); } 
+	)
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+String Assignment() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (string = PrimaryExpression() ) {sb.append(string);} 
+  (":" "="  ) {sb.append(" := ");} 
+  (string = Expression()) {sb.append(string);} 
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String CaseExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	thisToken = <CASE> { sb.append(thisToken.image);} 
+	( string = Expression() { sb.append(" "); sb.append(string); }  )?
+          ( thisToken = <WHEN> { sb.append("  "); sb.append(thisToken.image); } 
+	        string = Expression() { sb.append(" "); sb.append(string); }
+	     thisToken = <THEN>  { sb.append(" "); sb.append(thisToken.image); }
+	        string=  Expression() { sb.append(" "); sb.append(string); } 
+	   )+
+	  [ thisToken = <ELSE> { sb.append(" "); sb.append(thisToken.image);} 
+	        Expression() { sb.append(" "); sb.append(string); }
+	  ]
+	  thisToken = <END> { sb.append(" "); sb.append(thisToken.image);}
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/*
+LIKE ( Expression ) [ <ESCAPE> <STRINGLITERAL>
+*/
+String LikeExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+        string = PrimaryExpression() { sb.append(" "); sb.append(string); }
+	(thisToken = <LIKE> ) { sb.append(thisToken.image);} 
+	//["(" { sb.append("(");} ]
+	( string = StringExpression() { sb.append(" "); sb.append(string); }  )
+	//[ ")" { sb.append(")");} ]
+	[
+	<ESCAPE> { sb.append(" ESCAPE ");} 
+	(  <CHARACTER_LITERAL>{ sb.append(" "); sb.append(token.toString()); }  
+	  | string = StringLiteral() { sb.append(" "); sb.append(string); }  
+	)
+	]
+  )
+  ( "." string = Expression() { sb.append("."); sb.append(string); } )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String TrimExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	(thisToken = <TRIM> ) { sb.append(thisToken.image);} 
+	"(" { sb.append("(");} 
+	 [ ( <LEADING> | <TRAILING> | <BOTH> ){ sb.append(" "); sb.append(token.toString()); }  ]
+	 [ string = StringExpression() { sb.append(" "); sb.append(string); } ]
+	 ( <FROM>  )  { sb.append(thisToken.image);} 
+	 string = StringExpression() { sb.append(" "); sb.append(string); }  
+	")" { sb.append(")");} 
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+/*
+TREAT ( Expression AS datatype)
+CAST ( Expression AS datatype)
+*/
+String ObjectExpression() :
+{ Token thisToken;  String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+	(thisToken = <CAST> | thisToken = <TREAT> ) { sb.append(thisToken.image);} 
+	"(" { sb.append("(");} 
+	( string = Expression() { sb.append(" "); sb.append(string); }  )
+	[
+	 <AT> <TIME> <ZONE> string = PrimaryExpression() { sb.append(" AT TIME ZONE "); sb.append(string); }
+	]
+	<AS> { sb.append(" AS ");} 
+	( string = datatype() { sb.append(" "); sb.append(string); }  )
+	")" { sb.append(")");} 
+  )
+  ( "." Expression() )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ConditionalOrExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (string = ConditionalAndExpression() ) { sb.append(string);}
+  ( (<OR>) {sb.append(" OR ");}  
+    (string = ConditionalAndExpression() ) {sb.append(string);}
+  )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ConditionalAndExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+   (string = EqualityExpression() ) { sb.append(string);}
+   ( (<AND> ) {sb.append(" AND ");}  
+     (string = EqualityExpression() ) { sb.append(string);}
+   )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String EqualityExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  //RelationalExpression() ( ( "=" | "!=" | "<>" | <IS>) RelationalExpression() )*
+  (
+	  (
+	   string = RelationalExpression() 
+	  ) {sb.append(string);} 
+	  ( 
+	   ( ("=" ) {sb.append(" = ");}
+	   | ("!" "=" ) {sb.append(" != ");}
+	   // Now unde RelationalExpression | ("<" ">" ) {sb.append(" <> ");}
+	   | (<IS>) {sb.append(" IS ");}  
+           )
+	   (
+	   string = RelationalExpression() 
+	   ) {sb.append(string);} 
+	  )*
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/**
+ * 2006-05-23 - Matthias Hendler - added FROM
+ */
+String RelationalExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  //AdditiveExpression() ( ( "<" | ">" | "<=" | ">=" | [<NOT>] (<IN> | <BETWEEN> | <LIKE> | <FROM>) ) AdditiveExpression() )*
+  (string = AdditiveExpression() ) { sb.append(string); }
+  ( 
+   ( 
+      (
+	(
+	    (("<" ) { sb.append("<"); } 
+	     [">"  { sb.append(">"); } ] // <> 
+	    )
+	  | (">" ) { sb.append(">"); }
+	)
+	[ ("=" ) { sb.append("="); } ]
+    
+      )
+      { sb.append(" "); } 
+   | [(<NOT>) { sb.append(" NOT "); }] 
+     ((<IN>) { sb.append(" IN "); } 
+     | (<BETWEEN> ) { sb.append(" BETWEEN "); }
+     | (<LIKE> ) { sb.append(" LIKE "); }
+     | (<FROM>) { sb.append(" FROM "); }
+     | (
+	 (
+	   (<MEMBER>) { sb.append(" MEMBER "); }
+	   |
+	   (<SUBMULTISET>) { sb.append(" SUBMULTISET "); }
+	 )
+         [ <OF> { sb.append(" OF "); } ]
+       )
+     ) 
+    // MULTISET Operators 
+    | ( 
+       <MULTISET> { sb.append (" MULTISET " );}  
+       (   <EXCEPT>  { sb.append (" EXCEPT " );}  
+         | <INTERSECT>  { sb.append (" INTERSECT " );} 
+	 | <UNION>  { sb.append (" UNION " ); }    
+       )
+       [   <DISTINCT>  { sb.append (" DISTINCT " );} 
+         | <ALL>  { sb.append (" ALL " );}   
+       ]
+     ) 
+   ) 
+   (string=AdditiveExpression() ) { sb.append(string); }
+   [
+	<ESCAPE> { sb.append(" ESCAPE ");} 
+	(  <CHARACTER_LITERAL>{ sb.append(" "); sb.append(token.toString()); }  
+	  | string = StringLiteral() { sb.append(" "); sb.append(string); }  
+	)
+   ]
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String AdditiveExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  (string = MultiplicativeExpression() ) { sb.append(string); }
+  ( 
+    ( ("+" ) { sb.append(" + "); }
+    | ("-" ) { sb.append(" - "); }
+    | ("||" ) { sb.append(" || "); }
+    ) 
+    (string = MultiplicativeExpression() ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String StringExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+  (string = PrimaryExpression() ) { sb.append(string); }
+  ( 
+     ("||" ) { sb.append(" || "); }
+    (string = PrimaryExpression() ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String MultiplicativeExpression() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+
+  //UnaryExpression() ( ( "*" | "/" | <MOD> ) UnaryExpression() )*
+ (
+  (string = UnaryExpression(true) ) { sb.append(string); }
+  ( 
+    ( ("**"  ) { sb.append(" ** "); } //Exponentiation 
+    | ("*"  ) { sb.append(" * "); }
+    | ("/"  ) { sb.append(" / "); }
+    | (<MOD>  ) { sb.append(" MOD "); }
+    ) 
+    (string = UnaryExpression(true) ) { sb.append(string); }
+  )*
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String UnaryExpression(boolean isUnarySign) :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+ (
+   ( ("+" ) { sb.append(isUnarySign ? " +" : " + "); }
+   | ("-" ) { sb.append(isUnarySign ? " -" : " - "); }
+   ) 
+   (string = UnaryExpression(false) ) { sb.append(string); }
+  |
+   (string = UnaryExpressionNotPlusMinus() ) { sb.append(string); }
+ )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String UnaryExpressionNotPlusMinus() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (<NOT>) {sb.append(" NOT "); } 
+  (string = UnaryExpression(false) ) { sb.append(string); }
+  |
+   (string = PrimaryExpression() ) { sb.append(string); }
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+/**
+ * 2006-05-23 - Matthias Hendler - Added lookahead otherwise warning encountered.
+ *                                 Warning arised while adding methode triggerUnit(). 
+ * 2011-04-27 - SRT - Add optional NEW Keyword to cope with Object Type constructors
+ */
+String PrimaryExpression() :
+{ Token thisToken ; String string = null; StringBuffer sb = new StringBuffer() ;
+}
+{
+  ( 
+    ( // Explicitly cope with case where "NEW" is a Primary Prefix, such as in a Trigger WHEN clause  
+	    (<NEW_DOT> thisToken = qualifiedID()  ) { sb.append(" NEW."); sb.append(thisToken.toString()); }  
+      )
+    |
+    (
+      LOOKAHEAD( <NEW>  PrimaryPrefix() ) // Lookahead so that we can recover and treat NEW as an identifier 
+        <NEW> { sb.append(" NEW "); } (string = PrimaryPrefix() ) {sb.append(string);}  
+      |       (string = PrimaryPrefix() ) {sb.append(string);}  
+	  
+	  )
+	  ( LOOKAHEAD(2) (string = PrimarySuffix() ) { sb.append(string); }  )*
+  )
+
+ { 
+ return sb.toString(); 
+ }
+}
+
+String PrimaryPrefix() :
+{ String string = null; StringBuffer sb = new StringBuffer() ; 
+
+}
+{
+(
+  ( string = Literal() ) { sb.append(string) ; } 
+| LOOKAHEAD(MultiSetCondition()) string = MultiSetCondition()
+| LOOKAHEAD(CompilationExpression()) string = CompilationExpression() //SRT 
+| LOOKAHEAD(TrimExpression()) string = TrimExpression() //SRT 20110613.3
+| LOOKAHEAD(CaseExpression()) ( string =CaseExpression() ) { sb.append(string) ; } //SRT 20110520
+| LOOKAHEAD(ObjectExpression() ) ( string = ObjectExpression() ) { sb.append(string) ; } //SRT 20110604
+//| LOOKAHEAD(LikeExpression()) ( string = LikeExpression() ) { sb.append(string) ; } //SRT 20110604 
+| ( string =Name() ) { sb.append(string) ; } 
+| LOOKAHEAD(<SELECT>) (<SELECT>) {sb.append("SELECT ..."); }  skip2NextTerminator(null,";")  
+| LOOKAHEAD(("(")+ <SELECT>) ("(") {sb.append("(SELECT ..."); }  skip2NextTerminator("(",")") ")"   
+| LOOKAHEAD(<WITH>) (<WITH>) {sb.append("WITH ..."); }  skip2NextTerminator(null,";")  
+| LOOKAHEAD(("(")+ <WITH>) ("(") {sb.append("(WITH ..."); }  skip2NextTerminator("(",")") ")"   
+|
+  ("(" ) {sb.append("("); } 
+  (string = Expression() ) {sb.append(string); } 
+  (
+    (",") {sb.append(", "); }  
+    (string = Expression() ) {sb.append(string); } 
+  )* 
+  (")") {sb.append(")"); } 
+
+)
+ { 
+ return sb.toString(); 
+ }
+}
+
+String PrimarySuffix() :
+{ Token suffixToken = null ; String timeZoneExpression = null ; String arguments = null; StringBuffer sb = new StringBuffer() ; }
+{
+  (
+  (".") {sb.append(".");}  (suffixToken = qualifiedID() ) { sb.append(suffixToken.toString()) ; }
+  //Bug 3535118 - Method call may include dblink 
+  //String dblink = null;
+  //["@" dblink = qualifiedName() {sb.append("@"); sb.append(dblink); } ]
+  | //Possible dblink 
+  ("@") {sb.append("@");}  (suffixToken = qualifiedID() ) { sb.append(suffixToken.toString()) ; }
+  | //Possible Date Time Expression - Bug 3553725  
+  ( <AT> {sb.append(" "); sb.append(token.image.toUpperCase());}  
+          (  <LOCAL> {sb.append(" "); sb.append(token.image.toUpperCase());}
+            | ( <TIME> <ZONE> {sb.append(" TIME ZONE");} ( <DBTIMEZONE> {sb.append(" "); sb.append(token.image.toUpperCase());}
+	        | <SESSIONTIMEZONE> {sb.append(" "); sb.append(token.image.toUpperCase());}
+	        | timeZoneExpression = StringLiteral() {sb.append(" "); sb.append(timeZoneExpression);}
+		| timeZoneExpression = Expression() ) {sb.append(" "); sb.append(timeZoneExpression);}
+	      )
+         )   
+  ) 
+  |
+  ( arguments = Arguments() ) {sb.append(arguments) ; }
+  )
+ { 
+ return sb.toString(); 
+ }
+}
+
+String Literal() :
+{ Token literalToken = null ; String literal = null ; }
+{
+  (
+  literalToken = numericLiteral() {literal = literalToken.toString(); }
+|
+  <CHARACTER_LITERAL> {literal = token.toString(); }
+|
+  //<STRING_LITERAL> {literal = token.toString(); }
+  literal = StringLiteral() //SRT 2010526 Cope with Q-QuotedStrings
+|
+  literal = BooleanLiteral()
+|
+  literal = NullLiteral()
+|
+  literal = DateTimeLiteral()
+  )
+
+ { 
+ return literal; 
+ }
+}
+
+String StringLiteral() :
+{
+Token thisToken = null;
+StringBuffer literal = new StringBuffer() ; 
+char startDelimiter ; 
+char endDelimiter ; 
+String terminator = null; 
+}
+{
+  //Essentially unchanged
+ (
+  thisToken = <STRING_LITERAL> 
+  { 
+   literal.append(thisToken.image); 
+   /*
+   This might be Q-Quoted string and this might be only a partial string
+   The token will only match up to the first single quote.
+   The code below appends any remaining part, theh returns the complete string
+   */
+   if (thisToken.image.toUpperCase().startsWith("Q'")
+       && thisToken.image.length() > 2
+      )
+   {
+   // Get the first token of the string so that the delimiter can be identified
+
+     startDelimiter= thisToken.image.charAt(2) ;
+     /*
+     if the start delimiter is one of [, {, <, or (, the end delimiter
+     is the corresponding closing character
+     */
+     switch (startDelimiter)
+     {
+      case '<' : endDelimiter = '>' ; break ; 
+      case '{' : endDelimiter = '}' ;  break ; 
+      case '(' : endDelimiter = ')' ;  break ; 
+      case '[' : endDelimiter = ']' ;  break ; 
+      default: endDelimiter = startDelimiter ; 
+     }
+
+     terminator = new String(endDelimiter + "'");
+     if (!thisToken.image.endsWith(terminator))
+     {
+       //Loop until we find atoken that ends with a single-quote precede by the terminator
+       literal.append(readPastNextOccurrence(terminator));
+     }
+   }
+  }
+ )
+ { return literal.toString(); }
+}
+
+
+String BooleanLiteral() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+ (
+  <TRUE> { literal = " TRUE " ; }
+	|
+  <FALSE> { literal = " FALSE " ; }
+ )
+ { return literal; }
+}
+
+String NullLiteral() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+  (
+  <NULL> { literal = " NULL " ; }
+  )
+ { 
+  return literal; 
+  }
+}
+
+String MultiSetCondition() :
+{String literal = null ; }
+{
+  //Essentially unchanged
+  (
+  <A> <SET> { literal = " A SET " ; }
+  |
+  <EMPTY> { literal = " EMPTY " ; }
+  )
+ { 
+  return literal; 
+  }
+}
+
+/** Recognizes a numeric literal.
+* This may look like token, but it isn't. Not atomic enough.
+* E.g. "+1" would be valid literal, which make parsing of "i+1" impossible
+* (here, we have tokens "i", "+" and "1")
+*/
+Token numericLiteral() :
+{ Token main = null; }
+{
+	(
+	  //Essentially unchanged, as it previouly returned a Token 
+		main=<UNSIGNED_NUMERIC_LITERAL>
+	)
+	{ 
+	 return main; 
+	}
+}
+
+/** Recognizes a labe.
+* This may look like token, but it isn't. Not atomic enough.
+* E.g. "+1" would be valid literal, which make parsing of "i+1" impossible
+* (here, we have tokens "i", "+" and "1")
+*/
+String label() :
+{ 
+Token labelID = null; 
+StringBuffer sb = new StringBuffer(); 
+}
+{
+	(
+	  //This cannot be a token because these are valid labels '<< next_msg >>", '<<"OUTER LOOP">>'  
+	"<<" labelID = unqualifiedID() ">>" {sb.append("<<");  sb.append(labelID);  sb.append(">>");  }
+	)
+	{ 
+	 return(sb.toString()); 
+	}
+}
+
+String Name() :
+{
+	Token thisToken = null;
+	Token separatorToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //unqualifiedID() (LOOKAHEAD(2) ("." | "%") qualifiedID())*
+  (thisToken=unqualifiedID()) {sb.append(thisToken); }
+  (
+   LOOKAHEAD(2) 
+    ("." {sb.append(".");} | "%" {sb.append("%");}) //qualifiedID() 
+    thisToken = qualifiedID() {sb.append(thisToken);}
+  )*
+  {
+  return(sb.toString()); 
+  }
+}
+
+String qualifiedName() :
+{
+	Token thisToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //Essentially unchanged as it previously returned a String 
+	(thisToken=unqualifiedID()) {sb.append(thisToken); }
+	( ("." thisToken=qualifiedID()) { sb.append("."); sb.append(thisToken); } )*
+	{ 
+	 return(sb.toString()); 
+	}
+}
+
+String Arguments() :
+{
+	String argumentList = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //"(" [ ArgumentList() ] ")"
+  ("(") { sb.append("("); }  
+  [ (argumentList = ArgumentList()) { sb.append(argumentList); } ] 
+  (")") { sb.append(")"); }  
+ { 
+ return sb.toString(); 
+ }
+}
+
+String ArgumentList() :
+{
+	String argument = null;
+	Token thisToken = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+  //Argument() ("," token=Argument())*
+  (argument = Argument()) { sb.append(argument); } 
+  (("," ) { sb.append(", "); }  (argument = Argument()) {sb.append(argument); } )*
+ { 
+ return sb.toString(); 
+ }
+}
+
+String Argument() :
+{
+	Token thisToken = null;
+	String string = null;
+	StringBuffer sb = new StringBuffer();
+}
+{
+	//[LOOKAHEAD(2) unqualifiedID() "=>"] Expression()
+	[LOOKAHEAD(2) (thisToken=unqualifiedID()) {sb.append(thisToken); } ("=>" | <AS> ) { sb.append(" "); sb.append(token.image.toUpperCase()); sb.append(" "); } ] 
+        (string = Expression() ) {sb.append(string); } 
+	//Allow Using CharacterSet suffix clause  
+	[
+	   ( <USING>  )  { sb.append(" "); sb.append(token.image.toUpperCase()); } 
+	   ( <CHAR_CS> | <NCHAR_CS>  )  { sb.append(" "); sb.append(token.image.toUpperCase()); } 
+	]
+ { 
+ return sb.toString(); 
+ }
+}
+
+
+
+// ============================================================================
+// D E C L A R A T I O N S
+// ============================================================================
+
+void variableOrConstantDeclaration(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token name=null;
+	String type;
+	Hashtable tags = null;
+	String elementName = "VARIABLE";
+	String defaultValue = null;
+	Hashtable variableAttributes = new Hashtable();
+}
+{
+	name=ID() [LOOKAHEAD(2) <CONSTANT> {elementName = "CONSTANT";}] type=datatype()
+	[[<NOT>] <NULL>]
+	[
+	//SRT 20110427 (":=" | <_DEFAULT>) Expression()
+	(":" "=" | <_DEFAULT>) (defaultValue = Expression() )
+	] ";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			if (null != defaultValue) variableAttributes.put("DEFAULT"
+			                                                , (defaultValue.startsWith("'") 
+			                                                   ||defaultValue.toUpperCase().startsWith("Q'") 
+									  ) // Literal
+									  ?HTMLEscaper.escape(defaultValue) //Escape Literal
+									  :purifyIdentifier(defaultValue)
+			                                                );
+			tags = processMemberComment(name, elementName, name.toString(),variableAttributes);
+			m_out.pushAttribute("TYPE", purifyIdentifier(type));
+			m_out.startElement("RETURN");
+			m_out.endElement("RETURN");
+			m_out.endElement(elementName);
+		}
+	}
+}
+
+void datatypeDeclaration() : {} { <IDENTIFIER> }
+
+void pragma(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token start,name = null,functionName,exceptionName,errorNumber; Hashtable tags = null; 
+  String string = null ; 
+}
+{
+	start=<PRAGMA>
+	(
+		name=<SERIALLY_REUSABLE>
+		|
+		name=<AUTONOMOUS_TRANSACTION>
+		|
+		name=<TIMESTAMP> "(" StringLiteral() ")"
+		|
+		name=<RESTRICT_REFERENCES> "(" (functionName=ID() /*| <_DEFAULT>*/)
+		("," (ID() | StringLiteral() /* 20110526 <STRING_LITERAL> */ ) )+	")"
+		|
+		name=<EXCEPTION_INIT> "(" exceptionName=<IDENTIFIER> "," ["+"|"-"] errorNumber=numericLiteral() ")"
+		|
+		name=<INTERFACE> "(" <IDENTIFIER> "," ID() [ "," numericLiteral() ] ")"
+		| //SRT 20110531 
+		string=qualifiedName() "(" readPastNextOccurrence(")") 
+	)
+	";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			tags = processMemberComment(start, start.toString().toUpperCase()
+			, (null != name) ? name.toString() : string
+			);
+			m_out.endElement("PRAGMA");
+		}
+	}
+}
+
+void exceptionDeclaration(boolean isPackageLevel) throws org.xml.sax.SAXException :
+{ Token exception_name; Hashtable tags = null; }
+{
+	exception_name=ID() <EXCEPTION> ";"
+	{
+		// element generated only on the package level
+		if (m_out != null && isPackageLevel)
+		{
+			tags = processMemberComment(exception_name, "EXCEPTION", exception_name.toString());
+			m_out.endElement("EXCEPTION");
+		}
+	}
+}
+
+void parallel_clause() throws org.xml.sax.SAXException :
+{
+}
+{
+    (
+	    ( "(" <PARTITION> ID()  <BY> 
+	       (<ANY> 
+	        |
+	        ( (<HASH> | <RANGE> ) "(" ID() ( "," ID() )* ")" )
+               )
+	    ")"  
+	    )
+    )
+    [ ( <ORDER> | <CLUSTER> ) <BY> "(" ID() ( "," ID() )*  ")" ] 
+
+}
+

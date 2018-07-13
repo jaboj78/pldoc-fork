@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<project name="${project.name}">
+    <skin>
+        <groupId>org.apache.maven.skins</groupId>
+        <artifactId>maven-stylus-skin</artifactId>
+        <version>1.1</version>
+    </skin>
+   <bannerLeft>
+        <name>PLDoc</name>
+        <src>images/pldoc-banner.png</src>
+        <href>http://pldoc.sourceforge.net</href>
+    </bannerLeft>
+    <body>
+        <links>
+            <item name="PLDoc" href="http://pldoc.sourceforge.net"/>
+        </links>
+
+        <menu name="Main Menu">
+            <item name="Introduction" href="index.html"/>
+            <item name="News" href="http://sourceforge.net/p/pldoc/news"/>
+            <item name="Download" href="downloads.html"/>
+            <item name="SourceForge Project" href="http://sourceforge.net/projects/pldoc/"/>
+            <item name="User Documentation" href="docs/Users_Guide/index.html"/>
+            <item name="Notes for Developers" href="developer-notes.html"/>
+            <item name="Release Notes" href="readme.txt"/>
+            <item name="Change Log" href="changes-report.html"/>
+            <item name="Maven 2 Plugin" href="maven-pldoc-plugin/index.html"/>
+            <item name="PL/SQL Cut and Paste Detection" href="pldoc-cpd/index.html"/>
+            <item name="PL/SQL Cut and Paste Maven 2 Plugin (Deprecated)" href="maven-cpd-plugin/index.html"/>
+            <item name="PL/SQL PMD and CPD Maven Plugin" href="pldoc-pmd-plugin/index.html"/>
+        </menu>
+
+        <!-- Run mvn compile site:site to generate the reports for the project. -->
+        <menu ref="reports" />
+    </body>
+</project>

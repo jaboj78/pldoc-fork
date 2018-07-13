@@ -1,0 +1,29 @@
+DB2 
+
+ IBM DB2 9.7.* supports {{{http://publib.boulder.ibm.com/infocenter/db2luw/v9r7/index.jsp?topic=%2Fcom.ibm.db2.luw.apdv.plsql.doc%2Fdoc%2Fc0053607.html}PL/SQL}} (9.7.5 for DB2 Express-C): the JDBC drivers may be installed from the DB2 installation. 
+ This was tested using DB2 Express-C on Ubuntu, and as clpplus was missing, clp was used instead.
+
+ In order to support PL/SQL, enable Oracle compatibility _BEFORE_ creating the database
+
++---+
+  db2set DB2_COMPATIBILITY_VECTOR=ORA
+  db2set DB2_DEFERRED_PREPARE_SEMANTICS=YES
+  db2stop
+  db2start
+  db2 CREATE DATABASE db 
++---+
+
+ Source code loaded via clp retains comments and thus PLDoc comments; the DBA_SOURCE table is similar to Oracle's view of the same name,
+ but contains 1 row per object: the text column is a CLOB comntaining the complete source code. In order to keep the interface equivalent to DBMS_METADATA.GET_DDL, you may use this callable statement:
+ 
+
++---+
+  BEGIN SELECT text INTO ? FROM dba_source WHERE type = ? AND name = ? AND owner = ? AND  ? LIKE '%'  AND ? LIKE '%' AND ? LIKE '%' ; END;
++---+
+
++---+
+ ./pldoc-db2.sh -doctitle \"Sample DB2 Application\" -d DB2-Direct-Query-Example -url jdbc:db2:db  -types "'PACKAGE,PACKAGE BODY,PROCEDURE,FUNCTION'"   -driver  com.ibm.db2.jcc.DB2Driver -getmetadata "\"BEGIN SELECT text INTO ? FROM dba_source WHERE type =  ? AND name = ? AND owner = ? AND  ? LIKE '%'  AND ? LIKE '%' AND ? LIKE '%' ; END;\""  -user db2inst1 -password db2inst1  -sql "DB2INST1.GET_%" -showSkippedPackages 
++---+
+
+
+

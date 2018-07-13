@@ -1,0 +1,43 @@
+  ---------------
+  Developer Notes 
+  ---------------
+
+Introduction
+
+ The maven PLDoc plugin code comprises a thin wrapper around the ANT classes specified in the PLDoc project.  
+
+Compilation 
+
+ Compilation takes a couple of minutes.
+ Build requires that the PLDoc project artefacts are available, usually via installation into the local repository.
+
++--
+mvn install                     Compile and install artefacts into local repository (this requires previous 
+                                installation of the pldoc project)
++--
+
+
+Site Generation
+
+ Site generation takes a couple of minutes.
+
++--
+mvn site         Site generation to target directory
+mvn site:deploy  Refresh site at Sourceforge
++--
+
+Code Release 
+
+  New versions should be released using the Maven release plugin which automates a lot of the steps needs to create a successful release. A successful release will automatically be deployed to the {{{http://search.maven.org/#search%7Cgav%7C1%7Cg%3A%22net.sourceforge.pldoc%22%20AND%20a%3A%22maven-pldoc-plugin%22}central Maven repository}}, via rsync synchronisation. The synchronisation process may take several days.
+
+  For more information about the steps required to deploy to Sourceforge, refer to {{{http://maven.apache.org/plugins/maven-site-plugin/examples/site-deploy-to-sourceforge.net.html}Deployment to Sourceforge}}.
+
+ 
++--
+mvn release:prepare                          Validate code tree (including build), extract code from SCM and build
+ssh -t <username>,pldoc@shell.sf.net create  Create remote Sourceforge shell required for site deployment
+mvn release:perform                          Deploy release artefacts to Sourceforge and update pldoc.sourceforge.net site
++--
+
+
+
