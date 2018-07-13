@@ -7,7 +7,7 @@
     <packaging>jar</packaging>
     <description>Documentation tool for PLSQL</description>
     <version>1.5.22-SNAPSHOT</version>
-    <url>http://pldoc.sourceforge.net</url>
+    <!--url>http://pldoc.sourceforge.net</url-->
     <licenses>
         <license>
             <distribution>repo</distribution>
@@ -16,7 +16,7 @@
         </license>
     </licenses>
 
-    <issueManagement>
+    <!--issueManagement>
         <system>Sourceforge2</system>
         <url>https://sourceforge.net/p/pldoc/bugs/</url>
     </issueManagement>
@@ -26,10 +26,10 @@
       <groupId>org.sonatype.oss</groupId>
       <artifactId>oss-parent</artifactId>
       <version>7</version>
-    </parent>
+    </parent-->
 
 
-    <mailingLists>
+    <!--mailingLists>
       <mailingList>
 	<name>PLDoc Development Mailing list</name>
 	<subscribe>http://lists.sourceforge.net/mailman/listinfo/pldoc-chat</subscribe>
@@ -37,13 +37,13 @@
 	<archive>http://sourceforge.net/mailarchive/forum.php?forum_name=pldoc-chat</archive>
 	<post>pldoc-chat@lists.sourceforge.net</post>
       </mailingList>
-    </mailingLists>
+    </mailingLists-->
 
-    <scm>
+    <!--scm>
 	    <connection>scm:svn:https://svn.code.sf.net/p/pldoc/code/pldoc/trunk</connection>
 	    <developerConnection>scm:svn:https://svn.code.sf.net/p/pldoc/code/pldoc/trunk</developerConnection>
 	    <url>https://sourceforge.net/p/pldoc/code/HEAD/tree/pldoc/trunk/</url>
-    </scm>
+    </scm-->
 
     <developers>
         <developer>
